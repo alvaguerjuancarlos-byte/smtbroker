@@ -191,6 +191,15 @@ export default function PanelPage() {
               <p className="text-[13px] md:text-[14px] text-[#8EA0BC] mt-1">Vista global de activos, brokers, propietarios e inversionistas</p>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
+              <button onClick={() => router.push('/panel/prospectos-broker')}
+                className="flex items-center gap-2 text-[12px] md:text-[13px] font-semibold px-3 md:px-4 py-2.5 rounded-xl border border-[#DDE3EC] bg-white hover:border-[#C9A84C] transition-colors text-[#111827]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.6"/>
+                  <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.6"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="1.6"/>
+                </svg>
+                Prospección de brokers
+              </button>
               <button onClick={compartirEnlace}
                 className="flex items-center gap-2 text-[12px] md:text-[13px] font-semibold px-3 md:px-4 py-2.5 rounded-xl border border-[#DDE3EC] bg-white hover:border-[#C9A84C] transition-colors text-[#111827]">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
