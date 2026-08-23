@@ -121,6 +121,10 @@ export default function PanelPage() {
   const [filtroFase, setFiltroFase] = useState<string>('todos')
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [copiedLink, setCopiedLink]   = useState(false)
+  // Estado de la invitación por correo disparada al aprobar (ver app/api/invitar-broker) —
+  // separado del status de la solicitud: si la invitación falla, la solicitud sigue "aprobada",
+  // pero se muestra la alerta para que el Broker Maestro sepa que hay que reintentar.
+  const [inviteEstado, setInviteEstado] = useState<Record<string, { estado: 'enviando' | 'ok' | 'error'; mensaje?: string }>>({})
 
   useEffect(() => {
     const init = async () => {
@@ -148,6 +152,31 @@ export default function PanelPage() {
   const actualizarStatus = async (id: string, status: 'aprobada' | 'rechazada') => {
     await supabase.from('solicitudes').update({ status }).eq('id', id)
     setSolicitudes(prev => prev.map(s => s.id === id ? { ...s, status } : s))
+
+    if (status !== 'aprobada') return
+    const solicitud = solicitudes.find(s => s.id === id)
+    if (!solicitud) return
+    await enviarInvitacion(id, solicitud.email, solicitud.nombre)
+  }
+
+  const enviarInvitacion = async (id: string, email: string, nombre: string) => {
+    setInviteEstado(prev => ({ ...prev, [id]: { estado: 'enviando' } }))
+    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const res = await fetch('/api/invitar-broker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ email, nombre }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setInviteEstado(prev => ({ ...prev, [id]: { estado: 'error', mensaje: json.error || 'Error al enviar la invitación' } }))
+        return
+      }
+      setInviteEstado(prev => ({ ...prev, [id]: { estado: 'ok' } }))
+    } catch {
+      setInviteEstado(prev => ({ ...prev, [id]: { estado: 'error', mensaje: 'Error de red al enviar la invitación' } }))
+    }
   }
 
   const compartirEnlace = () => {
@@ -262,9 +291,29 @@ export default function PanelPage() {
                           </button>
                         </div>
                       ) : (
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 self-start sm:self-auto ${s.status === 'aprobada' ? 'bg-[#FBF5E6] text-[#0F1F3D]' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
-                          {s.status === 'aprobada' ? 'Aprobada' : 'Rechazada'}
-                        </span>
+                        <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${s.status === 'aprobada' ? 'bg-[#FBF5E6] text-[#0F1F3D]' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
+                            {s.status === 'aprobada' ? 'Aprobada' : 'Rechazada'}
+                          </span>
+                          {s.status === 'aprobada' && inviteEstado[s.id] && (
+                            inviteEstado[s.id].estado === 'enviando' ? (
+                              <span className="text-[10px] text-[#8EA0BC]">Enviando invitación…</span>
+                            ) : inviteEstado[s.id].estado === 'ok' ? (
+                              <span className="text-[10px] text-[#0F1F3D]">✓ Invitación enviada</span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-[#DC2626]">{inviteEstado[s.id].mensaje}</span>
+                                {inviteEstado[s.id].mensaje !== 'Ya existe una cuenta con este correo.' && (
+                                  <button
+                                    onClick={() => enviarInvitacion(s.id, s.email, s.nombre)}
+                                    className="text-[10px] font-semibold text-[#C9A84C] hover:text-[#0F1F3D] underline">
+                                    Reintentar
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          )}
+                        </div>
                       )}
                     </div>
                   )
