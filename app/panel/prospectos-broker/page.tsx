@@ -27,6 +27,8 @@ interface Prospecto {
   fecha_prospectado: string
   fecha_contacto: string | null
   notas: string | null
+  email: string | null
+  telefono: string | null
 }
 
 const FUENTE_LABEL: Record<Fuente, string> = {
@@ -83,6 +85,8 @@ export default function ProspectosBrokerPage() {
   const [alta, setAlta] = useState(ALTA_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorAlta, setErrorAlta] = useState('')
+  const [importando, setImportando] = useState(false)
+  const [resultadoImport, setResultadoImport] = useState<{ tipo: 'ok' | 'error'; mensaje: string } | null>(null)
 
   const cargar = async () => {
     const { data } = await supabase
@@ -148,6 +152,28 @@ export default function ProspectosBrokerPage() {
     await supabase.from('prospectos_broker').update({ notas }).eq('id', id)
   }
 
+  const importarAmpi = async () => {
+    setImportando(true)
+    setResultadoImport(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/importar-ampi', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Error al importar')
+      setResultadoImport({
+        tipo: 'ok',
+        mensaje: `${body.nuevos} prospecto(s) nuevo(s) agregado(s) (${body.duplicados} ya existían de importaciones anteriores, de ${body.total} socios en el directorio).`,
+      })
+      await cargar()
+    } catch (e: any) {
+      setResultadoImport({ tipo: 'error', mensaje: e.message })
+    }
+    setImportando(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
@@ -185,6 +211,23 @@ export default function ProspectosBrokerPage() {
               <b className="text-[#3d3110]">Sin contacto real todavía:</b> este módulo es solo la cola de revisión y el alta manual. Ningún prospecto debe recibir contacto (ni manual ni automatizado) hasta que exista el aviso de privacidad LFPDPPP correspondiente — es un bloqueante explícito del handoff, no solo de la automatización.
             </p>
           </div>
+
+          {/* Ingesta AMPI */}
+          <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+            <div>
+              <p className="text-[13px] font-bold text-[#111827]">Directorio de socios AMPI Monterrey</p>
+              <p className="text-[12px] text-[#8EA0BC] mt-0.5">Trae los socios públicos del directorio y los agrega a la cola como nuevos (se salta los que ya se importaron antes). No contacta a nadie.</p>
+            </div>
+            <button onClick={importarAmpi} disabled={importando}
+              className="shrink-0 px-5 py-2.5 rounded-xl bg-[#0F1F3D] text-white text-[13px] font-semibold hover:bg-[#111827] transition-colors disabled:opacity-60 whitespace-nowrap">
+              {importando ? 'Importando…' : 'Importar desde AMPI'}
+            </button>
+          </div>
+          {resultadoImport && (
+            <div className={`rounded-xl px-4 py-3 text-[12.5px] ${resultadoImport.tipo === 'ok' ? 'bg-[#EEF2FF] text-[#3730A3]' : 'bg-[#FEE2E2] text-[#991B1B]'}`}>
+              {resultadoImport.mensaje}
+            </div>
+          )}
 
           {/* Alta manual */}
           <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6">
@@ -244,15 +287,16 @@ export default function ProspectosBrokerPage() {
             ) : (
               <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
                 <div className="overflow-x-auto">
-                  <div className="min-w-[820px]">
-                    <div className="grid grid-cols-7 gap-2 px-4 md:px-6 py-3 border-b border-[#EDF1F7] bg-[#FAFBFA]">
-                      {['Nombre', 'Fuente', 'Zona', 'Score', 'Estado', 'Notas', 'Acción'].map(h => (
+                  <div className="min-w-[940px]">
+                    <div className="grid grid-cols-8 gap-2 px-4 md:px-6 py-3 border-b border-[#EDF1F7] bg-[#FAFBFA]">
+                      {['Nombre', 'Contacto', 'Fuente', 'Zona', 'Score', 'Estado', 'Notas', 'Acción'].map(h => (
                         <p key={h} className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-wide">{h}</p>
                       ))}
                     </div>
                     {visibles.map((p, i) => (
-                      <div key={p.id} className={`grid grid-cols-7 gap-2 items-center px-4 md:px-6 py-3 ${i !== visibles.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
+                      <div key={p.id} className={`grid grid-cols-8 gap-2 items-center px-4 md:px-6 py-3 ${i !== visibles.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
                         <p className="text-[13px] font-semibold text-[#111827] truncate">{p.nombre}</p>
+                        <p className="text-[12px] text-[#4B5E7A] truncate">{p.email || p.telefono || '—'}</p>
                         <p className="text-[12px] text-[#4B5E7A]">{FUENTE_LABEL[p.fuente]}</p>
                         <p className="text-[12px] text-[#4B5E7A] truncate">{p.zona || '—'}</p>
                         <p className="text-[13px] font-bold text-[#111827]">{p.score_filtrado ?? '—'}</p>
