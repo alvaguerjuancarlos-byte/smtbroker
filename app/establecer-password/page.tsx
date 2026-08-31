@@ -1,16 +1,26 @@
 'use client'
 
-// Página de destino del link de invitación (ver app/api/invitar-broker/route.ts, redirectTo).
-// Supabase ya deja la sesión activa al abrir el link de invite — aquí solo se pide la
-// contraseña definitiva. Mismo lenguaje visual que /login.
+// Página de destino de los links de invitación y de reset de password (ver
+// app/api/invitar-broker/route.ts y lib/emailTemplates — ambas plantillas apuntan aquí con
+// ?token_hash=...&type=invite|recovery en vez del link de auto-verificación de Supabase).
+//
+// Por qué NO se verifica el token_hash automáticamente al cargar: Gmail (y otros clientes de
+// correo/escáneres de seguridad) visitan los links dentro de un correo apenas llega, para
+// revisarlos por phishing. Si esta página llamara a verifyOtp() en un useEffect, ese escaneo
+// automático consumiría el token de un solo uso antes de que la persona le diera clic — y el
+// link real le fallaría con "invalid or expired". Por eso se exige un clic manual en un botón:
+// un escáner automatizado carga la página pero no hace clic en botones.
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+type Estado = 'revisando' | 'porConfirmar' | 'confirmando' | 'listo' | 'invalido'
+
 export default function EstablecerPasswordPage() {
   const router = useRouter()
-  const [checandoSesion, setCheckandoSesion] = useState(true)
-  const [tieneSesion, setTieneSesion] = useState(false)
+  const [estado, setEstado] = useState<Estado>('revisando')
+  const [tokenHash, setTokenHash] = useState('')
+  const [tipo, setTipo] = useState<'invite' | 'recovery'>('recovery')
   const [password, setPassword] = useState('')
   const [confirmar, setConfirmar] = useState('')
   const [error, setError] = useState('')
@@ -18,12 +28,37 @@ export default function EstablecerPasswordPage() {
 
   useEffect(() => {
     const check = async () => {
+      // Caso link viejo (#access_token=... de un ConfirmationURL de Supabase, ya procesado
+      // por supabase-js al cargar) — sigue soportado para no romper invitaciones ya enviadas.
       const { data: { session } } = await supabase.auth.getSession()
-      setTieneSesion(!!session)
-      setCheckandoSesion(false)
+      if (session) { setEstado('listo'); return }
+
+      const params = new URLSearchParams(window.location.search)
+      const th = params.get('token_hash')
+      const ty = params.get('type')
+      if (th && (ty === 'invite' || ty === 'recovery')) {
+        setTokenHash(th)
+        setTipo(ty)
+        setEstado('porConfirmar')
+        return
+      }
+
+      setEstado('invalido')
     }
     check()
   }, [])
+
+  const handleConfirmar = async () => {
+    setEstado('confirmando')
+    setError('')
+    const { error: err } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: tipo })
+    if (err) {
+      setError(err.message)
+      setEstado('invalido')
+      return
+    }
+    setEstado('listo')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,10 +75,10 @@ export default function EstablecerPasswordPage() {
     router.push('/dashboard')
   }
 
-  if (checandoSesion) {
+  if (estado === 'revisando') {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <p className="text-[#8EA0BC] text-[14px]">Verificando invitación…</p>
+        <p className="text-[#8EA0BC] text-[14px]">Revisando enlace…</p>
       </div>
     )
   }
@@ -64,17 +99,35 @@ export default function EstablecerPasswordPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-[#DDE3EC] shadow-sm p-8">
-          {!tieneSesion ? (
+          {estado === 'invalido' && (
             <>
               <h2 className="text-[18px] font-bold text-[#111827] mb-1">Enlace inválido o expirado</h2>
               <p className="text-[13px] text-[#8EA0BC] mb-6">
-                Este enlace de invitación ya no es válido (las invitaciones expiran después de un tiempo). Pide al Broker Maestro que te envíe una nueva desde el panel.
+                Este enlace ya no es válido (los enlaces expiran después de un tiempo o de un solo uso). Pide que te envíen uno nuevo.
               </p>
               <a href="/login" className="block text-center w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors">
                 Ir a iniciar sesión
               </a>
             </>
-          ) : (
+          )}
+
+          {(estado === 'porConfirmar' || estado === 'confirmando') && (
+            <>
+              <h2 className="text-[18px] font-bold text-[#111827] mb-1">Confirma tu enlace</h2>
+              <p className="text-[13px] text-[#8EA0BC] mb-6">
+                Por seguridad, confirma manualmente para continuar (esto evita que un escáner de correo lo abra por ti).
+              </p>
+              <button
+                onClick={handleConfirmar}
+                disabled={estado === 'confirmando'}
+                className="w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {estado === 'confirmando' ? 'Confirmando…' : 'Confirmar y continuar'}
+              </button>
+            </>
+          )}
+
+          {estado === 'listo' && (
             <>
               <h2 className="text-[18px] font-bold text-[#111827] mb-1">Crea tu contraseña</h2>
               <p className="text-[13px] text-[#8EA0BC] mb-6">Último paso para activar tu cuenta.</p>
