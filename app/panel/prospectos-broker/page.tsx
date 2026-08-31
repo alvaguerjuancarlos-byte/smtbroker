@@ -152,20 +152,55 @@ export default function ProspectosBrokerPage() {
     await supabase.from('prospectos_broker').update({ notas }).eq('id', id)
   }
 
+  // La ingesta corre en el navegador del Broker Maestro, no en el backend de Vercel: el
+  // directorio de AMPI (vía backampi.inmoapp.mx) tiene CORS abierto (Access-Control-Allow-Origin:
+  // *) pero su Cloudflare rechaza con 403 las peticiones que salen desde las IPs de las funciones
+  // serverless de Vercel (probable bloqueo genérico a tráfico de datacenter) — desde un navegador
+  // normal sí responde 200. Por eso se llama directo desde aquí en vez de por una API route.
   const importarAmpi = async () => {
     setImportando(true)
     setResultadoImport(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/importar-ampi', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error al importar')
+      const res = await fetch('https://backampi.inmoapp.mx/api/landing/partners/ampimty.com')
+      if (!res.ok) throw new Error(`Respuesta ${res.status} del directorio de AMPI`)
+      const socios: { name: string; url: string | null; email: string | null; phone: string | null; province: string | null }[] = await res.json()
+      if (!Array.isArray(socios)) throw new Error('Formato inesperado del directorio de AMPI')
+
+      const { data: existentes } = await supabase
+        .from('prospectos_broker')
+        .select('email')
+        .eq('fuente', 'ampi')
+      const emailsExistentes = new Set((existentes || []).map(r => r.email).filter(Boolean))
+
+      let sinEmail = 0
+      const nuevosRegistros = socios
+        .filter(s => {
+          if (!s.email) { sinEmail++; return false }
+          return !emailsExistentes.has(s.email)
+        })
+        .map(s => {
+          const zona = s.province || null
+          const { score } = calcularScore({ zona: zona || '', volumenListadosAparente: null, afiliacionPrevia: false })
+          return {
+            nombre: s.name,
+            fuente: 'ampi' as const,
+            fuente_ref: s.url || s.email,
+            email: s.email,
+            telefono: s.phone || null,
+            zona,
+            volumen_listados_aparente: null,
+            score_filtrado: score,
+          }
+        })
+
+      if (nuevosRegistros.length > 0) {
+        const { error: insertError } = await supabase.from('prospectos_broker').insert(nuevosRegistros)
+        if (insertError) throw new Error(insertError.message)
+      }
+
       setResultadoImport({
         tipo: 'ok',
-        mensaje: `${body.nuevos} prospecto(s) nuevo(s) agregado(s) (${body.duplicados} ya existían de importaciones anteriores, de ${body.total} socios en el directorio).`,
+        mensaje: `${nuevosRegistros.length} prospecto(s) nuevo(s) agregado(s) (${emailsExistentes.size} ya existían de importaciones anteriores, de ${socios.length} socios en el directorio).`,
       })
       await cargar()
     } catch (e: any) {
