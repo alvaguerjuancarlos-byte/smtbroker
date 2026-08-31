@@ -13,6 +13,7 @@ import { calcularScore, UMBRAL_COLA } from '@/lib/prospectosBrokerScore'
 
 type Fuente = 'ampi' | 'colegio_corredores' | 'portal_listado' | 'linkedin_manual'
 type Estado = 'nuevo' | 'en_revision' | 'contactado' | 'interesado' | 'descartado' | 'convertido'
+type TieneLicencia = 'si' | 'no' | 'no_se'
 
 interface Prospecto {
   id: string
@@ -87,6 +88,12 @@ export default function ProspectosBrokerPage() {
   const [errorAlta, setErrorAlta] = useState('')
   const [importando, setImportando] = useState(false)
   const [resultadoImport, setResultadoImport] = useState<{ tipo: 'ok' | 'error'; mensaje: string } | null>(null)
+  // Verificación de cédula/licencia al convertir — versión mínima manual (ver Documento Maestro
+  // V5, Sección 7: el mecanismo de verificación es una decisión de producto sin resolver, esto
+  // NO es un gate automatizado ni bloquea la conversión, es solo un registro de la respuesta.
+  const [convirtiendo, setConvirtiendo] = useState<Prospecto | null>(null)
+  const [licenciaForm, setLicenciaForm] = useState<{ tieneLicencia: TieneLicencia; notas: string }>({ tieneLicencia: 'no_se', notas: '' })
+  const [guardandoConversion, setGuardandoConversion] = useState(false)
 
   const cargar = async () => {
     const { data } = await supabase
@@ -140,12 +147,32 @@ export default function ProspectosBrokerPage() {
   }
 
   const cambiarEstado = async (p: Prospecto, nuevoEstado: Estado) => {
+    // "convertido" pasa primero por la pregunta de licencia — ver abrirConversion/confirmarConversion.
+    if (nuevoEstado === 'convertido') { setConvirtiendo(p); setLicenciaForm({ tieneLicencia: 'no_se', notas: '' }); return }
+
     const patch: Partial<Prospecto> = { estado: nuevoEstado }
     if (nuevoEstado === 'contactado' && !p.fecha_contacto) patch.fecha_contacto = new Date().toISOString()
     await supabase.from('prospectos_broker').update(patch).eq('id', p.id)
     setProspectos(prev => prev.map(x => x.id === p.id ? { ...x, ...patch } : x))
-    // Nota: al llegar a "convertido" NO se crea/enlaza verificaciones_broker — esa tabla no
-    // existe todavía en este proyecto (ver plan). Pendiente cuando se confirme su esquema real.
+  }
+
+  const confirmarConversion = async () => {
+    if (!convirtiendo) return
+    setGuardandoConversion(true)
+
+    await supabase.from('verificaciones_broker').insert({
+      prospecto_id: convirtiendo.id,
+      tiene_licencia: licenciaForm.tieneLicencia === 'no_se' ? null : licenciaForm.tieneLicencia === 'si',
+      notas: licenciaForm.notas || null,
+    })
+
+    // No tener licencia no bloquea la conversión — es solo informativo para dar seguimiento
+    // después (ver Documento Maestro V5, Sección 7: el gate real todavía no está diseñado).
+    await supabase.from('prospectos_broker').update({ estado: 'convertido' }).eq('id', convirtiendo.id)
+    setProspectos(prev => prev.map(x => x.id === convirtiendo.id ? { ...x, estado: 'convertido' as Estado } : x))
+
+    setGuardandoConversion(false)
+    setConvirtiendo(null)
   }
 
   const guardarNotas = async (id: string, notas: string) => {
@@ -362,6 +389,41 @@ export default function ProspectosBrokerPage() {
 
         </div>
       </main>
+
+      {convirtiendo && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
+          <div className="bg-white rounded-2xl border border-[#DDE3EC] shadow-xl p-6 w-full max-w-[440px]">
+            <p className="text-[11px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em] mb-1">Marcar como convertido</p>
+            <h3 className="text-[16px] font-bold text-[#111827] mb-4">{convirtiendo.nombre}</h3>
+
+            <p className="text-[12.5px] text-[#4B5E7A] mb-2">¿Tiene cédula/licencia vigente? <span className="text-[#8EA0BC]">(no bloquea la conversión, solo se registra para dar seguimiento)</span></p>
+            <div className="flex gap-2 mb-4">
+              {(['si', 'no', 'no_se'] as TieneLicencia[]).map(op => (
+                <button key={op} type="button" onClick={() => setLicenciaForm(f => ({ ...f, tieneLicencia: op }))}
+                  className={`flex-1 text-[12px] font-semibold py-2 rounded-lg border transition-colors ${licenciaForm.tieneLicencia === op ? 'bg-[#C9A84C] text-white border-[#C9A84C]' : 'border-[#DDE3EC] text-[#4B5E7A] hover:border-[#C9A84C]'}`}>
+                  {op === 'si' ? 'Sí' : op === 'no' ? 'No' : 'No sé'}
+                </button>
+              ))}
+            </div>
+
+            <Field label="Notas (opcional)">
+              <textarea value={licenciaForm.notas} onChange={e => setLicenciaForm(f => ({ ...f, notas: e.target.value }))}
+                placeholder="Ej. número de cédula, vigencia, cómo se verificó…" rows={3} className={inputCls()} />
+            </Field>
+
+            <div className="flex gap-2 mt-5">
+              <button type="button" onClick={() => setConvirtiendo(null)} disabled={guardandoConversion}
+                className="flex-1 py-2.5 rounded-xl border border-[#DDE3EC] text-[#4B5E7A] text-[13px] font-semibold hover:border-[#BFC9D8] transition-colors disabled:opacity-60">
+                Cancelar
+              </button>
+              <button type="button" onClick={confirmarConversion} disabled={guardandoConversion}
+                className="flex-1 py-2.5 rounded-xl bg-[#111827] text-white text-[13px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60">
+                {guardandoConversion ? 'Guardando…' : 'Confirmar conversión'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
