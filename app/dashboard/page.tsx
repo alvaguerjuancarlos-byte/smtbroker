@@ -39,9 +39,16 @@ export default function DashboardPage() {
 
       const { data: profile } = await supabase
         .from('usuarios')
-        .select('nombre')
+        .select('nombre, rol')
         .eq('id', user.id)
         .single()
+
+      // El inversionista/comprador tiene su propio portal — este dashboard está armado para
+      // el propietario ("mis activos"), no le sirve de nada a alguien que no posee ningún activo.
+      if ((profile as { rol: string | null } | null)?.rol === 'inversionista') {
+        router.push('/portal-inversion')
+        return
+      }
 
       setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Usuario')
 

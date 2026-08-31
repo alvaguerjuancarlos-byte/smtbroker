@@ -156,17 +156,17 @@ export default function PanelPage() {
     if (status !== 'aprobada') return
     const solicitud = solicitudes.find(s => s.id === id)
     if (!solicitud) return
-    await enviarInvitacion(id, solicitud.email, solicitud.nombre)
+    await enviarInvitacion(id, solicitud.email, solicitud.nombre, solicitud.rol)
   }
 
-  const enviarInvitacion = async (id: string, email: string, nombre: string) => {
+  const enviarInvitacion = async (id: string, email: string, nombre: string, rol: string) => {
     setInviteEstado(prev => ({ ...prev, [id]: { estado: 'enviando' } }))
     const { data: { session } } = await supabase.auth.getSession()
     try {
       const res = await fetch('/api/invitar-broker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ email, nombre }),
+        body: JSON.stringify({ email, nombre, rol }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -305,7 +305,7 @@ export default function PanelPage() {
                                 <span className="text-[10px] text-[#DC2626]">{inviteEstado[s.id].mensaje}</span>
                                 {inviteEstado[s.id].mensaje !== 'Ya existe una cuenta con este correo.' && (
                                   <button
-                                    onClick={() => enviarInvitacion(s.id, s.email, s.nombre)}
+                                    onClick={() => enviarInvitacion(s.id, s.email, s.nombre, s.rol)}
                                     className="text-[10px] font-semibold text-[#C9A84C] hover:text-[#0F1F3D] underline">
                                     Reintentar
                                   </button>

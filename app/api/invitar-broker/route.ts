@@ -24,13 +24,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
-  const { email, nombre } = await req.json()
+  const { email, nombre, rol } = await req.json()
   if (!email) return NextResponse.json({ error: 'Falta el correo' }, { status: 400 })
 
   const redirectTo = `${req.nextUrl.origin}/establecer-password`
 
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    data: { nombre: nombre || null },
+    data: { nombre: nombre || null, rol: rol || null },
     redirectTo,
   })
 
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   // admin (bypassa RLS del lado servidor) para que el nombre ya esté listo cuando la persona
   // entre por primera vez.
   if (data?.user?.id) {
-    await supabaseAdmin.from('usuarios').upsert({ id: data.user.id, nombre: nombre || null })
+    await supabaseAdmin.from('usuarios').upsert({ id: data.user.id, nombre: nombre || null, rol: rol || null })
   }
 
   return NextResponse.json({ ok: true })
