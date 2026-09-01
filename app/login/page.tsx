@@ -40,7 +40,7 @@ export default function LoginPage() {
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.09) 1px, transparent 1px)',
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
