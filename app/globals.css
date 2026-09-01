@@ -17,6 +17,23 @@
   --color-smt-gold: #C9A84C;
   --color-smt-gold-dark: #A8893A;
   --color-smt-gold-muted: #FBF5E6;
+
+  /* Rediseño navy/dorado (piloto: /login) — paleta y tipografía separadas de --color-smt-*
+     para no alterar ninguna pantalla existente mientras se decide si se extiende. */
+  --font-fraunces: var(--font-fraunces);
+  --font-plex-sans: var(--font-plex-sans);
+  --font-plex-mono: var(--font-plex-mono);
+  --color-navy-950: #070f1c;
+  --color-navy-900: #0b1d3a;
+  --color-navy-800: #13294a;
+  --color-navy-700: #1c3a63;
+  --color-gold-500: #c9a227;
+  --color-gold-400: #ddc06a;
+  --color-gold-100: #f1e6c2;
+  --color-paper: #f4f0e6;
+  --color-paper-dim: #cfc9b8;
+  --color-slate: #8b96ab;
+  --color-slate-dim: #5f6a80;
 }
 
 body {
