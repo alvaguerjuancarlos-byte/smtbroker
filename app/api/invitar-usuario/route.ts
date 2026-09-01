@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
-// Envía la invitación real por correo cuando el Broker Maestro aprueba una solicitud en /panel
-// — antes solo se cambiaba el status, sin crear cuenta ni avisar a nadie (gap ya documentado en
-// HANDOFF.md desde mayo). Requiere SUPABASE_SERVICE_ROLE_KEY (ver plan) — el Admin API de
-// Supabase (inviteUserByEmail) no funciona con el anon key.
+// Envía la invitación real por correo — se usa para los cuatro roles (propietario, broker,
+// inversionista, y brokers que llegan por prospección en vez de /bienvenida), no solo brokers;
+// de ahí el nombre de la ruta (antes era /api/invitar-broker). Requiere SUPABASE_SERVICE_ROLE_KEY
+// — el Admin API de Supabase (inviteUserByEmail) no funciona con el anon key.
 export async function POST(req: NextRequest) {
   let supabaseAdmin
   try {

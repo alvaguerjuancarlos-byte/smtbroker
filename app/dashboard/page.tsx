@@ -43,10 +43,12 @@ export default function DashboardPage() {
         .eq('id', user.id)
         .single()
 
-      // El inversionista/comprador tiene su propio portal — este dashboard está armado para
-      // el propietario ("mis activos"), no le sirve de nada a alguien que no posee ningún activo.
-      if ((profile as { rol: string | null } | null)?.rol === 'inversionista') {
-        router.push('/portal-inversion')
+      // Inversionista y broker tienen su propio portal — este dashboard está armado para el
+      // propietario ("mis activos"), no le sirve de nada a alguien que no posee ningún activo.
+      const HOME_POR_ROL: Record<string, string> = { inversionista: '/portal-inversion', broker: '/portal-broker' }
+      const rolUsuario = (profile as { rol: string | null } | null)?.rol
+      if (rolUsuario && HOME_POR_ROL[rolUsuario]) {
+        router.push(HOME_POR_ROL[rolUsuario])
         return
       }
 
@@ -77,7 +79,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} />
+      <Topbar userName={userName} rol="propietario" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">

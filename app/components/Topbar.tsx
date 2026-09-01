@@ -4,7 +4,23 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function Topbar({ userName }: { userName?: string }) {
+type Rol = 'propietario' | 'broker' | 'inversionista' | 'broker_maestro'
+
+const HOME_POR_ROL: Record<Rol, string> = {
+  propietario: '/dashboard',
+  broker: '/portal-broker',
+  inversionista: '/portal-inversion',
+  broker_maestro: '/panel',
+}
+
+// Link secundario propio de cada rol — lo que tiene sentido que haga desde el Topbar además de
+// volver a su home. Solo broker_maestro y propietario tienen una acción secundaria hoy.
+const LINK_SECUNDARIO: Partial<Record<Rol, { href: string; label: string }>> = {
+  broker_maestro: { href: '/panel/prospectos-broker', label: 'Prospección' },
+  propietario: { href: '/activo/nuevo', label: 'Registrar activo' },
+}
+
+export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol }) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -13,6 +29,8 @@ export default function Topbar({ userName }: { userName?: string }) {
   }
 
   const initial = userName ? userName.charAt(0).toUpperCase() : '?'
+  const home = rol ? HOME_POR_ROL[rol] : '/dashboard'
+  const secundario = rol ? LINK_SECUNDARIO[rol] : undefined
 
   return (
     <header className="bg-white border-b border-[#DDE3EC] px-4 md:px-6 py-3 flex items-center gap-2 md:gap-3 sticky top-0 z-20">
@@ -22,11 +40,16 @@ export default function Topbar({ userName }: { userName?: string }) {
           <path d="M9 2V16M2 6L16 12M16 6L2 12" stroke="white" strokeWidth="1" strokeOpacity="0.5"/>
         </svg>
       </div>
-      <Link href="/dashboard" className="text-[15px] font-bold text-[#111827] tracking-tight hover:text-[#C9A84C] transition-colors shrink-0">
+      <Link href={home} className="text-[15px] font-bold text-[#111827] tracking-tight hover:text-[#C9A84C] transition-colors shrink-0">
         SMTBROKER
       </Link>
       <span className="hidden md:inline text-[#DDE3EC] text-sm">|</span>
       <span className="hidden md:inline text-[12px] text-[#8EA0BC]">Plataforma IA de ventas inmobiliarias</span>
+      {secundario && (
+        <Link href={secundario.href} className="hidden sm:inline text-[12.5px] font-semibold text-[#4B5E7A] hover:text-[#C9A84C] transition-colors ml-2">
+          {secundario.label}
+        </Link>
+      )}
 
       <div className="ml-auto flex items-center gap-2 md:gap-3">
         {userName && (

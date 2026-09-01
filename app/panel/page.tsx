@@ -121,7 +121,7 @@ export default function PanelPage() {
   const [filtroFase, setFiltroFase] = useState<string>('todos')
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [copiedLink, setCopiedLink]   = useState(false)
-  // Estado de la invitación por correo disparada al aprobar (ver app/api/invitar-broker) —
+  // Estado de la invitación por correo disparada al aprobar (ver app/api/invitar-usuario) —
   // separado del status de la solicitud: si la invitación falla, la solicitud sigue "aprobada",
   // pero se muestra la alerta para que el Broker Maestro sepa que hay que reintentar.
   const [inviteEstado, setInviteEstado] = useState<Record<string, { estado: 'enviando' | 'ok' | 'error'; mensaje?: string }>>({})
@@ -163,7 +163,7 @@ export default function PanelPage() {
     setInviteEstado(prev => ({ ...prev, [id]: { estado: 'enviando' } }))
     const { data: { session } } = await supabase.auth.getSession()
     try {
-      const res = await fetch('/api/invitar-broker', {
+      const res = await fetch('/api/invitar-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ email, nombre, rol }),
@@ -207,7 +207,7 @@ export default function PanelPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} />
+      <Topbar userName={userName} rol="broker_maestro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[1100px] mx-auto flex flex-col gap-6 md:gap-8">

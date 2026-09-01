@@ -75,6 +75,8 @@ const ALTA_INICIAL = {
   fuente_ref: '',
   zona: '',
   volumen_listados_aparente: '',
+  email: '',
+  telefono: '',
 }
 
 export default function ProspectosBrokerPage() {
@@ -94,6 +96,9 @@ export default function ProspectosBrokerPage() {
   const [convirtiendo, setConvirtiendo] = useState<Prospecto | null>(null)
   const [licenciaForm, setLicenciaForm] = useState<{ tieneLicencia: TieneLicencia; notas: string }>({ tieneLicencia: 'no_se', notas: '' })
   const [guardandoConversion, setGuardandoConversion] = useState(false)
+  // Estado de la invitación disparada desde "convertido" — mismo patrón que /panel
+  // (ver enviarInvitacion en app/panel/page.tsx).
+  const [inviteEstado, setInviteEstado] = useState<Record<string, { estado: 'enviando' | 'ok' | 'error'; mensaje?: string }>>({})
 
   const cargar = async () => {
     const { data } = await supabase
@@ -133,6 +138,8 @@ export default function ProspectosBrokerPage() {
       zona: alta.zona || null,
       volumen_listados_aparente: volumen,
       score_filtrado: score,
+      email: alta.email || null,
+      telefono: alta.telefono || null,
     })
 
     if (err) {
@@ -177,6 +184,30 @@ export default function ProspectosBrokerPage() {
 
   const guardarNotas = async (id: string, notas: string) => {
     await supabase.from('prospectos_broker').update({ notas }).eq('id', id)
+  }
+
+  // Cierra el hueco del flujo: antes "convertido" no creaba cuenta ni mandaba nada — quedaba
+  // marcado en la base sin que el broker se enterara. Mismo endpoint que usa /panel para los
+  // otros roles (ver app/api/invitar-usuario).
+  const invitarProspecto = async (p: Prospecto) => {
+    if (!p.email) return
+    setInviteEstado(prev => ({ ...prev, [p.id]: { estado: 'enviando' } }))
+    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const res = await fetch('/api/invitar-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ email: p.email, nombre: p.nombre, rol: 'broker' }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setInviteEstado(prev => ({ ...prev, [p.id]: { estado: 'error', mensaje: json.error || 'Error al enviar la invitación' } }))
+        return
+      }
+      setInviteEstado(prev => ({ ...prev, [p.id]: { estado: 'ok' } }))
+    } catch {
+      setInviteEstado(prev => ({ ...prev, [p.id]: { estado: 'error', mensaje: 'Error de red al enviar la invitación' } }))
+    }
   }
 
   // La ingesta corre en el navegador del Broker Maestro, no en el backend de Vercel: el
@@ -250,7 +281,7 @@ export default function ProspectosBrokerPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} />
+      <Topbar userName={userName} rol="broker_maestro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[1100px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -270,7 +301,7 @@ export default function ProspectosBrokerPage() {
 
           <div className="bg-[#FBF5E6] border-l-4 border-[#C9A84C] rounded-r-xl px-4 py-3">
             <p className="text-[12.5px] text-[#5a4a1a]">
-              <b className="text-[#3d3110]">Sin contacto real todavía:</b> este módulo es solo la cola de revisión y el alta manual. Ningún prospecto debe recibir contacto (ni manual ni automatizado) hasta que exista el aviso de privacidad LFPDPPP correspondiente — es un bloqueante explícito del handoff, no solo de la automatización.
+              <b className="text-[#3d3110]">Cuidado con el botón "Invitar a esta cuenta":</b> mandarle un correo real a alguien tomado de una fuente como AMPI SÍ es contacto real a un tercero — el aviso de privacidad LFPDPPP sigue sin redactarse. Úsalo solo si ya tienes una base legal para ese contacto (relación previa, consentimiento, etc.), no como parte del flujo estándar de prospección hasta que el aviso exista.
             </p>
           </div>
 
@@ -318,6 +349,16 @@ export default function ProspectosBrokerPage() {
                 <Field label="Volumen de listados aparente">
                   <input type="number" min="0" value={alta.volumen_listados_aparente} onChange={e => setAlta(a => ({ ...a, volumen_listados_aparente: e.target.value }))}
                     placeholder="0" className={inputCls()} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Correo (necesario para poder invitarlo más adelante)">
+                  <input type="email" value={alta.email} onChange={e => setAlta(a => ({ ...a, email: e.target.value }))}
+                    placeholder="correo@ejemplo.com" className={inputCls()} />
+                </Field>
+                <Field label="Teléfono">
+                  <input type="tel" value={alta.telefono} onChange={e => setAlta(a => ({ ...a, telefono: e.target.value }))}
+                    placeholder="+52 81 0000 0000" className={inputCls()} />
                 </Field>
               </div>
               {errorAlta && <p className="text-[12px] text-[#DC2626]">{errorAlta}</p>}
@@ -377,7 +418,26 @@ export default function ProspectosBrokerPage() {
                               {ESTADO_LABEL[next]}
                             </button>
                           ))}
-                          {TRANSICIONES[p.estado].length === 0 && <span className="text-[11px] text-[#8EA0BC]">—</span>}
+                          {p.estado === 'convertido' && (
+                            inviteEstado[p.id]?.estado === 'ok' ? (
+                              <span className="text-[10px] text-[#0F1F3D]">✓ Invitado</span>
+                            ) : inviteEstado[p.id]?.estado === 'enviando' ? (
+                              <span className="text-[10px] text-[#8EA0BC]">Enviando…</span>
+                            ) : p.email ? (
+                              <div className="flex flex-col gap-1">
+                                <button onClick={() => invitarProspecto(p)}
+                                  className="text-[10px] font-semibold px-2 py-1 rounded-md border border-[#C9A84C] text-[#0F1F3D] hover:bg-[#FBF5E6] transition-colors">
+                                  Invitar a esta cuenta
+                                </button>
+                                {inviteEstado[p.id]?.estado === 'error' && (
+                                  <span className="text-[10px] text-[#DC2626]">{inviteEstado[p.id].mensaje}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-[#8EA0BC]">Sin correo — no se puede invitar</span>
+                            )
+                          )}
+                          {p.estado !== 'convertido' && TRANSICIONES[p.estado].length === 0 && <span className="text-[11px] text-[#8EA0BC]">—</span>}
                         </div>
                       </div>
                     ))}

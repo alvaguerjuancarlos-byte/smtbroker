@@ -121,7 +121,7 @@ export default function PortalInversionPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} />
+      <Topbar userName={userName} rol="inversionista" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">

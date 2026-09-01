@@ -1,7 +1,7 @@
 'use client'
 
 // Página de destino de los links de invitación y de reset de password (ver
-// app/api/invitar-broker/route.ts y lib/emailTemplates — ambas plantillas apuntan aquí con
+// app/api/invitar-usuario/route.ts y las plantillas de Supabase — ambas apuntan aquí con
 // ?token_hash=...&type=invite|recovery en vez del link de auto-verificación de Supabase).
 //
 // Por qué NO se verifica el token_hash automáticamente al cargar: Gmail (y otros clientes de
