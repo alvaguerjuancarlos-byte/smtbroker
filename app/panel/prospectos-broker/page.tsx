@@ -281,7 +281,16 @@ export default function ProspectosBrokerPage() {
     : prospectos.filter(p => p.estado === 'nuevo' || (p.score_filtrado ?? 0) >= UMBRAL_COLA)
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col">
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+      <div className="relative flex flex-col flex-1">
       <Topbar userName={userName} rol="broker_maestro" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
@@ -450,6 +459,7 @@ export default function ProspectosBrokerPage() {
 
         </div>
       </main>
+      </div>
 
       {convirtiendo && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50">

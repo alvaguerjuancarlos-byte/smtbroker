@@ -208,7 +208,16 @@ export default function PanelPage() {
   const enProceso    = ACTIVOS_ECO.filter(a => a.fase !== 'cerrado').length
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col">
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+      <div className="relative flex flex-col flex-1">
       <Topbar userName={userName} rol="broker_maestro" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
@@ -491,6 +500,7 @@ export default function PanelPage() {
 
         </div>
       </main>
+      </div>
     </div>
   )
 }
