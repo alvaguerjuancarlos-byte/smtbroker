@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -55,19 +55,21 @@ const INVERSIONISTAS = [
 const formatMXN = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 
+// Chips de estado en tema oscuro: borde + texto en el tono semántico sobre fondo casi
+// transparente, en vez de bloques pastel sólidos (que no leen bien sobre navy).
 const faseCfg = (fase: string) => {
-  if (fase === 'valoracion') return { label: 'Valoración',  badge: 'bg-[#FEF3C7] text-[#92600A]',  dot: 'bg-[#D97706]' }
-  if (fase === 'marketing')  return { label: 'Marketing',   badge: 'bg-[#EEF2FF] text-[#3730A3]',  dot: 'bg-[#4F46E5]' }
-  if (fase === 'leads')      return { label: 'Leads',       badge: 'bg-[#FBF5E6] text-[#0F1F3D]',  dot: 'bg-[#C9A84C]' }
-  if (fase === 'cerrado')    return { label: 'Cerrado',     badge: 'bg-[#F3F4F6] text-[#374151]',  dot: 'bg-[#6B7280]' }
-  return                            { label: 'Ingresado',   badge: 'bg-[#F3F4F6] text-[#6B7280]',  dot: 'bg-[#D1D5DB]' }
+  if (fase === 'valoracion') return { label: 'Valoración', chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10', dot: 'bg-[#D97706]' }
+  if (fase === 'marketing')  return { label: 'Marketing',  chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10', dot: 'bg-[#7b76ea]' }
+  if (fase === 'leads')      return { label: 'Leads',      chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10',    dot: 'bg-gold-500' }
+  if (fase === 'cerrado')    return { label: 'Cerrado',    chip: 'border-white/15 text-slate bg-white/5',              dot: 'bg-slate' }
+  return                            { label: 'Ingresado',  chip: 'border-white/15 text-slate bg-white/5',              dot: 'bg-slate' }
 }
 
 const actividadCfg = (tipo: string) => {
-  if (tipo === 'lead')      return { color: 'bg-[#FBF5E6]', icon: '#C9A84C' }
-  if (tipo === 'marketing') return { color: 'bg-[#EEF2FF]', icon: '#4F46E5' }
-  if (tipo === 'cierre')    return { color: 'bg-[#111827]', icon: '#4ade80' }
-  return                           { color: 'bg-[#F3F4F6]', icon: '#8EA0BC' }
+  if (tipo === 'lead')      return { color: 'bg-gold-500/10', icon: '#ddc06a' }
+  if (tipo === 'marketing') return { color: 'bg-[#4F46E5]/10', icon: '#a5a1f5' }
+  if (tipo === 'cierre')    return { color: 'bg-white/10', icon: '#6bdb9a' }
+  return                           { color: 'bg-white/5', icon: '#8b96ab' }
 }
 
 // ─── Componentes ──────────────────────────────────────────────────────────────
@@ -75,17 +77,17 @@ const actividadCfg = (tipo: string) => {
 function PipelineBar() {
   const fases = [
     { label: 'Valoración', count: 2, color: '#D97706' },
-    { label: 'Marketing',  count: 2, color: '#4F46E5' },
-    { label: 'Leads',      count: 2, color: '#C9A84C' },
-    { label: 'Cerrado',    count: 2, color: '#6B7280' },
+    { label: 'Marketing',  count: 2, color: '#7b76ea' },
+    { label: 'Leads',      count: 2, color: '#c9a227' },
+    { label: 'Cerrado',    count: 2, color: '#5f6a80' },
   ]
   const total = fases.reduce((a, f) => a + f.count, 0)
 
   return (
-    <div className="bg-white rounded-2xl border border-[#DDE3EC] p-6">
-      <p className="text-[15px] font-bold text-[#111827] mb-1">Pipeline de activos</p>
-      <p className="text-[12px] text-[#8EA0BC] mb-5">{total} activos en el ecosistema</p>
-      <div className="flex h-4 rounded-full overflow-hidden gap-0.5 mb-4">
+    <div className="bg-navy-800 border border-white/10 p-6">
+      <p className="font-fraunces text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
+      <p className="text-[12px] text-slate mb-5">{total} activos en el ecosistema</p>
+      <div className="flex h-3 overflow-hidden gap-0.5 mb-4">
         {fases.map(f => (
           <div key={f.label} style={{ width: `${(f.count / total) * 100}%`, backgroundColor: f.color }} />
         ))}
@@ -93,10 +95,10 @@ function PipelineBar() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {fases.map(f => (
           <div key={f.label} className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: f.color }} />
+            <span className="w-2 h-2 shrink-0" style={{ backgroundColor: f.color }} />
             <div>
-              <p className="text-[13px] font-black text-[#111827]">{f.count}</p>
-              <p className="text-[10px] text-[#8EA0BC]">{f.label}</p>
+              <p className="font-plex-mono text-[13px] font-medium text-paper">{f.count}</p>
+              <p className="text-[10px] text-slate">{f.label}</p>
             </div>
           </div>
         ))}
@@ -108,10 +110,10 @@ function PipelineBar() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const rolLabel = (rol: string) => {
-  if (rol === 'propietario')  return { label: 'Propietario',  badge: 'bg-[#FBF5E6] text-[#0F1F3D]'  }
-  if (rol === 'inversionista') return { label: 'Inversionista', badge: 'bg-[#EEF2FF] text-[#3730A3]'  }
-  if (rol === 'broker')       return { label: 'Broker',        badge: 'bg-[#FEF3C7] text-[#92600A]'  }
-  return                             { label: rol,             badge: 'bg-[#F3F4F6] text-[#6B7280]'  }
+  if (rol === 'propietario')   return { label: 'Propietario',   chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
+  if (rol === 'inversionista') return { label: 'Inversionista', chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
+  if (rol === 'broker')        return { label: 'Broker',        chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
+  return                              { label: rol,             chip: 'border-white/15 text-slate bg-white/5' }
 }
 
 export default function PanelPage() {
@@ -191,8 +193,8 @@ export default function PanelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <p className="text-[#8EA0BC] text-[14px]">Cargando panel…</p>
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
+        <p className="text-slate text-[14px] font-plex-mono">Cargando panel…</p>
       </div>
     )
   }
@@ -206,8 +208,8 @@ export default function PanelPage() {
   const enProceso    = ACTIVOS_ECO.filter(a => a.fase !== 'cerrado').length
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} rol="broker_maestro" />
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col">
+      <Topbar userName={userName} rol="broker_maestro" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[1100px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -215,13 +217,13 @@ export default function PanelPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <span className="text-[11px] font-bold text-[#C9A84C] tracking-[0.14em] uppercase">Broker Maestro</span>
-              <h1 className="text-[22px] md:text-[28px] font-black text-[#111827] mt-0.5">Panel del Ecosistema</h1>
-              <p className="text-[13px] md:text-[14px] text-[#8EA0BC] mt-1">Vista global de activos, brokers, propietarios e inversionistas</p>
+              <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Broker Maestro</span>
+              <h1 className="font-fraunces text-[24px] md:text-[30px] font-medium text-paper mt-1">Panel del Ecosistema</h1>
+              <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Vista global de activos, brokers, propietarios e inversionistas</p>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <button onClick={() => router.push('/panel/prospectos-broker')}
-                className="flex items-center gap-2 text-[12px] md:text-[13px] font-semibold px-3 md:px-4 py-2.5 rounded-xl border border-[#DDE3EC] bg-white hover:border-[#C9A84C] transition-colors text-[#111827]">
+                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] px-3 md:px-4 py-2.5 border border-white/15 hover:border-gold-500 transition-colors text-paper-dim hover:text-gold-400">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.6"/>
                   <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.6"/>
@@ -230,7 +232,7 @@ export default function PanelPage() {
                 Prospección de brokers
               </button>
               <button onClick={compartirEnlace}
-                className="flex items-center gap-2 text-[12px] md:text-[13px] font-semibold px-3 md:px-4 py-2.5 rounded-xl border border-[#DDE3EC] bg-white hover:border-[#C9A84C] transition-colors text-[#111827]">
+                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] px-3 md:px-4 py-2.5 border border-white/15 hover:border-gold-500 transition-colors text-paper-dim hover:text-gold-400">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M8.59 13.51a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                   <path d="M15.41 10.49a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
@@ -238,7 +240,7 @@ export default function PanelPage() {
                 {copiedLink ? '¡Copiado!' : 'Compartir'}
               </button>
               <button onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-2 text-[12px] md:text-[13px] font-semibold text-[#8EA0BC] hover:text-[#111827] border border-[#DDE3EC] px-3 md:px-4 py-2.5 rounded-xl transition-colors bg-white">
+                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] text-slate hover:text-gold-400 border border-white/15 hover:border-gold-500 px-3 md:px-4 py-2.5 transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.6" fill="none"/>
                 </svg>
@@ -252,61 +254,61 @@ export default function PanelPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-[16px] font-bold text-[#111827]">Solicitudes de registro</h2>
+                  <h2 className="font-fraunces text-[17px] font-medium text-paper">Solicitudes de registro</h2>
                   {pendientes.length > 0 && (
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92600A]">
+                    <span className="font-plex-mono text-[10.5px] font-medium px-2 py-0.5 border border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10">
                       {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
-                <span className="text-[12px] text-[#8EA0BC]">{solicitudes.length} en total</span>
+                <span className="text-[12px] text-slate">{solicitudes.length} en total</span>
               </div>
-              <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+              <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {solicitudes.map((s, i) => {
-                  const { label, badge } = rolLabel(s.rol)
+                  const { label, chip } = rolLabel(s.rol)
                   const isPendiente = s.status === 'pendiente'
                   return (
-                    <div key={s.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 md:px-6 py-4 ${i !== solicitudes.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
+                    <div key={s.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 md:px-6 py-4 ${i !== solicitudes.length - 1 ? 'border-b border-white/10' : ''}`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-[#F5F7FA] border border-[#DDE3EC] flex items-center justify-center shrink-0">
-                          <span className="text-[13px] font-black text-[#4B5E7A]">{s.nombre.charAt(0).toUpperCase()}</span>
+                        <div className="w-9 h-9 bg-navy-950/60 border border-white/10 flex items-center justify-center shrink-0">
+                          <span className="font-plex-mono text-[13px] font-medium text-paper-dim">{s.nombre.charAt(0).toUpperCase()}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111827] truncate">{s.nombre}</p>
-                          <p className="text-[11px] text-[#8EA0BC] mt-0.5 truncate">{s.email} {s.telefono ? `· ${s.telefono}` : ''}</p>
+                          <p className="text-[14px] font-medium text-paper truncate">{s.nombre}</p>
+                          <p className="text-[11px] text-slate mt-0.5 truncate">{s.email} {s.telefono ? `· ${s.telefono}` : ''}</p>
                         </div>
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${badge}`}>{label}</span>
+                        <span className={`font-plex-mono text-[10.5px] font-medium px-2.5 py-1 border shrink-0 ${chip}`}>{label}</span>
                       </div>
                       {isPendiente ? (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={() => actualizarStatus(s.id, 'aprobada')}
-                            className="text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-[#C9A84C] text-white hover:bg-[#0F1F3D] transition-colors">
+                            className="font-plex-mono text-[11.5px] font-medium px-3 py-1.5 bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors">
                             Aprobar
                           </button>
                           <button
                             onClick={() => actualizarStatus(s.id, 'rechazada')}
-                            className="text-[12px] font-semibold px-3 py-1.5 rounded-lg border border-[#DDE3EC] text-[#8EA0BC] hover:text-[#111827] hover:border-[#111827] transition-colors">
+                            className="font-plex-mono text-[11.5px] px-3 py-1.5 border border-white/15 text-slate hover:text-paper hover:border-white/30 transition-colors">
                             Rechazar
                           </button>
                         </div>
                       ) : (
                         <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
-                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${s.status === 'aprobada' ? 'bg-[#FBF5E6] text-[#0F1F3D]' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
+                          <span className={`font-plex-mono text-[10.5px] font-medium px-2.5 py-1 border self-start sm:self-auto ${s.status === 'aprobada' ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate bg-white/5'}`}>
                             {s.status === 'aprobada' ? 'Aprobada' : 'Rechazada'}
                           </span>
                           {s.status === 'aprobada' && inviteEstado[s.id] && (
                             inviteEstado[s.id].estado === 'enviando' ? (
-                              <span className="text-[10px] text-[#8EA0BC]">Enviando invitación…</span>
+                              <span className="text-[10px] text-slate">Enviando invitación…</span>
                             ) : inviteEstado[s.id].estado === 'ok' ? (
-                              <span className="text-[10px] text-[#0F1F3D]">✓ Invitación enviada</span>
+                              <span className="text-[10px] text-gold-400">✓ Invitación enviada</span>
                             ) : (
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-[#DC2626]">{inviteEstado[s.id].mensaje}</span>
+                                <span className="text-[10px] text-[#f3a3a3]">{inviteEstado[s.id].mensaje}</span>
                                 {inviteEstado[s.id].mensaje !== 'Ya existe una cuenta con este correo.' && (
                                   <button
                                     onClick={() => enviarInvitacion(s.id, s.email, s.nombre, s.rol)}
-                                    className="text-[10px] font-semibold text-[#C9A84C] hover:text-[#0F1F3D] underline">
+                                    className="text-[10px] font-medium text-gold-400 hover:text-gold-100 underline">
                                     Reintentar
                                   </button>
                                 )}
@@ -325,16 +327,16 @@ export default function PanelPage() {
           {/* Métricas globales */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
             {[
-              { label: 'En proceso',    value: String(enProceso),            sub: 'en 3 fases',            color: 'text-[#111827]' },
-              { label: 'Cerrados',      value: String(cerrados),             sub: 'este ciclo',            color: 'text-[#C9A84C]' },
-              { label: 'Volumen',       value: formatMXN(volumenTotal),      sub: 'valor portafolio',      color: 'text-[#3730A3]' },
-              { label: 'Brokers',       value: String(BROKERS.length),       sub: 'activos',               color: 'text-[#D97706]' },
-              { label: 'Inversionistas', value: String(INVERSIONISTAS.length), sub: 'registrados',        color: 'text-[#111827]' },
+              { label: 'En proceso',     value: String(enProceso),             sub: 'en 3 fases',       color: 'text-paper' },
+              { label: 'Cerrados',       value: String(cerrados),              sub: 'este ciclo',       color: 'text-gold-400' },
+              { label: 'Volumen',        value: formatMXN(volumenTotal),       sub: 'valor portafolio', color: 'text-[#a5a1f5]' },
+              { label: 'Brokers',        value: String(BROKERS.length),        sub: 'activos',          color: 'text-[#e8b568]' },
+              { label: 'Inversionistas', value: String(INVERSIONISTAS.length), sub: 'registrados',      color: 'text-paper' },
             ].map(m => (
-              <div key={m.label} className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-5">
-                <p className="text-[10px] text-[#8EA0BC] uppercase tracking-wide mb-2">{m.label}</p>
-                <p className={`text-[16px] md:text-[18px] font-black leading-tight ${m.color}`}>{m.value}</p>
-                <p className="text-[10px] text-[#8EA0BC] mt-0.5">{m.sub}</p>
+              <div key={m.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
+                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-2">{m.label}</p>
+                <p className={`font-fraunces text-[17px] md:text-[19px] font-medium leading-tight ${m.color}`}>{m.value}</p>
+                <p className="text-[10px] text-slate mt-0.5">{m.sub}</p>
               </div>
             ))}
           </div>
@@ -346,19 +348,19 @@ export default function PanelPage() {
             </div>
 
             {/* Actividad reciente */}
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] p-5 flex flex-col gap-1">
-              <p className="text-[13px] font-bold text-[#111827] mb-3">Actividad reciente</p>
+            <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-1">
+              <p className="font-fraunces text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
               <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 160 }}>
                 {ACTIVIDAD.map((a, i) => {
                   const cfg = actividadCfg(a.tipo)
                   return (
                     <div key={i} className="flex items-start gap-2.5">
-                      <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${cfg.color}`}>
+                      <div className={`w-6 h-6 flex items-center justify-center shrink-0 mt-0.5 ${cfg.color}`}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.icon }} />
                       </div>
                       <div>
-                        <p className="text-[11px] text-[#111827] leading-snug">{a.texto}</p>
-                        <p className="text-[10px] text-[#8EA0BC] mt-0.5">{a.hora}</p>
+                        <p className="text-[11px] text-paper-dim leading-snug">{a.texto}</p>
+                        <p className="text-[10px] text-slate mt-0.5">{a.hora}</p>
                       </div>
                     </div>
                   )
@@ -370,14 +372,14 @@ export default function PanelPage() {
           {/* Activos del ecosistema */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-[16px] font-bold text-[#111827]">Activos del ecosistema</h2>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
               <div className="flex items-center flex-wrap gap-1.5">
                 {['todos', 'valoracion', 'marketing', 'leads', 'cerrado'].map(f => (
                   <button key={f} onClick={() => setFiltroFase(f)}
-                    className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg capitalize transition-colors ${
+                    className={`font-plex-mono text-[10.5px] px-3 py-1.5 capitalize transition-colors ${
                       filtroFase === f
-                        ? 'bg-[#C9A84C] text-white'
-                        : 'bg-white border border-[#DDE3EC] text-[#8EA0BC] hover:text-[#111827]'
+                        ? 'bg-gold-500 text-navy-950'
+                        : 'border border-white/15 text-slate hover:text-paper hover:border-white/30'
                     }`}>
                     {f === 'todos' ? 'Todos' : faseCfg(f).label}
                   </button>
@@ -385,33 +387,33 @@ export default function PanelPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+            <div className="bg-navy-800 border border-white/10 overflow-hidden">
               <div className="overflow-x-auto">
                 <div className="min-w-[580px]">
-                  <div className="grid grid-cols-6 px-4 md:px-6 py-3 border-b border-[#EDF1F7] bg-[#FAFBFA]">
+                  <div className="grid grid-cols-6 px-4 md:px-6 py-3 border-b border-white/10 bg-white/[0.02]">
                     {['Activo', 'Propietario', 'Broker', 'Municipio', 'Precio', 'Fase'].map(h => (
-                      <p key={h} className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-wide">{h}</p>
+                      <p key={h} className="font-plex-mono text-[10px] text-slate uppercase tracking-wide">{h}</p>
                     ))}
                   </div>
                   {activosFiltrados.map((a, i) => {
                     const cfg = faseCfg(a.fase)
                     return (
                       <div key={a.id}
-                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-[#EDF1F7]' : ''} hover:bg-[#FAFBFA] transition-colors cursor-pointer`}>
+                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors cursor-pointer`}>
                         <div>
-                          <p className="text-[13px] font-semibold text-[#111827] truncate">{a.nombre}</p>
-                          <p className="text-[10px] text-[#8EA0BC]">{a.tipo}</p>
+                          <p className="text-[13px] font-medium text-paper truncate">{a.nombre}</p>
+                          <p className="text-[10px] text-slate">{a.tipo}</p>
                         </div>
-                        <p className="text-[12px] text-[#4B5E7A] truncate">{a.propietario}</p>
+                        <p className="text-[12px] text-paper-dim truncate">{a.propietario}</p>
                         <div className="flex items-center gap-1.5">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${a.broker === 'Maestro' ? 'bg-[#C9A84C] text-white' : 'bg-[#EEF2FF] text-[#3730A3]'}`}>
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center font-plex-mono text-[9px] font-medium shrink-0 ${a.broker === 'Maestro' ? 'bg-gold-500 text-navy-950' : 'bg-[#4F46E5]/20 text-[#a5a1f5]'}`}>
                             {a.broker.charAt(0)}
                           </div>
-                          <p className="text-[12px] text-[#4B5E7A] truncate">{a.broker}</p>
+                          <p className="text-[12px] text-paper-dim truncate">{a.broker}</p>
                         </div>
-                        <p className="text-[12px] text-[#4B5E7A]">{a.municipio}</p>
-                        <p className="text-[12px] font-semibold text-[#111827]">{formatMXN(a.precio)}</p>
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full w-fit flex items-center gap-1.5 ${cfg.badge}`}>
+                        <p className="text-[12px] text-paper-dim">{a.municipio}</p>
+                        <p className="font-plex-mono text-[12px] text-paper">{formatMXN(a.precio)}</p>
+                        <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border w-fit flex items-center gap-1.5 ${cfg.chip}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                           {cfg.label}
                         </span>
@@ -428,20 +430,20 @@ export default function PanelPage() {
 
             {/* Brokers */}
             <div>
-              <h2 className="text-[16px] font-bold text-[#111827] mb-4">Brokers aliados</h2>
-              <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
+              <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {BROKERS.map((b, i) => (
-                  <div key={i} className={`px-5 py-4 ${i !== BROKERS.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
+                  <div key={i} className={`px-5 py-4 ${i !== BROKERS.length - 1 ? 'border-b border-white/10' : ''}`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center">
-                          <span className="text-[12px] font-black text-[#3730A3]">{b.nombre.charAt(0)}</span>
+                        <div className="w-8 h-8 rounded-full bg-[#4F46E5]/15 flex items-center justify-center">
+                          <span className="font-plex-mono text-[12px] font-medium text-[#a5a1f5]">{b.nombre.charAt(0)}</span>
                         </div>
-                        <p className="text-[13px] font-bold text-[#111827]">{b.nombre}</p>
+                        <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="#D97706"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.2 3 8.8l.9-3L1.5 4h3z"/></svg>
-                        <span className="text-[12px] font-bold text-[#D97706]">{b.rating}</span>
+                        <span className="font-plex-mono text-[12px] font-medium text-[#e8b568]">{b.rating}</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
@@ -450,9 +452,9 @@ export default function PanelPage() {
                         { label: 'Cerrados', value: b.cerrados },
                         { label: 'Volumen', value: formatMXN(b.volumen) },
                       ].map(s => (
-                        <div key={s.label} className="bg-[#F5F7FA] rounded-lg p-2.5 text-center">
-                          <p className="text-[13px] font-black text-[#111827]">{s.value}</p>
-                          <p className="text-[10px] text-[#8EA0BC]">{s.label}</p>
+                        <div key={s.label} className="bg-navy-950/60 border border-white/5 p-2.5 text-center">
+                          <p className="font-plex-mono text-[13px] font-medium text-paper">{s.value}</p>
+                          <p className="text-[10px] text-slate">{s.label}</p>
                         </div>
                       ))}
                     </div>
@@ -463,21 +465,21 @@ export default function PanelPage() {
 
             {/* Inversionistas */}
             <div>
-              <h2 className="text-[16px] font-bold text-[#111827] mb-4">Inversionistas registrados</h2>
-              <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Inversionistas registrados</h2>
+              <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {INVERSIONISTAS.map((inv, i) => (
-                  <div key={i} className={`px-5 py-4 flex items-start justify-between gap-4 ${i !== INVERSIONISTAS.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
+                  <div key={i} className={`px-5 py-4 flex items-start justify-between gap-4 ${i !== INVERSIONISTAS.length - 1 ? 'border-b border-white/10' : ''}`}>
                     <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-[#FBF5E6] flex items-center justify-center shrink-0">
-                        <span className="text-[12px] font-black text-[#0F1F3D]">{inv.nombre.charAt(0)}</span>
+                      <div className="w-8 h-8 rounded-full bg-gold-500/15 flex items-center justify-center shrink-0">
+                        <span className="font-plex-mono text-[12px] font-medium text-gold-400">{inv.nombre.charAt(0)}</span>
                       </div>
                       <div>
-                        <p className="text-[13px] font-bold text-[#111827]">{inv.nombre}</p>
-                        <p className="text-[11px] text-[#8EA0BC] mt-0.5">{inv.intereses}</p>
-                        <p className="text-[11px] text-[#4B5E7A] font-semibold mt-0.5">{inv.presupuesto}</p>
+                        <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
+                        <p className="text-[11px] text-slate mt-0.5">{inv.intereses}</p>
+                        <p className="text-[11px] text-paper-dim font-medium mt-0.5">{inv.presupuesto}</p>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${inv.activo ? 'bg-[#FBF5E6] text-[#0F1F3D]' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
+                    <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border shrink-0 ${inv.activo ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate bg-white/5'}`}>
                       {inv.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </div>
