@@ -333,7 +333,14 @@ export default function PanelPage() {
             </div>
           )}
 
-          {/* Métricas globales */}
+          {/* Métricas globales — ACTIVOS_ECO/BROKERS/INVERSIONISTAS son datos de ejemplo, ver
+              nota al inicio del archivo. Badge explícito para que nadie tome una decisión de
+              negocio sobre un número inventado. */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.14em]">Métricas globales</p>
+              <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+            </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
             {[
               { label: 'En proceso',     value: String(enProceso),             sub: 'en 3 fases',       color: 'text-paper' },
@@ -349,6 +356,7 @@ export default function PanelPage() {
               </div>
             ))}
           </div>
+          </div>
 
           {/* Pipeline + Actividad reciente */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -358,7 +366,10 @@ export default function PanelPage() {
 
             {/* Actividad reciente */}
             <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-1">
-              <p className="font-fraunces text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
+              <div className="flex items-center gap-2 mb-3">
+                <p className="font-fraunces text-[14px] font-medium text-paper">Actividad reciente</p>
+                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+              </div>
               <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 160 }}>
                 {ACTIVIDAD.map((a, i) => {
                   const cfg = actividadCfg(a.tipo)
@@ -381,7 +392,10 @@ export default function PanelPage() {
           {/* Activos del ecosistema */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
+                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+              </div>
               <div className="flex items-center flex-wrap gap-1.5">
                 {['todos', 'valoracion', 'marketing', 'leads', 'cerrado'].map(f => (
                   <button key={f} onClick={() => setFiltroFase(f)}
@@ -439,7 +453,10 @@ export default function PanelPage() {
 
             {/* Brokers */}
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="font-fraunces text-[17px] font-medium text-paper">Brokers aliados</h2>
+                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+              </div>
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {BROKERS.map((b, i) => (
                   <div key={i} className={`px-5 py-4 ${i !== BROKERS.length - 1 ? 'border-b border-white/10' : ''}`}>
@@ -474,7 +491,10 @@ export default function PanelPage() {
 
             {/* Inversionistas */}
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Inversionistas registrados</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="font-fraunces text-[17px] font-medium text-paper">Inversionistas registrados</h2>
+                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+              </div>
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {INVERSIONISTAS.map((inv, i) => (
                   <div key={i} className={`px-5 py-4 flex items-start justify-between gap-4 ${i !== INVERSIONISTAS.length - 1 ? 'border-b border-white/10' : ''}`}>
