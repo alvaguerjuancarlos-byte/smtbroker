@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -116,8 +116,17 @@ export default function NuevoActivoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar rol="propietario" />
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+      <div className="relative flex flex-col flex-1">
+      <Topbar rol="propietario" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[640px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -125,76 +134,76 @@ export default function NuevoActivoPage() {
           {/* Header */}
           <div>
             <button onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-1.5 text-[13px] text-[#8EA0BC] hover:text-[#111827] mb-4 transition-colors">
+              className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               Volver al dashboard
             </button>
-            <h1 className="text-[24px] font-black text-[#111827]">Registrar activo</h1>
-            <p className="text-[14px] text-[#8EA0BC] mt-1">Ingresa los datos del inmueble para iniciar el análisis</p>
+            <h1 className="font-fraunces text-[26px] font-medium text-paper">Registrar activo</h1>
+            <p className="text-[14px] text-slate mt-1.5">Ingresa los datos del inmueble para iniciar el análisis</p>
           </div>
 
           {/* Fase */}
-          <div className="flex items-center gap-2 bg-[#FBF5E6] border border-[#EDD9A3] rounded-xl px-4 py-3">
-            <span className="text-[11px] font-bold text-white bg-[#0F1F3D] px-2 py-0.5 rounded-full">Fase 01</span>
-            <span className="text-[13px] text-[#0F1F3D] font-medium">Diagnóstico y Estrategia</span>
+          <div className="flex items-center gap-2 bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
+            <span className="font-plex-mono text-[10.5px] font-medium text-navy-950 bg-gold-500 px-2 py-0.5">Fase 01</span>
+            <span className="text-[13px] text-paper-dim font-medium">Diagnóstico y Estrategia</span>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
             {/* Sección 1: Datos generales */}
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6 flex flex-col gap-5">
-              <p className="text-[12px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Datos generales</p>
+            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Datos generales</p>
 
-              <Field label="Nombre del activo" required error={submitted && required.nombre}>
+              <Field label="Nombre del activo" required error={submitted && required.nombre} tema="oscuro">
                 <input type="text" value={form.nombre} onChange={e => set('nombre', e.target.value)}
-                  placeholder="Ej. Terreno Col. Providencia" className={inputCls(submitted && required.nombre)} />
+                  placeholder="Ej. Terreno Col. Providencia" className={inputCls(submitted && required.nombre, 'oscuro')} />
               </Field>
 
-              <Field label="Tipo de activo" required>
-                <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls()}>
-                  {TIPOS.map(t => <option key={t}>{t}</option>)}
+              <Field label="Tipo de activo" required tema="oscuro">
+                <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls(false, 'oscuro')}>
+                  {TIPOS.map(t => <option key={t} className="bg-navy-900">{t}</option>)}
                 </select>
               </Field>
             </div>
 
             {/* Sección 2: Ubicación */}
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6 flex flex-col gap-5">
-              <p className="text-[12px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Ubicación</p>
+            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Ubicación</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <Field label="Calle" required error={submitted && required.calle}>
+                  <Field label="Calle" required error={submitted && required.calle} tema="oscuro">
                     <input type="text" value={form.calle} onChange={e => set('calle', e.target.value)}
-                      placeholder="Nombre de la calle" className={inputCls(submitted && required.calle)} />
+                      placeholder="Nombre de la calle" className={inputCls(submitted && required.calle, 'oscuro')} />
                   </Field>
                 </div>
-                <Field label="Número">
+                <Field label="Número" tema="oscuro">
                   <input type="text" value={form.numero} onChange={e => set('numero', e.target.value)}
-                    placeholder="123" className={inputCls()} />
+                    placeholder="123" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Colonia" required error={submitted && required.colonia}>
+              <Field label="Colonia" required error={submitted && required.colonia} tema="oscuro">
                 <input type="text" value={form.colonia} onChange={e => set('colonia', e.target.value)}
-                  placeholder="Nombre de la colonia" className={inputCls(submitted && required.colonia)} />
+                  placeholder="Nombre de la colonia" className={inputCls(submitted && required.colonia, 'oscuro')} />
               </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Municipio / Alcaldía" required error={submitted && required.municipio}>
+                <Field label="Municipio / Alcaldía" required error={submitted && required.municipio} tema="oscuro">
                   <input type="text" value={form.municipio} onChange={e => set('municipio', e.target.value)}
-                    placeholder="Ej. Guadalajara" className={inputCls(submitted && required.municipio)} />
+                    placeholder="Ej. Guadalajara" className={inputCls(submitted && required.municipio, 'oscuro')} />
                 </Field>
-                <Field label="Código postal">
+                <Field label="Código postal" tema="oscuro">
                   <input type="text" value={form.cp} onChange={e => set('cp', e.target.value)}
-                    placeholder="00000" maxLength={5} className={inputCls()} />
+                    placeholder="00000" maxLength={5} className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Estado" required error={submitted && required.estado}>
-                <select value={form.estado} onChange={e => set('estado', e.target.value)} className={inputCls(submitted && required.estado)}>
-                  {ESTADOS_MX.map(s => <option key={s}>{s}</option>)}
+              <Field label="Estado" required error={submitted && required.estado} tema="oscuro">
+                <select value={form.estado} onChange={e => set('estado', e.target.value)} className={inputCls(submitted && required.estado, 'oscuro')}>
+                  {ESTADOS_MX.map(s => <option key={s} className="bg-navy-900">{s}</option>)}
                 </select>
               </Field>
 
@@ -204,7 +213,7 @@ export default function NuevoActivoPage() {
                   type="button"
                   onClick={() => setShowMap(true)}
                   disabled={!form.municipio}
-                  className="flex items-center gap-2 text-[13px] font-semibold text-[#C9A84C] hover:text-[#0F1F3D] border border-[#EDD9A3] hover:border-[#C9A84C] px-4 py-2.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed w-fit"
+                  className="flex items-center gap-2 font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed w-fit"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Z" stroke="currentColor" strokeWidth="1.8" fill="none"/>
@@ -214,13 +223,13 @@ export default function NuevoActivoPage() {
                 </button>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[11px] font-semibold text-[#4B5E7A] uppercase tracking-[0.1em]">Mapa</p>
+                  <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Mapa</p>
                   <MapPicker
                     onLocationChange={(la, ln) => { setLat(la); setLng(ln) }}
                     initialAddress={addressForMap}
                   />
                   {lat && lng && (
-                    <p className="text-[11px] text-[#C9A84C] font-semibold">✓ Ubicación confirmada en el mapa</p>
+                    <p className="text-[11px] text-gold-400 font-medium">✓ Ubicación confirmada en el mapa</p>
                   )}
                 </div>
               )}
@@ -230,58 +239,59 @@ export default function NuevoActivoPage() {
             <CatastroLegalSection value={catastro} onChange={setCatastroPatch} tipoActivo={form.tipo} submitted={submitted} />
 
             {/* Sección 3: Características */}
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6 flex flex-col gap-5">
-              <p className="text-[12px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Características y precio</p>
+            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Características y precio</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Superficie (m²)">
+                <Field label="Superficie (m²)" tema="oscuro">
                   <input type="number" value={form.superficie} onChange={e => set('superficie', e.target.value)}
-                    placeholder="0" min="0" className={inputCls()} />
+                    placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Precio total (MXN)">
+                <Field label="Precio total (MXN)" tema="oscuro">
                   <input type="number" value={form.precio_total} onChange={e => set('precio_total', e.target.value)}
-                    placeholder="0" min="0" className={inputCls()} />
+                    placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Descripción / Observaciones">
+              <Field label="Descripción / Observaciones" tema="oscuro">
                 <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
                   placeholder="Características relevantes, estado del inmueble, acceso, etc."
-                  rows={4} className={`${inputCls()} resize-none`} />
+                  rows={4} className={`${inputCls(false, 'oscuro')} resize-none`} />
               </Field>
             </div>
 
             {submitted && hasErrors && (
-              <div className="flex items-start gap-2.5 bg-[#FEE2E2] border border-[#FECACA] rounded-xl px-4 py-3">
+              <div className="flex items-start gap-2.5 bg-red-950/20 border border-red-900/60 px-4 py-3">
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
-                  <circle cx="8" cy="8" r="7" stroke="#DC2626" strokeWidth="1.4"/>
-                  <path d="M8 5v3.5M8 10.5v.5" stroke="#DC2626" strokeWidth="1.4" strokeLinecap="round"/>
+                  <circle cx="8" cy="8" r="7" stroke="#f3a3a3" strokeWidth="1.4"/>
+                  <path d="M8 5v3.5M8 10.5v.5" stroke="#f3a3a3" strokeWidth="1.4" strokeLinecap="round"/>
                 </svg>
-                <p className="text-[12px] text-[#991B1B]">Completa los campos obligatorios marcados en rojo antes de continuar.</p>
+                <p className="text-[12px] text-[#f3a3a3]">Completa los campos obligatorios marcados en rojo antes de continuar.</p>
               </div>
             )}
 
             {error && (
-              <div className="flex items-center gap-2 bg-[#FEE2E2] border border-[#FECACA] rounded-xl px-4 py-3">
-                <p className="text-[12px] text-[#991B1B]">{error}</p>
+              <div className="flex items-center gap-2 bg-red-950/20 border border-red-900/60 px-4 py-3">
+                <p className="text-[12px] text-[#f3a3a3]">{error}</p>
               </div>
             )}
 
             <button type="submit" disabled={loading || diagnosticando}
-              className="w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
               {loading ? 'Guardando…' : 'Registrar y continuar →'}
             </button>
 
           </form>
         </div>
       </main>
+      </div>
 
       {diagnosticando && (
-        <div className="fixed inset-0 bg-[#0F1F3D] flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-navy-950 flex items-center justify-center z-50">
           <div className="text-center">
-            <span className="block w-2.5 h-2.5 rounded-full bg-[#C9A84C] mx-auto mb-4 animate-pulse" />
-            <p className="text-[15px] text-white font-medium">Mastermind está coordinando al Agente Legal…</p>
-            <p className="text-[12px] text-white/50 mt-1.5">Simulación — sin conexión real a catastro todavía</p>
+            <span className="block w-2.5 h-2.5 rounded-full bg-gold-500 mx-auto mb-4 animate-pulse" />
+            <p className="text-[15px] text-paper font-medium">Mastermind está coordinando al Agente Legal…</p>
+            <p className="text-[12px] text-slate mt-1.5 font-plex-mono">Simulación — sin conexión real a catastro todavía</p>
           </div>
         </div>
       )}

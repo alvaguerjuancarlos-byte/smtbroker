@@ -113,30 +113,39 @@ export default function PortalInversionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <p className="text-[#8EA0BC] text-[14px]">Cargando…</p>
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
+        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar userName={userName} rol="inversionista" />
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+      <div className="relative flex flex-col flex-1">
+      <Topbar userName={userName} rol="inversionista" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">
 
           <div>
-            <h1 className="text-[24px] md:text-[28px] font-black text-[#111827] leading-tight">Hola, {firstName}</h1>
-            <p className="text-[14px] text-[#8EA0BC] mt-1">Tu perfil de inversión y los activos disponibles</p>
+            <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
+            <p className="text-[14px] text-slate mt-1.5">Tu perfil de inversión y los activos disponibles</p>
           </div>
 
           {/* Perfil de intención */}
-          <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6">
+          <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[12px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Tu perfil de inversión</p>
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Tu perfil de inversión</p>
               {tienePerfil && !editando && (
-                <button onClick={() => setEditando(true)} className="text-[12px] font-semibold text-[#C9A84C] hover:text-[#0F1F3D] transition-colors">
+                <button onClick={() => setEditando(true)} className="text-[12px] font-medium text-gold-400 hover:text-gold-100 transition-colors">
                   Editar
                 </button>
               )}
@@ -145,53 +154,53 @@ export default function PortalInversionPage() {
             {!editando ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Presupuesto</p>
-                  <p className="text-[14px] text-[#111827] mt-1">{perfil.presupuesto || '—'}</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Presupuesto</p>
+                  <p className="text-[14px] text-paper mt-1">{perfil.presupuesto || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Zona de interés</p>
-                  <p className="text-[14px] text-[#111827] mt-1">{perfil.zona || '—'}</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Zona de interés</p>
+                  <p className="text-[14px] text-paper mt-1">{perfil.zona || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Tipo de activo</p>
-                  <p className="text-[14px] text-[#111827] mt-1">{perfil.tipo_activo_interes || '—'}</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tipo de activo</p>
+                  <p className="text-[14px] text-paper mt-1">{perfil.tipo_activo_interes || '—'}</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <p className="text-[10px] font-bold text-[#8EA0BC] uppercase tracking-[0.1em]">Tesis de inversión</p>
-                  <p className="text-[13px] text-[#4B5E7A] mt-1 leading-relaxed">{perfil.tesis_inversion || '—'}</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tesis de inversión</p>
+                  <p className="text-[13px] text-paper-dim mt-1 leading-relaxed">{perfil.tesis_inversion || '—'}</p>
                 </div>
               </div>
             ) : (
               <form onSubmit={guardarPerfil} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Presupuesto estimado">
-                    <select value={perfil.presupuesto} onChange={e => setPerfil(p => ({ ...p, presupuesto: e.target.value }))} className={inputCls()}>
-                      <option value="">Selecciona…</option>
-                      {PRESUPUESTOS.map(p => <option key={p}>{p}</option>)}
+                  <Field label="Presupuesto estimado" tema="oscuro">
+                    <select value={perfil.presupuesto} onChange={e => setPerfil(p => ({ ...p, presupuesto: e.target.value }))} className={inputCls(false, 'oscuro')}>
+                      <option value="" className="bg-navy-900">Selecciona…</option>
+                      {PRESUPUESTOS.map(p => <option key={p} className="bg-navy-900">{p}</option>)}
                     </select>
                   </Field>
-                  <Field label="Zona de interés">
+                  <Field label="Zona de interés" tema="oscuro">
                     <input type="text" value={perfil.zona} onChange={e => setPerfil(p => ({ ...p, zona: e.target.value }))}
-                      placeholder="Ej. San Pedro Garza García" className={inputCls()} />
+                      placeholder="Ej. San Pedro Garza García" className={inputCls(false, 'oscuro')} />
                   </Field>
                 </div>
-                <Field label="Tipo de activo de interés">
+                <Field label="Tipo de activo de interés" tema="oscuro">
                   <input type="text" value={perfil.tipo_activo_interes} onChange={e => setPerfil(p => ({ ...p, tipo_activo_interes: e.target.value }))}
-                    placeholder="Ej. Terrenos, edificios, desarrollos verticales" className={inputCls()} />
+                    placeholder="Ej. Terrenos, edificios, desarrollos verticales" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Tesis de inversión (opcional)">
+                <Field label="Tesis de inversión (opcional)" tema="oscuro">
                   <textarea value={perfil.tesis_inversion} onChange={e => setPerfil(p => ({ ...p, tesis_inversion: e.target.value }))}
-                    placeholder="¿Qué buscas y por qué? Ej. terreno para desarrollo vertical, horizonte de 3-5 años…" rows={3} className={inputCls()} />
+                    placeholder="¿Qué buscas y por qué? Ej. terreno para desarrollo vertical, horizonte de 3-5 años…" rows={3} className={inputCls(false, 'oscuro')} />
                 </Field>
                 <div className="flex gap-2">
                   {tienePerfil && (
                     <button type="button" onClick={() => setEditando(false)}
-                      className="px-5 py-2.5 rounded-xl border border-[#DDE3EC] text-[#4B5E7A] text-[13px] font-semibold hover:border-[#BFC9D8] transition-colors">
+                      className="px-5 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
                       Cancelar
                     </button>
                   )}
                   <button type="submit" disabled={guardando}
-                    className="px-5 py-2.5 rounded-xl bg-[#C9A84C] text-white text-[13px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60">
+                    className="px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors disabled:opacity-60">
                     {guardando ? 'Guardando…' : 'Guardar perfil'}
                   </button>
                 </div>
@@ -202,32 +211,32 @@ export default function PortalInversionPage() {
           {/* Activos disponibles */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[16px] font-bold text-[#111827]">Activos disponibles</h2>
-              <span className="text-[12px] text-[#8EA0BC]">{activos.length}</span>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos disponibles</h2>
+              <span className="text-[12px] text-slate">{activos.length}</span>
             </div>
-            <p className="text-[12px] text-[#8EA0BC] mb-4">Listado general — todavía no hay un motor de match contra tu perfil, se muestran todos los activos cargados en la plataforma.</p>
+            <p className="text-[12px] text-slate mb-4">Listado general — todavía no hay un motor de match contra tu perfil, se muestran todos los activos cargados en la plataforma.</p>
 
             {activos.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-[#DDE3EC] px-8 py-14 text-center">
-                <p className="text-[13px] text-[#8EA0BC]">Todavía no hay activos cargados en la plataforma.</p>
+              <div className="bg-navy-800 border border-white/10 px-8 py-14 text-center">
+                <p className="text-[13px] text-slate">Todavía no hay activos cargados en la plataforma.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+              <div className="bg-navy-800 border border-white/10 overflow-hidden">
                 {activos.map((a, i) => (
-                  <div key={a.id} className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-[#EDF1F7]' : ''}`}>
-                    <div className="w-9 h-9 rounded-xl bg-[#F5F7FA] border border-[#DDE3EC] flex items-center justify-center shrink-0">
+                  <div key={a.id} className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <div className="w-9 h-9 bg-navy-950/60 border border-white/10 flex items-center justify-center shrink-0">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="#8EA0BC" strokeWidth="1.5" fill="none"/>
+                        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="#8b96ab" strokeWidth="1.5" fill="none"/>
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-[#111827] truncate">{a.nombre}</p>
-                      <p className="text-[11px] text-[#8EA0BC] mt-0.5 truncate">
+                      <p className="text-[14px] font-medium text-paper truncate">{a.nombre}</p>
+                      <p className="text-[11px] text-slate mt-0.5 truncate">
                         {a.tipo} · {a.municipio}, {a.estado}{a.superficie ? ` · ${a.superficie} m²` : ''} · {formatDate(a.created_at)}
                       </p>
                     </div>
                     {a.precio_total != null && (
-                      <span className="text-[13px] font-bold text-[#111827] shrink-0">{formatMXN(a.precio_total)}</span>
+                      <span className="font-plex-mono text-[13px] text-paper shrink-0">{formatMXN(a.precio_total)}</span>
                     )}
                   </div>
                 ))}
@@ -237,6 +246,7 @@ export default function PortalInversionPage() {
 
         </div>
       </main>
+      </div>
     </div>
   )
 }

@@ -26,37 +26,37 @@ const LEADS_SIMULADOS = [
 ]
 
 const scoreCfg = (score: number) => {
-  if (score >= 80) return { label: 'Inversionista serio', badge: 'bg-[#FBF5E6] text-[#0F1F3D]',  dot: 'bg-[#C9A84C]' }
-  if (score >= 60) return { label: 'Calificado',          badge: 'bg-[#EEF2FF] text-[#3730A3]',  dot: 'bg-[#4F46E5]' }
-  if (score >= 40) return { label: 'Interesado',          badge: 'bg-[#FEF3C7] text-[#92600A]',  dot: 'bg-[#D97706]' }
-  return               { label: 'Curioso',               badge: 'bg-[#F3F4F6] text-[#6B7280]',  dot: 'bg-[#8EA0BC]' }
+  if (score >= 80) return { label: 'Inversionista serio', badge: 'bg-gold-500/10 text-gold-400',  dot: 'bg-gold-500' }
+  if (score >= 60) return { label: 'Calificado',          badge: 'bg-[#4F46E5]/10 text-[#a5a1f5]',  dot: 'bg-[#4F46E5]' }
+  if (score >= 40) return { label: 'Interesado',          badge: 'bg-[#D97706]/10 text-[#e8b568]',  dot: 'bg-[#D97706]' }
+  return               { label: 'Curioso',               badge: 'bg-white/5 text-slate',  dot: 'bg-slate' }
 }
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 80 ? '#C9A84C' : score >= 60 ? '#4F46E5' : score >= 40 ? '#D97706' : '#D1D5DB'
+  const color = score >= 80 ? '#ddc06a' : score >= 60 ? '#4F46E5' : score >= 40 ? '#D97706' : '#5f6a80'
   return (
     <div className="flex items-center gap-2 flex-1">
-      <div className="flex-1 h-1.5 bg-[#EDF1F7] rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: color }} />
       </div>
-      <span className="text-[12px] font-bold text-[#111827] w-8 text-right">{score}</span>
+      <span className="text-[12px] font-bold text-paper w-8 text-right">{score}</span>
     </div>
   )
 }
 
 function FunnelChart() {
   const pasos = [
-    { label: 'Contactos totales',  valor: 38, color: '#DDE3EC', texto: '#6B7280' },
-    { label: 'Interesados',        valor: 15, color: '#FEF3C7', texto: '#92600A' },
-    { label: 'Calificados',        valor: 6,  color: '#EEF2FF', texto: '#3730A3' },
-    { label: 'Listos para cerrar', valor: 2,  color: '#FBF5E6', texto: '#0F1F3D' },
+    { label: 'Contactos totales',  valor: 38, color: 'rgba(255,255,255,0.06)', texto: '#c9d3e0' },
+    { label: 'Interesados',        valor: 15, color: 'rgba(217,119,6,0.15)', texto: '#e8b568' },
+    { label: 'Calificados',        valor: 6,  color: 'rgba(79,70,229,0.15)', texto: '#a5a1f5' },
+    { label: 'Listos para cerrar', valor: 2,  color: 'rgba(201,162,39,0.15)', texto: '#ddc06a' },
   ]
   const max = pasos[0].valor
 
   return (
-    <div className="bg-white rounded-2xl border border-[#DDE3EC] p-6">
-      <p className="text-[15px] font-bold text-[#111827] mb-1">Embudo de calificación</p>
-      <p className="text-[12px] text-[#8EA0BC] mb-6">De contacto a cierre</p>
+    <div className="bg-navy-800 border border-white/10 p-6">
+      <p className="text-[15px] font-bold text-paper mb-1">Embudo de calificación</p>
+      <p className="text-[12px] text-slate mb-6">De contacto a cierre</p>
       <div className="flex flex-col gap-2">
         {pasos.map((p, i) => {
           const pct = (p.valor / max) * 100
@@ -78,17 +78,17 @@ function FunnelChart() {
 
 function ScoreDistChart() {
   const rangos = [
-    { label: 'Curiosos',     rango: '0–39',   count: 3, color: '#D1D5DB' },
+    { label: 'Curiosos',     rango: '0–39',   count: 3, color: '#5f6a80' },
     { label: 'Interesados',  rango: '40–59',  count: 2, color: '#D97706' },
     { label: 'Calificados',  rango: '60–79',  count: 2, color: '#4F46E5' },
-    { label: 'Serios',       rango: '80–100', count: 2, color: '#C9A84C' },
+    { label: 'Serios',       rango: '80–100', count: 2, color: '#ddc06a' },
   ]
   const max = Math.max(...rangos.map(r => r.count))
 
   return (
-    <div className="bg-white rounded-2xl border border-[#DDE3EC] p-6">
-      <p className="text-[15px] font-bold text-[#111827] mb-1">Distribución de scores</p>
-      <p className="text-[12px] text-[#8EA0BC] mb-6">Leads por rango de calificación</p>
+    <div className="bg-navy-800 border border-white/10 p-6">
+      <p className="text-[15px] font-bold text-paper mb-1">Distribución de scores</p>
+      <p className="text-[12px] text-slate mb-6">Leads por rango de calificación</p>
       <div className="flex items-end gap-4 h-[120px]">
         {rangos.map((r, i) => {
           const pct = (r.count / max) * 100
@@ -98,8 +98,8 @@ function ScoreDistChart() {
               <div className="w-full flex items-end" style={{ height: 80 }}>
                 <div className="w-full rounded-t-lg" style={{ height: `${pct}%`, backgroundColor: r.color }} />
               </div>
-              <span className="text-[9px] text-[#8EA0BC] text-center leading-tight">{r.label}</span>
-              <span className="text-[9px] text-[#C4CFC8]">{r.rango}</span>
+              <span className="text-[9px] text-slate text-center leading-tight">{r.label}</span>
+              <span className="text-[9px] text-slate-dim">{r.rango}</span>
             </div>
           )
         })}
@@ -138,8 +138,8 @@ export default function LeadsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <p className="text-[#8EA0BC] text-[14px]">Cargando…</p>
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
+        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
       </div>
     )
   }
@@ -156,8 +156,17 @@ export default function LeadsPage() {
   const topLead = LEADS_SIMULADOS[0]
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      <Topbar rol="propietario" />
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+      <div className="relative flex flex-col flex-1">
+      <Topbar rol="propietario" tema="oscuro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -165,7 +174,7 @@ export default function LeadsPage() {
           {/* Breadcrumb */}
           <div>
             <button onClick={() => router.push(`/activo/${id}`)}
-              className="flex items-center gap-1.5 text-[13px] text-[#8EA0BC] hover:text-[#111827] mb-4 transition-colors">
+              className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
@@ -173,10 +182,10 @@ export default function LeadsPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-[22px] md:text-[26px] font-black text-[#111827]">Leads y calificación</h1>
-                <p className="text-[14px] text-[#8EA0BC] mt-1">Fase 03 · {activo?.tipo} en {activo?.municipio}, {activo?.estado}</p>
+                <h1 className="text-[22px] md:text-[26px] font-black text-paper">Leads y calificación</h1>
+                <p className="text-[14px] text-slate mt-1">Fase 03 · {activo?.tipo} en {activo?.municipio}, {activo?.estado}</p>
               </div>
-              <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-[#FBF5E6] text-[#0F1F3D] self-start shrink-0">
+              <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 self-start shrink-0">
                 2 listos para cerrar
               </span>
             </div>
@@ -194,12 +203,12 @@ export default function LeadsPage() {
                 disabled={!f.href}
                 className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl border text-left transition-all ${
                   f.active
-                    ? 'bg-[#C9A84C] border-[#C9A84C] text-white'
+                    ? 'bg-gold-500 border-gold-500 text-navy-950'
                     : f.href
-                      ? 'bg-white border-[#DDE3EC] text-[#111827] hover:border-[#C9A84C] hover:shadow-sm'
-                      : 'bg-white border-[#DDE3EC] text-[#C4CFC8] cursor-not-allowed'
+                      ? 'bg-navy-800 border-white/10 text-paper hover:border-gold-500'
+                      : 'bg-navy-800 border-white/10 text-slate-dim cursor-not-allowed'
                 }`}>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${f.active ? 'bg-white/20 text-white' : 'bg-[#EDF1F7] text-[#8EA0BC]'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${f.active ? 'bg-navy-950/20 text-navy-950' : 'bg-white/10 text-slate'}`}>
                   {f.fase}
                 </span>
                 <span className="text-[12px] md:text-[13px] font-semibold truncate">{f.label}</span>
@@ -210,15 +219,15 @@ export default function LeadsPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {[
-              { label: 'Total leads',           value: '9',      sub: 'captados',           color: 'text-[#111827]' },
-              { label: 'Serios',                value: '2',      sub: 'score ≥ 80',         color: 'text-[#C9A84C]' },
-              { label: 'Score promedio',        value: '61',     sub: 'de 100 posible',      color: 'text-[#3730A3]' },
-              { label: 'Resp. promedio',        value: '18 min', sub: 'primer contacto',     color: 'text-[#D97706]' },
+              { label: 'Total leads',           value: '9',      sub: 'captados',           color: 'text-paper' },
+              { label: 'Serios',                value: '2',      sub: 'score ≥ 80',         color: 'text-gold-400' },
+              { label: 'Score promedio',        value: '61',     sub: 'de 100 posible',      color: 'text-[#a5a1f5]' },
+              { label: 'Resp. promedio',        value: '18 min', sub: 'primer contacto',     color: 'text-[#e8b568]' },
             ].map(s => (
-              <div key={s.label} className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-5">
-                <p className="text-[11px] text-[#8EA0BC] uppercase tracking-wide mb-2">{s.label}</p>
+              <div key={s.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
+                <p className="text-[11px] text-slate uppercase tracking-wide mb-2">{s.label}</p>
                 <p className={`text-[22px] md:text-[24px] font-black ${s.color}`}>{s.value}</p>
-                <p className="text-[11px] text-[#8EA0BC] mt-0.5">{s.sub}</p>
+                <p className="text-[11px] text-slate mt-0.5">{s.sub}</p>
               </div>
             ))}
           </div>
@@ -230,9 +239,9 @@ export default function LeadsPage() {
           </div>
 
           {/* Top lead destacado */}
-          <div className="bg-[#111827] rounded-2xl p-5 md:p-6 text-white">
+          <div className="bg-navy-900 border border-gold-500/20 p-5 md:p-6 text-white">
             <div className="flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] uppercase bg-[#C9A84C] text-white px-3 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] uppercase bg-gold-500 text-white px-3 py-1 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 Lead prioritario
               </span>
@@ -264,14 +273,14 @@ export default function LeadsPage() {
           {/* Lista de leads con filtros */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-[16px] font-bold text-[#111827]">Todos los leads</h2>
+              <h2 className="text-[16px] font-bold text-paper">Todos los leads</h2>
               <div className="flex items-center flex-wrap gap-1.5">
                 {(['todos', 'serios', 'calificados', 'interesados', 'curiosos'] as const).map(f => (
                   <button key={f} onClick={() => setFiltro(f)}
                     className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-colors capitalize ${
                       filtro === f
-                        ? 'bg-[#C9A84C] text-white'
-                        : 'bg-white border border-[#DDE3EC] text-[#8EA0BC] hover:text-[#111827]'
+                        ? 'bg-gold-500 text-navy-950'
+                        : 'bg-navy-800 border border-white/10 text-slate hover:text-paper'
                     }`}>
                     {f}
                   </button>
@@ -279,18 +288,18 @@ export default function LeadsPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] overflow-hidden">
+            <div className="bg-navy-800 border border-white/10 overflow-hidden">
               {leadsFiltrados.map((lead, i) => {
                 const cfg = scoreCfg(lead.score)
                 return (
                   <div key={lead.id}
-                    className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== leadsFiltrados.length - 1 ? 'border-b border-[#EDF1F7]' : ''} hover:bg-[#FAFBFA] transition-colors`}>
-                    <div className="w-9 h-9 rounded-full bg-[#EDF1F7] flex items-center justify-center shrink-0">
-                      <span className="text-[13px] font-black text-[#4B5E7A]">{lead.nombre.charAt(0)}</span>
+                    className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== leadsFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors`}>
+                    <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                      <span className="text-[13px] font-black text-paper-dim">{lead.nombre.charAt(0)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-[#111827] truncate">{lead.nombre}</p>
-                      <p className="text-[11px] text-[#8EA0BC] mt-0.5 truncate">{lead.contacto} · {lead.canal}</p>
+                      <p className="text-[14px] font-semibold text-paper truncate">{lead.nombre}</p>
+                      <p className="text-[11px] text-slate mt-0.5 truncate">{lead.contacto} · {lead.canal}</p>
                     </div>
                     <div className="hidden sm:flex flex-1 max-w-[120px]">
                       <ScoreBar score={lead.score} />
@@ -306,8 +315,8 @@ export default function LeadsPage() {
 
           {/* Paquete de transparencia */}
           <div>
-            <h2 className="text-[13px] font-bold text-[#8EA0BC] tracking-[0.12em] uppercase mb-4">Paquete de Transparencia · Enviado a leads serios</h2>
-            <div className="bg-white rounded-2xl border border-[#DDE3EC] p-4 md:p-6">
+            <h2 className="text-[13px] font-bold text-slate tracking-[0.12em] uppercase mb-4">Paquete de Transparencia · Enviado a leads serios</h2>
+            <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { doc: 'Reporte de valoración completo',    enviado: true  },
@@ -315,14 +324,14 @@ export default function LeadsPage() {
                   { doc: 'Análisis de mercado y comparables', enviado: true  },
                   { doc: 'Contrato de promesa de compraventa', enviado: false },
                 ].map(d => (
-                  <div key={d.doc} className={`flex items-center gap-3 p-3.5 rounded-xl border ${d.enviado ? 'border-[#EDD9A3] bg-[#F0FBF6]' : 'border-[#DDE3EC] bg-[#F5F7FA]'}`}>
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${d.enviado ? 'bg-[#C9A84C]' : 'bg-[#DDE3EC]'}`}>
+                  <div key={d.doc} className={`flex items-center gap-3 p-3.5 rounded-xl border ${d.enviado ? 'border-gold-500/40 bg-gold-500/[0.06]' : 'border-white/10 bg-navy-950/60'}`}>
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${d.enviado ? 'bg-gold-500' : 'bg-white/10'}`}>
                       {d.enviado
                         ? <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        : <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 4v6M4 7h6" stroke="#8EA0BC" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        : <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 4v6M4 7h6" stroke="#8b96ab" strokeWidth="1.5" strokeLinecap="round"/></svg>
                       }
                     </div>
-                    <p className={`text-[12px] font-medium ${d.enviado ? 'text-[#111827]' : 'text-[#8EA0BC]'}`}>{d.doc}</p>
+                    <p className={`text-[12px] font-medium ${d.enviado ? 'text-paper' : 'text-slate'}`}>{d.doc}</p>
                   </div>
                 ))}
               </div>
@@ -330,12 +339,12 @@ export default function LeadsPage() {
           </div>
 
           {/* CTA cierre */}
-          <div className="bg-[#F0FBF6] border border-[#C9A84C]/30 rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <p className="text-[15px] font-bold text-[#0F1F3D] mb-1">Lead listo para firmar · {topLead.nombre}</p>
-              <p className="text-[13px] text-[#5a9078]">Score {topLead.score}/100 · Notifica al broker para iniciar el cierre.</p>
+              <p className="text-[15px] font-bold text-gold-400 mb-1">Lead listo para firmar · {topLead.nombre}</p>
+              <p className="text-[13px] text-paper-dim">Score {topLead.score}/100 · Notifica al broker para iniciar el cierre.</p>
             </div>
-            <button className="flex items-center justify-center gap-2 bg-[#C9A84C] text-white px-6 py-3.5 rounded-xl text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors shrink-0">
+            <button className="flex items-center justify-center gap-2 bg-gold-500 text-navy-950 px-6 py-3.5 font-plex-mono text-[13px] tracking-[0.02em] hover:bg-gold-400 transition-colors shrink-0">
               Notificar al broker
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M6 4l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
@@ -345,6 +354,7 @@ export default function LeadsPage() {
 
         </div>
       </main>
+      </div>
     </div>
   )
 }
