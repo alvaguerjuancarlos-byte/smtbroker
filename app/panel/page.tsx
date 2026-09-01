@@ -85,7 +85,10 @@ function PipelineBar() {
 
   return (
     <div className="bg-navy-800 border border-white/10 p-6">
-      <p className="font-fraunces text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
+      <div className="flex items-center gap-2 mb-1">
+        <p className="font-fraunces text-[16px] font-medium text-paper">Pipeline de activos</p>
+        <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
+      </div>
       <p className="text-[12px] text-slate mb-5">{total} activos en el ecosistema</p>
       <div className="flex h-3 overflow-hidden gap-0.5 mb-4">
         {fases.map(f => (
