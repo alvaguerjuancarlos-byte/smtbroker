@@ -291,7 +291,7 @@ export default function ProspectosBrokerPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar userName={userName} rol="broker_maestro" tema="oscuro" />
+      <Topbar userName={userName} rol="broker_maestro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[1100px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -337,36 +337,36 @@ export default function ProspectosBrokerPage() {
             <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em] mb-4">Alta manual de candidato</p>
             <form onSubmit={handleAlta} className="flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Nombre" required tema="oscuro">
+                <Field label="Nombre" required>
                   <input type="text" value={alta.nombre} onChange={e => setAlta(a => ({ ...a, nombre: e.target.value }))}
                     placeholder="Nombre del broker o agencia" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Fuente" required tema="oscuro">
+                <Field label="Fuente" required>
                   <select value={alta.fuente} onChange={e => setAlta(a => ({ ...a, fuente: e.target.value as Fuente }))} className={inputCls(false, 'oscuro')}>
                     {(Object.keys(FUENTE_LABEL) as Fuente[]).map(f => <option key={f} value={f} className="bg-navy-900">{FUENTE_LABEL[f]}</option>)}
                   </select>
                 </Field>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Referencia de fuente" tema="oscuro">
+                <Field label="Referencia de fuente">
                   <input type="text" value={alta.fuente_ref} onChange={e => setAlta(a => ({ ...a, fuente_ref: e.target.value }))}
                     placeholder="URL o identificador" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Zona" tema="oscuro">
+                <Field label="Zona">
                   <input type="text" value={alta.zona} onChange={e => setAlta(a => ({ ...a, zona: e.target.value }))}
                     placeholder="Ej. San Pedro Garza García" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Volumen de listados aparente" tema="oscuro">
+                <Field label="Volumen de listados aparente">
                   <input type="number" min="0" value={alta.volumen_listados_aparente} onChange={e => setAlta(a => ({ ...a, volumen_listados_aparente: e.target.value }))}
                     placeholder="0" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Correo (necesario para poder invitarlo más adelante)" tema="oscuro">
+                <Field label="Correo (necesario para poder invitarlo más adelante)">
                   <input type="email" value={alta.email} onChange={e => setAlta(a => ({ ...a, email: e.target.value }))}
                     placeholder="correo@ejemplo.com" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Teléfono" tema="oscuro">
+                <Field label="Teléfono">
                   <input type="tel" value={alta.telefono} onChange={e => setAlta(a => ({ ...a, telefono: e.target.value }))}
                     placeholder="+52 81 0000 0000" className={inputCls(false, 'oscuro')} />
                 </Field>
@@ -478,7 +478,7 @@ export default function ProspectosBrokerPage() {
                 ))}
               </div>
 
-              <Field label="Notas (opcional)" tema="oscuro">
+              <Field label="Notas (opcional)">
                 <textarea value={licenciaForm.notas} onChange={e => setLicenciaForm(f => ({ ...f, notas: e.target.value }))}
                   placeholder="Ej. número de cédula, vigencia, cómo se verificó…" rows={3} className={inputCls(false, 'oscuro')} />
               </Field>

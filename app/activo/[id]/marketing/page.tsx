@@ -223,7 +223,7 @@ export default function MarketingPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar rol="propietario" tema="oscuro" />
+      <Topbar rol="propietario" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">

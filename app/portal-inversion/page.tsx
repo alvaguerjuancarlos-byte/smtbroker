@@ -130,7 +130,7 @@ export default function PortalInversionPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar userName={userName} rol="inversionista" tema="oscuro" />
+      <Topbar userName={userName} rol="inversionista" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -173,22 +173,22 @@ export default function PortalInversionPage() {
             ) : (
               <form onSubmit={guardarPerfil} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Presupuesto estimado" tema="oscuro">
+                  <Field label="Presupuesto estimado">
                     <select value={perfil.presupuesto} onChange={e => setPerfil(p => ({ ...p, presupuesto: e.target.value }))} className={inputCls(false, 'oscuro')}>
                       <option value="" className="bg-navy-900">Selecciona…</option>
                       {PRESUPUESTOS.map(p => <option key={p} className="bg-navy-900">{p}</option>)}
                     </select>
                   </Field>
-                  <Field label="Zona de interés" tema="oscuro">
+                  <Field label="Zona de interés">
                     <input type="text" value={perfil.zona} onChange={e => setPerfil(p => ({ ...p, zona: e.target.value }))}
                       placeholder="Ej. San Pedro Garza García" className={inputCls(false, 'oscuro')} />
                   </Field>
                 </div>
-                <Field label="Tipo de activo de interés" tema="oscuro">
+                <Field label="Tipo de activo de interés">
                   <input type="text" value={perfil.tipo_activo_interes} onChange={e => setPerfil(p => ({ ...p, tipo_activo_interes: e.target.value }))}
                     placeholder="Ej. Terrenos, edificios, desarrollos verticales" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Tesis de inversión (opcional)" tema="oscuro">
+                <Field label="Tesis de inversión (opcional)">
                   <textarea value={perfil.tesis_inversion} onChange={e => setPerfil(p => ({ ...p, tesis_inversion: e.target.value }))}
                     placeholder="¿Qué buscas y por qué? Ej. terreno para desarrollo vertical, horizonte de 3-5 años…" rows={3} className={inputCls(false, 'oscuro')} />
                 </Field>

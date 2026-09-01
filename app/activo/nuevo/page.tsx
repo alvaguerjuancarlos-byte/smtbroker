@@ -126,7 +126,7 @@ export default function NuevoActivoPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar rol="propietario" tema="oscuro" />
+      <Topbar rol="propietario" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[640px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -156,12 +156,12 @@ export default function NuevoActivoPage() {
             <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
               <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Datos generales</p>
 
-              <Field label="Nombre del activo" required error={submitted && required.nombre} tema="oscuro">
+              <Field label="Nombre del activo" required error={submitted && required.nombre}>
                 <input type="text" value={form.nombre} onChange={e => set('nombre', e.target.value)}
                   placeholder="Ej. Terreno Col. Providencia" className={inputCls(submitted && required.nombre, 'oscuro')} />
               </Field>
 
-              <Field label="Tipo de activo" required tema="oscuro">
+              <Field label="Tipo de activo" required>
                 <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls(false, 'oscuro')}>
                   {TIPOS.map(t => <option key={t} className="bg-navy-900">{t}</option>)}
                 </select>
@@ -174,34 +174,34 @@ export default function NuevoActivoPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <Field label="Calle" required error={submitted && required.calle} tema="oscuro">
+                  <Field label="Calle" required error={submitted && required.calle}>
                     <input type="text" value={form.calle} onChange={e => set('calle', e.target.value)}
                       placeholder="Nombre de la calle" className={inputCls(submitted && required.calle, 'oscuro')} />
                   </Field>
                 </div>
-                <Field label="Número" tema="oscuro">
+                <Field label="Número">
                   <input type="text" value={form.numero} onChange={e => set('numero', e.target.value)}
                     placeholder="123" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Colonia" required error={submitted && required.colonia} tema="oscuro">
+              <Field label="Colonia" required error={submitted && required.colonia}>
                 <input type="text" value={form.colonia} onChange={e => set('colonia', e.target.value)}
                   placeholder="Nombre de la colonia" className={inputCls(submitted && required.colonia, 'oscuro')} />
               </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Municipio / Alcaldía" required error={submitted && required.municipio} tema="oscuro">
+                <Field label="Municipio / Alcaldía" required error={submitted && required.municipio}>
                   <input type="text" value={form.municipio} onChange={e => set('municipio', e.target.value)}
                     placeholder="Ej. Guadalajara" className={inputCls(submitted && required.municipio, 'oscuro')} />
                 </Field>
-                <Field label="Código postal" tema="oscuro">
+                <Field label="Código postal">
                   <input type="text" value={form.cp} onChange={e => set('cp', e.target.value)}
                     placeholder="00000" maxLength={5} className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Estado" required error={submitted && required.estado} tema="oscuro">
+              <Field label="Estado" required error={submitted && required.estado}>
                 <select value={form.estado} onChange={e => set('estado', e.target.value)} className={inputCls(submitted && required.estado, 'oscuro')}>
                   {ESTADOS_MX.map(s => <option key={s} className="bg-navy-900">{s}</option>)}
                 </select>
@@ -243,17 +243,17 @@ export default function NuevoActivoPage() {
               <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Características y precio</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Superficie (m²)" tema="oscuro">
+                <Field label="Superficie (m²)">
                   <input type="number" value={form.superficie} onChange={e => set('superficie', e.target.value)}
                     placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Precio total (MXN)" tema="oscuro">
+                <Field label="Precio total (MXN)">
                   <input type="number" value={form.precio_total} onChange={e => set('precio_total', e.target.value)}
                     placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
 
-              <Field label="Descripción / Observaciones" tema="oscuro">
+              <Field label="Descripción / Observaciones">
                 <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
                   placeholder="Características relevantes, estado del inmueble, acceso, etc."
                   rows={4} className={`${inputCls(false, 'oscuro')} resize-none`} />

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Rol = 'propietario' | 'broker' | 'inversionista' | 'broker_maestro'
@@ -13,18 +13,34 @@ const HOME_POR_ROL: Record<Rol, string> = {
   broker_maestro: '/panel',
 }
 
-// Link secundario propio de cada rol — lo que tiene sentido que haga desde el Topbar además de
-// volver a su home. Solo broker_maestro y propietario tienen una acción secundaria hoy.
-const LINK_SECUNDARIO: Partial<Record<Rol, { href: string; label: string }>> = {
-  broker_maestro: { href: '/panel/prospectos-broker', label: 'Prospección' },
-  propietario: { href: '/activo/nuevo', label: 'Registrar activo' },
+// Navegación visible en el Topbar por rol — mismo componente y misma forma para los cuatro,
+// para que la barra se sienta consistente en toda la plataforma (antes cada rol tenía a lo más
+// un link suelto, o ninguno). El Broker Maestro ve enlaces a las cuatro áreas (incluidas las
+// vistas propias de propietario/inversionista/broker) porque es quien supervisa todo el
+// ecosistema — los demás roles solo ven lo suyo.
+const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
+  propietario: [
+    { href: '/dashboard', label: 'Mis activos' },
+    { href: '/activo/nuevo', label: 'Registrar activo' },
+  ],
+  broker: [
+    { href: '/portal-broker', label: 'Mi portal' },
+  ],
+  inversionista: [
+    { href: '/portal-inversion', label: 'Mi portal' },
+  ],
+  broker_maestro: [
+    { href: '/panel', label: 'Panel' },
+    { href: '/panel/prospectos-broker', label: 'Prospección' },
+    { href: '/dashboard', label: 'Vista propietario' },
+    { href: '/portal-inversion', label: 'Vista inversionista' },
+    { href: '/portal-broker', label: 'Vista broker' },
+  ],
 }
 
-// `tema` distingue el rediseño navy/dorado (nuevo, aplicándose pantalla por pantalla — ver
-// /login, /panel) del tema claro original (todavía en uso en el resto). Migración incremental:
-// sin esto, cambiar este componente rompería visualmente cualquier pantalla no migrada todavía.
-export default function Topbar({ userName, rol, tema = 'claro' }: { userName?: string; rol?: Rol; tema?: 'claro' | 'oscuro' }) {
+export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol }) {
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -33,11 +49,11 @@ export default function Topbar({ userName, rol, tema = 'claro' }: { userName?: s
 
   const initial = userName ? userName.charAt(0).toUpperCase() : '?'
   const home = rol ? HOME_POR_ROL[rol] : '/dashboard'
-  const secundario = rol ? LINK_SECUNDARIO[rol] : undefined
+  const nav = rol ? NAV_POR_ROL[rol] : []
 
-  if (tema === 'oscuro') {
-    return (
-      <header className="bg-navy-900/90 backdrop-blur-sm border-b border-white/10 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 sticky top-0 z-20">
+  return (
+    <header className="bg-navy-900/90 backdrop-blur-sm border-b border-white/10 sticky top-0 z-20">
+      <div className="px-4 md:px-6 py-3 flex items-center gap-3 md:gap-5">
         <Link href={home} className="flex items-center gap-2.5 shrink-0 group">
           <svg width="26" height="26" viewBox="0 0 30 30" fill="none" className="shrink-0">
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
@@ -47,13 +63,20 @@ export default function Topbar({ userName, rol, tema = 'claro' }: { userName?: s
             SMT<span className="text-gold-400 group-hover:text-paper transition-colors">BROKER</span>
           </span>
         </Link>
-        <span className="hidden md:inline text-white/15">|</span>
-        <span className="hidden md:inline font-plex-mono text-[11px] text-slate tracking-[0.06em]">Plataforma IA de ventas inmobiliarias</span>
-        {secundario && (
-          <Link href={secundario.href} className="hidden sm:inline font-plex-mono text-[11.5px] tracking-[0.04em] text-gold-400 hover:text-gold-100 transition-colors ml-2">
-            {secundario.label} →
-          </Link>
-        )}
+
+        <nav className="hidden md:flex items-center gap-1">
+          {nav.map(n => {
+            const active = pathname === n.href
+            return (
+              <Link key={n.href} href={n.href}
+                className={`font-plex-mono text-[11.5px] tracking-[0.03em] px-2.5 py-1.5 transition-colors ${
+                  active ? 'text-gold-400 bg-gold-500/10' : 'text-slate hover:text-paper'
+                }`}>
+                {n.label}
+              </Link>
+            )
+          })}
+        </nav>
 
         <div className="ml-auto flex items-center gap-2 md:gap-3">
           {userName && (
@@ -74,48 +97,24 @@ export default function Topbar({ userName, rol, tema = 'claro' }: { userName?: s
             <span className="hidden sm:inline">SALIR</span>
           </button>
         </div>
-      </header>
-    )
-  }
-
-  return (
-    <header className="bg-white border-b border-[#DDE3EC] px-4 md:px-6 py-3 flex items-center gap-2 md:gap-3 sticky top-0 z-20">
-      <div className="w-8 h-8 rounded-lg bg-[#C9A84C] flex items-center justify-center shrink-0">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M9 2L16 6V12L9 16L2 12V6L9 2Z" stroke="white" strokeWidth="1.5" fill="none"/>
-          <path d="M9 2V16M2 6L16 12M16 6L2 12" stroke="white" strokeWidth="1" strokeOpacity="0.5"/>
-        </svg>
       </div>
-      <Link href={home} className="text-[15px] font-bold text-[#111827] tracking-tight hover:text-[#C9A84C] transition-colors shrink-0">
-        SMTBROKER
-      </Link>
-      <span className="hidden md:inline text-[#DDE3EC] text-sm">|</span>
-      <span className="hidden md:inline text-[12px] text-[#8EA0BC]">Plataforma IA de ventas inmobiliarias</span>
-      {secundario && (
-        <Link href={secundario.href} className="hidden sm:inline text-[12.5px] font-semibold text-[#4B5E7A] hover:text-[#C9A84C] transition-colors ml-2">
-          {secundario.label}
-        </Link>
+
+      {/* Nav en móvil — misma lista, debajo del renglón principal */}
+      {nav.length > 0 && (
+        <nav className="md:hidden flex items-center gap-1 px-4 pb-2.5 overflow-x-auto">
+          {nav.map(n => {
+            const active = pathname === n.href
+            return (
+              <Link key={n.href} href={n.href}
+                className={`font-plex-mono text-[11px] tracking-[0.03em] px-2.5 py-1.5 whitespace-nowrap transition-colors ${
+                  active ? 'text-gold-400 bg-gold-500/10' : 'text-slate hover:text-paper'
+                }`}>
+                {n.label}
+              </Link>
+            )
+          })}
+        </nav>
       )}
-
-      <div className="ml-auto flex items-center gap-2 md:gap-3">
-        {userName && (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#FBF5E6] flex items-center justify-center shrink-0">
-              <span className="text-[11px] font-bold text-[#0F1F3D]">{initial}</span>
-            </div>
-            <span className="hidden sm:inline text-[13px] font-medium text-[#111827]">{userName}</span>
-          </div>
-        )}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-[12px] text-[#8EA0BC] hover:text-[#111827] border border-[#DDE3EC] px-2.5 md:px-3 py-1.5 rounded-xl transition-colors"
-        >
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-            <path d="M5 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="hidden sm:inline">Salir</span>
-        </button>
-      </div>
     </header>
   )
 }

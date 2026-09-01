@@ -218,7 +218,7 @@ export default function PanelPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar userName={userName} rol="broker_maestro" tema="oscuro" />
+      <Topbar userName={userName} rol="broker_maestro" />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[1100px] mx-auto flex flex-col gap-6 md:gap-8">
