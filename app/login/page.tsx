@@ -58,6 +58,17 @@ export default function LoginPage() {
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="0.6"/>
           </svg>
 
+          <div className="flex items-center gap-3 mb-14">
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="shrink-0">
+              <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
+              <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
+            </svg>
+            <div>
+              <span className="font-fraunces font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
+              <span className="block font-plex-mono text-[10px] text-slate tracking-[0.12em] -mt-0.5">BY MINDBRIDGE</span>
+            </div>
+          </div>
+
           <span className="font-plex-mono text-[11px] tracking-[0.22em] uppercase text-gold-400">
             Acceso · Plataforma
           </span>
