@@ -75,37 +75,45 @@ export default function EstablecerPasswordPage() {
     router.push('/dashboard')
   }
 
+  const gridBg = {
+    backgroundImage:
+      'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+    backgroundSize: '56px 56px',
+  }
+
   if (estado === 'revisando') {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <p className="text-[#8EA0BC] text-[14px]">Revisando enlace…</p>
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center relative">
+        <div className="absolute inset-0 pointer-events-none" style={gridBg} />
+        <p className="relative text-slate text-[14px] font-plex-mono">Revisando enlace…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
-      <div className="w-full max-w-[400px]">
+    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex items-center justify-center px-4 relative">
+      <div className="absolute inset-0 pointer-events-none" style={gridBg} />
+
+      <div className="relative w-full max-w-[400px]">
 
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[#C9A84C] flex items-center justify-center mb-4 shadow-lg shadow-[#C9A84C]/20">
-            <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
-              <path d="M9 2L16 6V12L9 16L2 12V6L9 2Z" stroke="white" strokeWidth="1.5" fill="none"/>
-              <path d="M9 2V16M2 6L16 12M16 6L2 12" stroke="white" strokeWidth="1" strokeOpacity="0.5"/>
-            </svg>
-          </div>
-          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">SMTBROKER</h1>
-          <p className="text-[11px] text-[#8EA0BC] tracking-[0.14em] uppercase mt-0.5">Plataforma IA de ventas inmobiliarias</p>
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="mb-3">
+            <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
+            <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
+          </svg>
+          <h1 className="font-fraunces font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></h1>
+          <p className="font-plex-mono text-[10px] text-slate tracking-[0.14em] uppercase mt-0.5">Plataforma IA de ventas inmobiliarias</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#DDE3EC] shadow-sm p-8">
+        <div className="relative before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">
+          <div className="bg-navy-800 border border-white/10 p-8">
           {estado === 'invalido' && (
             <>
-              <h2 className="text-[18px] font-bold text-[#111827] mb-1">Enlace inválido o expirado</h2>
-              <p className="text-[13px] text-[#8EA0BC] mb-6">
+              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Enlace inválido o expirado</h2>
+              <p className="text-[13px] text-slate mb-6">
                 Este enlace ya no es válido (los enlaces expiran después de un tiempo o de un solo uso). Pide que te envíen uno nuevo.
               </p>
-              <a href="/login" className="block text-center w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors">
+              <a href="/login" className="block text-center w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors">
                 Ir a iniciar sesión
               </a>
             </>
@@ -113,14 +121,14 @@ export default function EstablecerPasswordPage() {
 
           {(estado === 'porConfirmar' || estado === 'confirmando') && (
             <>
-              <h2 className="text-[18px] font-bold text-[#111827] mb-1">Confirma tu enlace</h2>
-              <p className="text-[13px] text-[#8EA0BC] mb-6">
+              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Confirma tu enlace</h2>
+              <p className="text-[13px] text-slate mb-6">
                 Por seguridad, confirma manualmente para continuar (esto evita que un escáner de correo lo abra por ti).
               </p>
               <button
                 onClick={handleConfirmar}
                 disabled={estado === 'confirmando'}
-                className="w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {estado === 'confirmando' ? 'Confirmando…' : 'Confirmar y continuar'}
               </button>
@@ -129,49 +137,50 @@ export default function EstablecerPasswordPage() {
 
           {estado === 'listo' && (
             <>
-              <h2 className="text-[18px] font-bold text-[#111827] mb-1">Crea tu contraseña</h2>
-              <p className="text-[13px] text-[#8EA0BC] mb-6">Último paso para activar tu cuenta.</p>
+              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Crea tu contraseña</h2>
+              <p className="text-[13px] text-slate mb-6">Último paso para activar tu cuenta.</p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-[#4B5E7A] uppercase tracking-[0.1em]">Contraseña</label>
+                <div className="flex flex-col gap-2">
+                  <label className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Contraseña</label>
                   <input
                     type="password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-[#DDE3EC] bg-[#F5F7FA] text-[14px] text-[#111827] placeholder-[#BFC9D8] focus:outline-none focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
+                    className="w-full px-4 py-3 border border-white/15 bg-navy-950/60 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-[#4B5E7A] uppercase tracking-[0.1em]">Confirmar contraseña</label>
+                <div className="flex flex-col gap-2">
+                  <label className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Confirmar contraseña</label>
                   <input
                     type="password"
                     value={confirmar}
                     onChange={e => setConfirmar(e.target.value)}
                     placeholder="Repite la contraseña"
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-[#DDE3EC] bg-[#F5F7FA] text-[14px] text-[#111827] placeholder-[#BFC9D8] focus:outline-none focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
+                    className="w-full px-4 py-3 border border-white/15 bg-navy-950/60 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-start gap-2.5 bg-[#FEE2E2] border border-[#FECACA] rounded-xl px-4 py-3">
-                    <p className="text-[12px] text-[#991B1B] leading-snug">{error}</p>
+                  <div className="flex items-start gap-2.5 bg-red-950/20 border border-red-900/60 px-4 py-3">
+                    <p className="text-[12px] text-[#f3a3a3] leading-snug">{error}</p>
                   </div>
                 )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-xl bg-[#C9A84C] text-white text-[14px] font-semibold hover:bg-[#0F1F3D] transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                  className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-1"
                 >
                   {loading ? 'Guardando…' : 'Activar cuenta'}
                 </button>
               </form>
             </>
           )}
+          </div>
         </div>
 
       </div>
