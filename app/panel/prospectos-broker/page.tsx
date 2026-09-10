@@ -276,9 +276,15 @@ export default function ProspectosBrokerPage() {
     )
   }
 
+  // "Cola" = todo lo que sigue activo en el flujo (nuevo/en revisión/contactado) más lo que ya
+  // pasó el umbral de score. Antes solo incluía "nuevo" -- un prospecto de AMPI nunca puede
+  // llegar al umbral (volumen_listados_aparente siempre null en la importación, ver
+  // importarAmpi), así que en cuanto el Broker Maestro lo movía a "en_revision" desaparecía de
+  // esta vista por default, sin ningún aviso (hallazgo real, 2026-09-09).
+  const ESTADOS_EN_COLA: Estado[] = ['nuevo', 'en_revision', 'contactado']
   const visibles = filtro === 'todos'
     ? prospectos
-    : prospectos.filter(p => p.estado === 'nuevo' || (p.score_filtrado ?? 0) >= UMBRAL_COLA)
+    : prospectos.filter(p => ESTADOS_EN_COLA.includes(p.estado) || (p.score_filtrado ?? 0) >= UMBRAL_COLA)
 
   return (
     <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
@@ -386,8 +392,9 @@ export default function ProspectosBrokerPage() {
               <div className="flex items-center gap-1.5">
                 {(['cola', 'todos'] as const).map(f => (
                   <button key={f} onClick={() => setFiltro(f)}
+                    title={f === 'cola' ? 'Nuevo, en revisión o contactado -- o cualquiera con score alto' : undefined}
                     className={`font-plex-mono text-[10.5px] px-3 py-1.5 transition-colors ${filtro === f ? 'bg-gold-500 text-navy-950' : 'border border-white/15 text-slate hover:text-paper hover:border-white/30'}`}>
-                    {f === 'cola' ? `Nuevo + score ≥ ${UMBRAL_COLA}` : 'Todos'}
+                    {f === 'cola' ? `En proceso + score ≥ ${UMBRAL_COLA}` : 'Todos'}
                   </button>
                 ))}
               </div>
