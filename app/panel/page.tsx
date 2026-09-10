@@ -17,43 +17,49 @@ interface Solicitud {
   created_at: string
 }
 
-// ─── Datos simulados del ecosistema ───────────────────────────────────────────
+interface Activo {
+  id: string
+  usuario_id: string
+  broker_id: string | null
+  nombre: string
+  tipo: string
+  municipio: string
+  precio_total: number | null
+  status: string
+  created_at: string
+}
 
-const ACTIVOS_ECO = [
-  { id: '1', nombre: 'Terreno Col. Providencia',  tipo: 'Terreno',     propietario: 'Jorge Calvarez',    broker: 'Maestro',          municipio: 'Guadalajara',    fase: 'leads',      precio: 8500000  },
-  { id: '2', nombre: 'Casa Valle Real',           tipo: 'Casa',        propietario: 'María González',    broker: 'Luis Hdez.',       municipio: 'Zapopan',        fase: 'marketing',  precio: 4200000  },
-  { id: '3', nombre: 'Local Av. Vallarta',        tipo: 'Local',       propietario: 'Roberto Sánchez',   broker: 'Maestro',          municipio: 'Guadalajara',    fase: 'valoracion', precio: 2800000  },
-  { id: '4', nombre: 'Departamento Midtown',      tipo: 'Depto',       propietario: 'Ana Martínez',      broker: 'Carmen Vega',      municipio: 'CDMX',           fase: 'marketing',  precio: 5600000  },
-  { id: '5', nombre: 'Bodega Industrial Periferico', tipo: 'Bodega',   propietario: 'Grupo RIMSA',       broker: 'Luis Hdez.',       municipio: 'Tlaquepaque',    fase: 'leads',      precio: 12000000 },
-  { id: '6', nombre: 'Terreno Carretera 45',      tipo: 'Terreno',     propietario: 'Carlos Peña',       broker: 'Maestro',          municipio: 'Tonalá',         fase: 'cerrado',    precio: 3100000  },
-  { id: '7', nombre: 'Edificio Centro Histórico', tipo: 'Edificio',    propietario: 'Inmobiliaria PMG',  broker: 'Carmen Vega',      municipio: 'Guadalajara',    fase: 'valoracion', precio: 18000000 },
-  { id: '8', nombre: 'Casa Bugambilias',          tipo: 'Casa',        propietario: 'Sofía Romero',      broker: 'Maestro',          municipio: 'Zapopan',        fase: 'cerrado',    precio: 3800000  },
-]
+interface UsuarioMin {
+  id: string
+  nombre: string
+  rol: string | null
+}
 
-const BROKERS = [
-  { nombre: 'Luis Hernández',  activos: 2, cerrados: 1, volumen: 16200000, rating: 4.8 },
-  { nombre: 'Carmen Vega',     activos: 2, cerrados: 0, volumen: 23600000, rating: 4.6 },
-]
-
-const ACTIVIDAD = [
-  { hora: 'Hace 12 min', texto: 'Carlos Mendoza (score 92) solicitó visita — Terreno Col. Providencia',  tipo: 'lead'      },
-  { hora: 'Hace 1h',     texto: 'Casa Valle Real alcanzó 1,000 vistas en portales',                       tipo: 'marketing' },
-  { hora: 'Hace 2h',     texto: 'Nuevo propietario registrado: Sofía Romero — Casa Bugambilias',          tipo: 'registro'  },
-  { hora: 'Hace 3h',     texto: 'Bodega Industrial Periferico: 2 nuevos leads calificados',               tipo: 'lead'      },
-  { hora: 'Ayer 4:30pm', texto: 'Cierre confirmado — Casa Bugambilias · $3,800,000',                     tipo: 'cierre'    },
-  { hora: 'Ayer 2:10pm', texto: 'Carmen Vega incorporó: Edificio Centro Histórico',                       tipo: 'registro'  },
-]
-
-const INVERSIONISTAS = [
-  { nombre: 'Grupo Inversiones RM', intereses: 'Terrenos · Edificios', presupuesto: '$5M – $20M', activo: true  },
-  { nombre: 'Carlos Mendoza',       intereses: 'Terrenos · Casas',    presupuesto: '$3M – $10M', activo: true  },
-  { nombre: 'Fondo NEXUS Capital',  intereses: 'Industrial · Mixto',  presupuesto: '$10M – $50M', activo: false },
-]
+interface PerfilIntencion {
+  usuario_id: string
+  presupuesto: string | null
+  tipo_activo_interes: string | null
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatMXN = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+
+// "Hace 12 min" / "Hace 3h" / "Ayer" / fecha corta — para la actividad reciente, derivada de
+// fechas reales (activos.created_at, solicitudes.created_at), no de un log de eventos inventado.
+const tiempoRelativo = (iso: string) => {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60000)
+  if (min < 1) return 'Justo ahora'
+  if (min < 60) return `Hace ${min} min`
+  const horas = Math.floor(min / 60)
+  if (horas < 24) return `Hace ${horas}h`
+  const dias = Math.floor(horas / 24)
+  if (dias === 1) return 'Ayer'
+  if (dias < 7) return `Hace ${dias} días`
+  return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+}
 
 // Chips de estado en tema oscuro: borde + texto en el tono semántico sobre fondo casi
 // transparente, en vez de bloques pastel sólidos (que no leen bien sobre navy).
@@ -65,47 +71,51 @@ const faseCfg = (fase: string) => {
   return                            { label: 'Ingresado',  chip: 'border-white/15 text-slate bg-white/5',              dot: 'bg-slate' }
 }
 
-const actividadCfg = (tipo: string) => {
-  if (tipo === 'lead')      return { color: 'bg-gold-500/10', icon: '#ddc06a' }
-  if (tipo === 'marketing') return { color: 'bg-[#4F46E5]/10', icon: '#a5a1f5' }
-  if (tipo === 'cierre')    return { color: 'bg-white/10', icon: '#6bdb9a' }
-  return                           { color: 'bg-white/5', icon: '#8b96ab' }
+const actividadCfg = (tipo: 'activo' | 'registro') => {
+  if (tipo === 'activo') return { color: 'bg-gold-500/10', icon: '#ddc06a' }
+  return { color: 'bg-[#4F46E5]/10', icon: '#a5a1f5' }
 }
 
 // ─── Componentes ──────────────────────────────────────────────────────────────
 
-function PipelineBar() {
+function PipelineBar({ activos }: { activos: Activo[] }) {
+  const conteo: Record<string, number> = {}
+  for (const a of activos) conteo[a.status] = (conteo[a.status] || 0) + 1
+
   const fases = [
-    { label: 'Valoración', count: 2, color: '#D97706' },
-    { label: 'Marketing',  count: 2, color: '#7b76ea' },
-    { label: 'Leads',      count: 2, color: '#c9a227' },
-    { label: 'Cerrado',    count: 2, color: '#5f6a80' },
-  ]
-  const total = fases.reduce((a, f) => a + f.count, 0)
+    { key: 'valoracion', label: 'Valoración', color: '#D97706' },
+    { key: 'marketing',  label: 'Marketing',  color: '#7b76ea' },
+    { key: 'leads',      label: 'Leads',      color: '#c9a227' },
+    { key: 'cerrado',    label: 'Cerrado',    color: '#5f6a80' },
+  ].map(f => ({ ...f, count: conteo[f.key] || 0 }))
+  const total = activos.length
 
   return (
     <div className="bg-navy-800 border border-white/10 p-6">
-      <div className="flex items-center gap-2 mb-1">
-        <p className="font-fraunces text-[16px] font-medium text-paper">Pipeline de activos</p>
-        <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-      </div>
-      <p className="text-[12px] text-slate mb-5">{total} activos en el ecosistema</p>
-      <div className="flex h-3 overflow-hidden gap-0.5 mb-4">
-        {fases.map(f => (
-          <div key={f.label} style={{ width: `${(f.count / total) * 100}%`, backgroundColor: f.color }} />
-        ))}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {fases.map(f => (
-          <div key={f.label} className="flex items-center gap-2">
-            <span className="w-2 h-2 shrink-0" style={{ backgroundColor: f.color }} />
-            <div>
-              <p className="font-plex-mono text-[13px] font-medium text-paper">{f.count}</p>
-              <p className="text-[10px] text-slate">{f.label}</p>
-            </div>
+      <p className="font-fraunces text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
+      <p className="text-[12px] text-slate mb-5">{total} activo{total !== 1 ? 's' : ''} en el ecosistema</p>
+      {total === 0 ? (
+        <p className="text-[12px] text-slate">Todavía no hay activos registrados.</p>
+      ) : (
+        <>
+          <div className="flex h-3 overflow-hidden gap-0.5 mb-4">
+            {fases.filter(f => f.count > 0).map(f => (
+              <div key={f.key} style={{ width: `${(f.count / total) * 100}%`, backgroundColor: f.color }} />
+            ))}
           </div>
-        ))}
-      </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {fases.map(f => (
+              <div key={f.key} className="flex items-center gap-2">
+                <span className="w-2 h-2 shrink-0" style={{ backgroundColor: f.color }} />
+                <div>
+                  <p className="font-plex-mono text-[13px] font-medium text-paper">{f.count}</p>
+                  <p className="text-[10px] text-slate">{f.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -125,6 +135,9 @@ export default function PanelPage() {
   const [userName, setUserName]     = useState('')
   const [filtroFase, setFiltroFase] = useState<string>('todos')
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
+  const [activos, setActivos]         = useState<Activo[]>([])
+  const [usuarios, setUsuarios]       = useState<UsuarioMin[]>([])
+  const [perfiles, setPerfiles]       = useState<PerfilIntencion[]>([])
   const [copiedLink, setCopiedLink]   = useState(false)
   // Estado de la invitación por correo disparada al aprobar (ver app/api/invitar-usuario) —
   // separado del status de la solicitud: si la invitación falla, la solicitud sigue "aprobada",
@@ -155,11 +168,16 @@ export default function PanelPage() {
 
       setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Broker Maestro')
 
-      const { data } = await supabase
-        .from('solicitudes')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setSolicitudes((data as Solicitud[]) || [])
+      const [{ data: solicitudesData }, { data: activosData }, { data: usuariosData }, { data: perfilesData }] = await Promise.all([
+        supabase.from('solicitudes').select('*').order('created_at', { ascending: false }),
+        supabase.from('activos').select('id, usuario_id, broker_id, nombre, tipo, municipio, precio_total, status, created_at'),
+        supabase.from('usuarios').select('id, nombre, rol'),
+        supabase.from('perfiles_intencion').select('usuario_id, presupuesto, tipo_activo_interes'),
+      ])
+      setSolicitudes((solicitudesData as Solicitud[]) || [])
+      setActivos((activosData as Activo[]) || [])
+      setUsuarios((usuariosData as UsuarioMin[]) || [])
+      setPerfiles((perfilesData as PerfilIntencion[]) || [])
 
       setLoading(false)
     }
@@ -214,13 +232,41 @@ export default function PanelPage() {
     )
   }
 
-  const activosFiltrados = filtroFase === 'todos'
-    ? ACTIVOS_ECO
-    : ACTIVOS_ECO.filter(a => a.fase === filtroFase)
+  const nombreDe = (id: string | null) => id ? (usuarios.find(u => u.id === id)?.nombre ?? '—') : null
 
-  const volumenTotal = ACTIVOS_ECO.reduce((a, c) => a + c.precio, 0)
-  const cerrados     = ACTIVOS_ECO.filter(a => a.fase === 'cerrado').length
-  const enProceso    = ACTIVOS_ECO.filter(a => a.fase !== 'cerrado').length
+  const activosFiltrados = filtroFase === 'todos'
+    ? activos
+    : activos.filter(a => a.status === filtroFase)
+
+  const volumenTotal = activos.reduce((a, c) => a + (c.precio_total || 0), 0)
+  const cerrados     = activos.filter(a => a.status === 'cerrado').length
+  const enProceso    = activos.filter(a => a.status !== 'cerrado').length
+
+  const brokersAliados = usuarios.filter(u => u.rol === 'broker').map(b => {
+    const propios = activos.filter(a => a.broker_id === b.id)
+    return {
+      nombre: b.nombre,
+      activos: propios.length,
+      cerrados: propios.filter(a => a.status === 'cerrado').length,
+      volumen: propios.reduce((s, a) => s + (a.precio_total || 0), 0),
+    }
+  })
+
+  const inversionistasRegistrados = usuarios.filter(u => u.rol === 'inversionista').map(inv => {
+    const perfil = perfiles.find(p => p.usuario_id === inv.id)
+    return {
+      nombre: inv.nombre,
+      intereses: perfil?.tipo_activo_interes || 'Sin perfil capturado',
+      presupuesto: perfil?.presupuesto || '—',
+    }
+  })
+
+  // Actividad reciente real, derivada de dos fuentes con fecha (no hay tabla de eventos) —
+  // activos nuevos y solicitudes ya aprobadas — combinadas y ordenadas por fecha real.
+  const actividad = [
+    ...activos.map(a => ({ tipo: 'activo' as const, texto: `Nuevo activo registrado: ${a.nombre}`, fecha: a.created_at })),
+    ...solicitudes.filter(s => s.status === 'aprobada').map(s => ({ tipo: 'registro' as const, texto: `Nuevo usuario aprobado: ${s.nombre} (${rolLabel(s.rol).label})`, fecha: s.created_at })),
+  ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 6)
 
   return (
     <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
@@ -348,21 +394,16 @@ export default function PanelPage() {
             </div>
           )}
 
-          {/* Métricas globales — ACTIVOS_ECO/BROKERS/INVERSIONISTAS son datos de ejemplo, ver
-              nota al inicio del archivo. Badge explícito para que nadie tome una decisión de
-              negocio sobre un número inventado. */}
+          {/* Métricas globales — ya vienen de activos/usuarios reales de Supabase. */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.14em]">Métricas globales</p>
-              <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-            </div>
+            <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.14em] mb-3">Métricas globales</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
             {[
-              { label: 'En proceso',     value: String(enProceso),             sub: 'en 3 fases',       color: 'text-paper' },
-              { label: 'Cerrados',       value: String(cerrados),              sub: 'este ciclo',       color: 'text-gold-400' },
-              { label: 'Volumen',        value: formatMXN(volumenTotal),       sub: 'valor portafolio', color: 'text-[#a5a1f5]' },
-              { label: 'Brokers',        value: String(BROKERS.length),        sub: 'activos',          color: 'text-[#e8b568]' },
-              { label: 'Inversionistas', value: String(INVERSIONISTAS.length), sub: 'registrados',      color: 'text-paper' },
+              { label: 'En proceso',     value: String(enProceso),                     sub: 'sin cerrar',      color: 'text-paper' },
+              { label: 'Cerrados',       value: String(cerrados),                      sub: 'este ciclo',       color: 'text-gold-400' },
+              { label: 'Volumen',        value: formatMXN(volumenTotal),               sub: 'valor portafolio', color: 'text-[#a5a1f5]' },
+              { label: 'Brokers',        value: String(brokersAliados.length),         sub: 'activos',          color: 'text-[#e8b568]' },
+              { label: 'Inversionistas', value: String(inversionistasRegistrados.length), sub: 'registrados',   color: 'text-paper' },
             ].map(m => (
               <div key={m.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-2">{m.label}</p>
@@ -376,41 +417,39 @@ export default function PanelPage() {
           {/* Pipeline + Actividad reciente */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <PipelineBar />
+              <PipelineBar activos={activos} />
             </div>
 
             {/* Actividad reciente */}
             <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-1">
-              <div className="flex items-center gap-2 mb-3">
-                <p className="font-fraunces text-[14px] font-medium text-paper">Actividad reciente</p>
-                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-              </div>
-              <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 160 }}>
-                {ACTIVIDAD.map((a, i) => {
-                  const cfg = actividadCfg(a.tipo)
-                  return (
-                    <div key={i} className="flex items-start gap-2.5">
-                      <div className={`w-6 h-6 flex items-center justify-center shrink-0 mt-0.5 ${cfg.color}`}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.icon }} />
+              <p className="font-fraunces text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
+              {actividad.length === 0 ? (
+                <p className="text-[11px] text-slate">Sin actividad todavía.</p>
+              ) : (
+                <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 160 }}>
+                  {actividad.map((a, i) => {
+                    const cfg = actividadCfg(a.tipo)
+                    return (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <div className={`w-6 h-6 flex items-center justify-center shrink-0 mt-0.5 ${cfg.color}`}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.icon }} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-paper-dim leading-snug">{a.texto}</p>
+                          <p className="text-[10px] text-slate mt-0.5">{tiempoRelativo(a.fecha)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[11px] text-paper-dim leading-snug">{a.texto}</p>
-                        <p className="text-[10px] text-slate mt-0.5">{a.hora}</p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Activos del ecosistema */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
-                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-              </div>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
               <div className="flex items-center flex-wrap gap-1.5">
                 {['todos', 'valoracion', 'marketing', 'leads', 'cerrado'].map(f => (
                   <button key={f} onClick={() => setFiltroFase(f)}
@@ -425,6 +464,11 @@ export default function PanelPage() {
               </div>
             </div>
 
+            {activosFiltrados.length === 0 ? (
+              <div className="bg-navy-800 border border-white/10 p-8 text-center">
+                <p className="text-[13px] text-slate">Sin activos que mostrar con este filtro.</p>
+              </div>
+            ) : (
             <div className="bg-navy-800 border border-white/10 overflow-hidden">
               <div className="overflow-x-auto">
                 <div className="min-w-[580px]">
@@ -434,23 +478,28 @@ export default function PanelPage() {
                     ))}
                   </div>
                   {activosFiltrados.map((a, i) => {
-                    const cfg = faseCfg(a.fase)
+                    const cfg = faseCfg(a.status)
+                    const nombreBroker = nombreDe(a.broker_id)
                     return (
                       <div key={a.id}
-                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors cursor-pointer`}>
+                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors`}>
                         <div>
                           <p className="text-[13px] font-medium text-paper truncate">{a.nombre}</p>
                           <p className="text-[10px] text-slate">{a.tipo}</p>
                         </div>
-                        <p className="text-[12px] text-paper-dim truncate">{a.propietario}</p>
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center font-plex-mono text-[9px] font-medium shrink-0 ${a.broker === 'Maestro' ? 'bg-gold-500 text-navy-950' : 'bg-[#4F46E5]/20 text-[#a5a1f5]'}`}>
-                            {a.broker.charAt(0)}
+                        <p className="text-[12px] text-paper-dim truncate">{nombreDe(a.usuario_id) ?? '—'}</p>
+                        {nombreBroker ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center font-plex-mono text-[9px] font-medium shrink-0 bg-[#4F46E5]/20 text-[#a5a1f5]">
+                              {nombreBroker.charAt(0)}
+                            </div>
+                            <p className="text-[12px] text-paper-dim truncate">{nombreBroker}</p>
                           </div>
-                          <p className="text-[12px] text-paper-dim truncate">{a.broker}</p>
-                        </div>
+                        ) : (
+                          <p className="text-[12px] text-slate">Sin asignar</p>
+                        )}
                         <p className="text-[12px] text-paper-dim">{a.municipio}</p>
-                        <p className="font-plex-mono text-[12px] text-paper">{formatMXN(a.precio)}</p>
+                        <p className="font-plex-mono text-[12px] text-paper">{formatMXN(a.precio_total || 0)}</p>
                         <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border w-fit flex items-center gap-1.5 ${cfg.chip}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                           {cfg.label}
@@ -461,6 +510,7 @@ export default function PanelPage() {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* Brokers aliados + Inversionistas */}
@@ -468,24 +518,20 @@ export default function PanelPage() {
 
             {/* Brokers */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="font-fraunces text-[17px] font-medium text-paper">Brokers aliados</h2>
-                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-              </div>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
+              {brokersAliados.length === 0 ? (
+                <div className="bg-navy-800 border border-white/10 p-6 text-center">
+                  <p className="text-[13px] text-slate">Sin brokers registrados todavía.</p>
+                </div>
+              ) : (
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
-                {BROKERS.map((b, i) => (
-                  <div key={i} className={`px-5 py-4 ${i !== BROKERS.length - 1 ? 'border-b border-white/10' : ''}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#4F46E5]/15 flex items-center justify-center">
-                          <span className="font-plex-mono text-[12px] font-medium text-[#a5a1f5]">{b.nombre.charAt(0)}</span>
-                        </div>
-                        <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
+                {brokersAliados.map((b, i) => (
+                  <div key={i} className={`px-5 py-4 ${i !== brokersAliados.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-[#4F46E5]/15 flex items-center justify-center">
+                        <span className="font-plex-mono text-[12px] font-medium text-[#a5a1f5]">{b.nombre.charAt(0)}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="#D97706"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.2 3 8.8l.9-3L1.5 4h3z"/></svg>
-                        <span className="font-plex-mono text-[12px] font-medium text-[#e8b568]">{b.rating}</span>
-                      </div>
+                      <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {[
@@ -502,33 +548,32 @@ export default function PanelPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Inversionistas */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="font-fraunces text-[17px] font-medium text-paper">Inversionistas registrados</h2>
-                <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide">Datos de ejemplo</span>
-              </div>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Inversionistas registrados</h2>
+              {inversionistasRegistrados.length === 0 ? (
+                <div className="bg-navy-800 border border-white/10 p-6 text-center">
+                  <p className="text-[13px] text-slate">Sin inversionistas registrados todavía.</p>
+                </div>
+              ) : (
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
-                {INVERSIONISTAS.map((inv, i) => (
-                  <div key={i} className={`px-5 py-4 flex items-start justify-between gap-4 ${i !== INVERSIONISTAS.length - 1 ? 'border-b border-white/10' : ''}`}>
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gold-500/15 flex items-center justify-center shrink-0">
-                        <span className="font-plex-mono text-[12px] font-medium text-gold-400">{inv.nombre.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
-                        <p className="text-[11px] text-slate mt-0.5">{inv.intereses}</p>
-                        <p className="text-[11px] text-paper-dim font-medium mt-0.5">{inv.presupuesto}</p>
-                      </div>
+                {inversionistasRegistrados.map((inv, i) => (
+                  <div key={i} className={`px-5 py-4 flex items-start gap-2.5 ${i !== inversionistasRegistrados.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <div className="w-8 h-8 rounded-full bg-gold-500/15 flex items-center justify-center shrink-0">
+                      <span className="font-plex-mono text-[12px] font-medium text-gold-400">{inv.nombre.charAt(0)}</span>
                     </div>
-                    <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border shrink-0 ${inv.activo ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate bg-white/5'}`}>
-                      {inv.activo ? 'Activo' : 'Inactivo'}
-                    </span>
+                    <div>
+                      <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
+                      <p className="text-[11px] text-slate mt-0.5">{inv.intereses}</p>
+                      <p className="text-[11px] text-paper-dim font-medium mt-0.5">{inv.presupuesto}</p>
+                    </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
           </div>
