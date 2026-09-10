@@ -114,7 +114,17 @@ export default function ProspectosBrokerPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
 
-      const { data: profile } = await supabase.from('usuarios').select('nombre').eq('id', user.id).single()
+      const { data: profile } = await supabase.from('usuarios').select('nombre, rol').eq('id', user.id).single()
+
+      // Misma protección que /panel — esta pantalla dispara importación real de AMPI e
+      // invitaciones reales por correo, no debe quedar abierta a cualquier usuario autenticado.
+      const HOME_POR_ROL: Record<string, string> = { propietario: '/dashboard', broker: '/portal-broker', inversionista: '/portal-inversion' }
+      const rolUsuario = (profile as { rol: string | null } | null)?.rol
+      if (rolUsuario !== 'broker_maestro') {
+        router.push(HOME_POR_ROL[rolUsuario ?? ''] || '/dashboard')
+        return
+      }
+
       setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Broker Maestro')
 
       await cargar()

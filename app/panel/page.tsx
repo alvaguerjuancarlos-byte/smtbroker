@@ -138,9 +138,21 @@ export default function PanelPage() {
 
       const { data: profile } = await supabase
         .from('usuarios')
-        .select('nombre')
+        .select('nombre, rol')
         .eq('id', user.id)
         .single()
+
+      // /panel es solo del Broker Maestro — antes cualquier usuario autenticado (propietario,
+      // broker, inversionista) que escribiera esta URL veía el panel completo, incluyendo
+      // aprobar/rechazar solicitudes (dispara invitación real) y la cola de prospección de
+      // brokers. Mismo patrón de redirección que ya usa /dashboard con inversionista/broker.
+      const HOME_POR_ROL: Record<string, string> = { propietario: '/dashboard', broker: '/portal-broker', inversionista: '/portal-inversion' }
+      const rolUsuario = (profile as { rol: string | null } | null)?.rol
+      if (rolUsuario !== 'broker_maestro') {
+        router.push(HOME_POR_ROL[rolUsuario ?? ''] || '/dashboard')
+        return
+      }
+
       setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Broker Maestro')
 
       const { data } = await supabase
