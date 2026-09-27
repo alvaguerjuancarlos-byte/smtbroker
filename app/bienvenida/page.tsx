@@ -9,6 +9,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
+import { AvisoSimplificado } from '../components/AvisoSimplificado'
 
 type Rol = 'propietario' | 'inversionista' | 'broker' | null
 
@@ -291,6 +292,8 @@ export default function BienvenidaPage() {
                     </Field>
                   </div>
                 )}
+
+                <AvisoSimplificado contexto="directo" tema="oscuro" />
 
                 {error && (
                   <div className="flex items-center gap-2 bg-red-950/20 border border-red-900/60 px-4 py-3">

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../../../components/Topbar'
+import { EjemploBadge } from '../../../components/EjemploBadge'
 
 interface Activo {
   id: string
@@ -239,7 +240,10 @@ export default function MarketingPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-[22px] md:text-[26px] font-black text-paper">Marketing y captación</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-[22px] md:text-[26px] font-black text-paper">Marketing y captación</h1>
+                  <EjemploBadge />
+                </div>
                 <p className="text-[14px] text-slate mt-1">Fase 02 · {activo.tipo} en {activo.municipio}, {activo.estado}</p>
               </div>
               <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 self-start shrink-0 flex items-center gap-1.5">
@@ -247,6 +251,14 @@ export default function MarketingPage() {
                 Campaña activa
               </span>
             </div>
+          </div>
+
+          <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
+            <p className="text-[12.5px] text-paper-dim">
+              <b className="text-gold-400">Datos de ejemplo:</b> las vistas, leads por canal, alcance de campaña y
+              métricas del agente conversacional de esta pantalla son simulados — muestran cómo se verá el módulo una
+              vez conectado a tracking y canales de distribución reales.
+            </p>
           </div>
 
           {/* Navegación de fases */}

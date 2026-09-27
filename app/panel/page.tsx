@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
+import { HOME_POR_ROL } from '@/lib/roles'
+import { EjemploBadge } from '../components/EjemploBadge'
 
 interface Solicitud {
   id: string
@@ -33,6 +35,7 @@ interface UsuarioMin {
   id: string
   nombre: string
   rol: string | null
+  es_demo: boolean
 }
 
 interface PerfilIntencion {
@@ -158,11 +161,10 @@ export default function PanelPage() {
       // /panel es solo del Broker Maestro — antes cualquier usuario autenticado (propietario,
       // broker, inversionista) que escribiera esta URL veía el panel completo, incluyendo
       // aprobar/rechazar solicitudes (dispara invitación real) y la cola de prospección de
-      // brokers. Mismo patrón de redirección que ya usa /dashboard con inversionista/broker.
-      const HOME_POR_ROL: Record<string, string> = { propietario: '/dashboard', broker: '/portal-broker', inversionista: '/portal-inversion' }
+      // brokers. Mismo mapa de "home por rol" que usa /dashboard y Topbar (ver lib/roles.ts).
       const rolUsuario = (profile as { rol: string | null } | null)?.rol
       if (rolUsuario !== 'broker_maestro') {
-        router.push(HOME_POR_ROL[rolUsuario ?? ''] || '/dashboard')
+        router.push((rolUsuario && rolUsuario in HOME_POR_ROL) ? HOME_POR_ROL[rolUsuario as keyof typeof HOME_POR_ROL] : '/dashboard')
         return
       }
 
@@ -171,7 +173,7 @@ export default function PanelPage() {
       const [{ data: solicitudesData }, { data: activosData }, { data: usuariosData }, { data: perfilesData }] = await Promise.all([
         supabase.from('solicitudes').select('*').order('created_at', { ascending: false }),
         supabase.from('activos').select('id, usuario_id, broker_id, nombre, tipo, municipio, precio_total, status, created_at'),
-        supabase.from('usuarios').select('id, nombre, rol'),
+        supabase.from('usuarios').select('id, nombre, rol, es_demo'),
         supabase.from('perfiles_intencion').select('usuario_id, presupuesto, tipo_activo_interes'),
       ])
       setSolicitudes((solicitudesData as Solicitud[]) || [])
@@ -234,37 +236,52 @@ export default function PanelPage() {
 
   const nombreDe = (id: string | null) => id ? (usuarios.find(u => u.id === id)?.nombre ?? '—') : null
 
+  // Personajes ficticios de scripts/seed-demo.mjs (cuentas reales de Auth, marcadas
+  // usuarios.es_demo) -- se siguen mostrando en las listas de abajo (tagueadas), pero se
+  // excluyen de Métricas globales / Pipeline / Actividad reciente para que esos números
+  // reflejen negocio real, no la demo. Ver migración 20260927000000_agrega_es_demo_usuarios.sql.
+  const demoIds = new Set(usuarios.filter(u => u.es_demo).map(u => u.id))
+  const esDemoActivo = (a: Activo) => demoIds.has(a.usuario_id)
+  const activosReales = activos.filter(a => !esDemoActivo(a))
+
   const activosFiltrados = filtroFase === 'todos'
     ? activos
     : activos.filter(a => a.status === filtroFase)
 
-  const volumenTotal = activos.reduce((a, c) => a + (c.precio_total || 0), 0)
-  const cerrados     = activos.filter(a => a.status === 'cerrado').length
-  const enProceso    = activos.filter(a => a.status !== 'cerrado').length
+  const volumenTotal = activosReales.reduce((a, c) => a + (c.precio_total || 0), 0)
+  const cerrados     = activosReales.filter(a => a.status === 'cerrado').length
+  const enProceso    = activosReales.filter(a => a.status !== 'cerrado').length
 
-  const brokersAliados = usuarios.filter(u => u.rol === 'broker').map(b => {
+  const brokersAliadosTodos = usuarios.filter(u => u.rol === 'broker').map(b => {
     const propios = activos.filter(a => a.broker_id === b.id)
     return {
+      id: b.id,
       nombre: b.nombre,
+      esDemo: b.es_demo,
       activos: propios.length,
       cerrados: propios.filter(a => a.status === 'cerrado').length,
       volumen: propios.reduce((s, a) => s + (a.precio_total || 0), 0),
     }
   })
+  const brokersAliados = brokersAliadosTodos.filter(b => !b.esDemo)
 
-  const inversionistasRegistrados = usuarios.filter(u => u.rol === 'inversionista').map(inv => {
+  const inversionistasRegistradosTodos = usuarios.filter(u => u.rol === 'inversionista').map(inv => {
     const perfil = perfiles.find(p => p.usuario_id === inv.id)
     return {
+      id: inv.id,
       nombre: inv.nombre,
+      esDemo: inv.es_demo,
       intereses: perfil?.tipo_activo_interes || 'Sin perfil capturado',
       presupuesto: perfil?.presupuesto || '—',
     }
   })
+  const inversionistasRegistrados = inversionistasRegistradosTodos.filter(i => !i.esDemo)
 
   // Actividad reciente real, derivada de dos fuentes con fecha (no hay tabla de eventos) —
-  // activos nuevos y solicitudes ya aprobadas — combinadas y ordenadas por fecha real.
+  // activos nuevos (reales, no de demo) y solicitudes ya aprobadas — combinadas y ordenadas por
+  // fecha real. solicitudes nunca las toca seed-demo.mjs (crea cuentas directo en Auth).
   const actividad = [
-    ...activos.map(a => ({ tipo: 'activo' as const, texto: `Nuevo activo registrado: ${a.nombre}`, fecha: a.created_at })),
+    ...activosReales.map(a => ({ tipo: 'activo' as const, texto: `Nuevo activo registrado: ${a.nombre}`, fecha: a.created_at })),
     ...solicitudes.filter(s => s.status === 'aprobada').map(s => ({ tipo: 'registro' as const, texto: `Nuevo usuario aprobado: ${s.nombre} (${rolLabel(s.rol).label})`, fecha: s.created_at })),
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 6)
 
@@ -417,7 +434,7 @@ export default function PanelPage() {
           {/* Pipeline + Actividad reciente */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <PipelineBar activos={activos} />
+              <PipelineBar activos={activosReales} />
             </div>
 
             {/* Actividad reciente */}
@@ -484,7 +501,10 @@ export default function PanelPage() {
                       <div key={a.id}
                         className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors`}>
                         <div>
-                          <p className="text-[13px] font-medium text-paper truncate">{a.nombre}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-[13px] font-medium text-paper truncate">{a.nombre}</p>
+                            {esDemoActivo(a) && <EjemploBadge />}
+                          </div>
                           <p className="text-[10px] text-slate">{a.tipo}</p>
                         </div>
                         <p className="text-[12px] text-paper-dim truncate">{nombreDe(a.usuario_id) ?? '—'}</p>
@@ -519,19 +539,20 @@ export default function PanelPage() {
             {/* Brokers */}
             <div>
               <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
-              {brokersAliados.length === 0 ? (
+              {brokersAliadosTodos.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
                   <p className="text-[13px] text-slate">Sin brokers registrados todavía.</p>
                 </div>
               ) : (
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
-                {brokersAliados.map((b, i) => (
-                  <div key={i} className={`px-5 py-4 ${i !== brokersAliados.length - 1 ? 'border-b border-white/10' : ''}`}>
-                    <div className="flex items-center gap-2.5 mb-3">
+                {brokersAliadosTodos.map((b, i) => (
+                  <div key={b.id} className={`px-5 py-4 ${i !== brokersAliadosTodos.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                       <div className="w-8 h-8 rounded-full bg-[#4F46E5]/15 flex items-center justify-center">
                         <span className="font-plex-mono text-[12px] font-medium text-[#a5a1f5]">{b.nombre.charAt(0)}</span>
                       </div>
                       <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
+                      {b.esDemo && <EjemploBadge />}
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {[
@@ -554,19 +575,22 @@ export default function PanelPage() {
             {/* Inversionistas */}
             <div>
               <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Inversionistas registrados</h2>
-              {inversionistasRegistrados.length === 0 ? (
+              {inversionistasRegistradosTodos.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
                   <p className="text-[13px] text-slate">Sin inversionistas registrados todavía.</p>
                 </div>
               ) : (
               <div className="bg-navy-800 border border-white/10 overflow-hidden">
-                {inversionistasRegistrados.map((inv, i) => (
-                  <div key={i} className={`px-5 py-4 flex items-start gap-2.5 ${i !== inversionistasRegistrados.length - 1 ? 'border-b border-white/10' : ''}`}>
+                {inversionistasRegistradosTodos.map((inv, i) => (
+                  <div key={inv.id} className={`px-5 py-4 flex items-start gap-2.5 ${i !== inversionistasRegistradosTodos.length - 1 ? 'border-b border-white/10' : ''}`}>
                     <div className="w-8 h-8 rounded-full bg-gold-500/15 flex items-center justify-center shrink-0">
                       <span className="font-plex-mono text-[12px] font-medium text-gold-400">{inv.nombre.charAt(0)}</span>
                     </div>
                     <div>
-                      <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
+                        {inv.esDemo && <EjemploBadge />}
+                      </div>
                       <p className="text-[11px] text-slate mt-0.5">{inv.intereses}</p>
                       <p className="text-[11px] text-paper-dim font-medium mt-0.5">{inv.presupuesto}</p>
                     </div>

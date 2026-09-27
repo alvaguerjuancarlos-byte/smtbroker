@@ -3,15 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-type Rol = 'propietario' | 'broker' | 'inversionista' | 'broker_maestro'
-
-const HOME_POR_ROL: Record<Rol, string> = {
-  propietario: '/dashboard',
-  broker: '/portal-broker',
-  inversionista: '/portal-inversion',
-  broker_maestro: '/panel',
-}
+import { HOME_POR_ROL, type Rol } from '@/lib/roles'
 
 // Navegación visible en el Topbar por rol — mismo componente y misma forma para los cuatro,
 // para que la barra se sienta consistente en toda la plataforma (antes cada rol tenía a lo más

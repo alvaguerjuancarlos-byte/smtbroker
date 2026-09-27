@@ -45,9 +45,11 @@ async function obtenerOCrearUsuario(nombre, slug, rol) {
     authUser = data.user
   }
 
+  // es_demo=true -- requiere la migración 20260927000000_agrega_es_demo_usuarios.sql aplicada
+  // primero (columna nueva). Sin esto, /panel no puede distinguir estas cuentas de las reales.
   const { error: upsertError } = await supabase
     .from('usuarios')
-    .upsert({ id: authUser.id, nombre, rol }, { onConflict: 'id' })
+    .upsert({ id: authUser.id, nombre, rol, es_demo: true }, { onConflict: 'id' })
   if (upsertError) throw new Error(`upsert usuarios ${email}: ${upsertError.message}`)
 
   return { id: authUser.id, email, nombre }

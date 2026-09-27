@@ -17,15 +17,28 @@ export async function POST(req: NextRequest) {
   const token = authHeader.replace(/^Bearer\s+/i, '')
   if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  // Solo exige sesión válida — mismo nivel de protección mínima que ya tiene /panel hoy (sin
-  // restricción por rol, ese control no existe todavía en ningún lado del proyecto).
   const { data: caller, error: callerError } = await supabaseAdmin.auth.getUser(token)
   if (callerError || !caller?.user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
+  // Solo Broker Maestro puede invitar -- antes esto solo se exigía en el cliente (/panel,
+  // /panel/prospectos-broker), así que cualquier usuario autenticado podía llamar este endpoint
+  // directo y crear una cuenta con rol "broker_maestro" (escalación de privilegios real,
+  // hallazgo 2026-09-27). Se usa supabaseAdmin (bypassa RLS) porque este check corre server-side
+  // antes de decidir si la petición procede, no depende de la sesión del propio caller.
+  const { data: callerProfile } = await supabaseAdmin.from('usuarios').select('rol').eq('id', caller.user.id).single()
+  if (callerProfile?.rol !== 'broker_maestro') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+
   const { email, nombre, rol } = await req.json()
   if (!email) return NextResponse.json({ error: 'Falta el correo' }, { status: 400 })
+
+  const ROLES_VALIDOS = ['propietario', 'inversionista', 'broker', 'broker_maestro']
+  if (rol && !ROLES_VALIDOS.includes(rol)) {
+    return NextResponse.json({ error: `Rol inválido: ${rol}` }, { status: 400 })
+  }
 
   const redirectTo = `${req.nextUrl.origin}/establecer-password`
 

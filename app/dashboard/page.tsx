@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
+import { HOME_POR_ROL } from '@/lib/roles'
 
 interface Activo {
   id: string
@@ -43,12 +44,13 @@ export default function DashboardPage() {
         .eq('id', user.id)
         .single()
 
-      // Inversionista y broker tienen su propio portal — este dashboard está armado para el
-      // propietario ("mis activos"), no le sirve de nada a alguien que no posee ningún activo.
-      const HOME_POR_ROL: Record<string, string> = { inversionista: '/portal-inversion', broker: '/portal-broker' }
+      // Inversionista, broker y broker_maestro tienen su propio home — este dashboard está
+      // armado para el propietario ("mis activos"), no le sirve de nada a nadie más (ver
+      // lib/roles.ts: antes esta lista vivía por separado aquí y no incluía broker_maestro, que
+      // se quedaba viendo esta pantalla vacía en vez de caer en /panel).
       const rolUsuario = (profile as { rol: string | null } | null)?.rol
-      if (rolUsuario && HOME_POR_ROL[rolUsuario]) {
-        router.push(HOME_POR_ROL[rolUsuario])
+      if (rolUsuario && rolUsuario !== 'propietario' && rolUsuario in HOME_POR_ROL) {
+        router.push(HOME_POR_ROL[rolUsuario as keyof typeof HOME_POR_ROL])
         return
       }
 

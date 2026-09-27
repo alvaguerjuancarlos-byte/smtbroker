@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../../../components/Topbar'
+import { EjemploBadge } from '../../../components/EjemploBadge'
 
 interface Activo {
   id: string
@@ -182,13 +183,24 @@ export default function LeadsPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-[22px] md:text-[26px] font-black text-paper">Leads y calificación</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-[22px] md:text-[26px] font-black text-paper">Leads y calificación</h1>
+                  <EjemploBadge />
+                </div>
                 <p className="text-[14px] text-slate mt-1">Fase 03 · {activo?.tipo} en {activo?.municipio}, {activo?.estado}</p>
               </div>
               <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 self-start shrink-0">
                 2 listos para cerrar
               </span>
             </div>
+          </div>
+
+          <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
+            <p className="text-[12.5px] text-paper-dim">
+              <b className="text-gold-400">Datos de ejemplo:</b> los leads, contactos y métricas de esta pantalla son
+              simulados — muestran cómo se verá el módulo una vez conectado a captación real de leads. Ningún nombre,
+              correo o teléfono de esta página corresponde a una persona real.
+            </p>
           </div>
 
           {/* Navegación de fases */}

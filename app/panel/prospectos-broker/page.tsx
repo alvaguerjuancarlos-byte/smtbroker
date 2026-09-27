@@ -9,7 +9,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../../components/Topbar'
 import { Field, inputCls } from '../../components/FormField'
+import { AvisoSimplificado } from '../../components/AvisoSimplificado'
 import { calcularScore, UMBRAL_COLA } from '@/lib/prospectosBrokerScore'
+import { HOME_POR_ROL } from '@/lib/roles'
 
 type Fuente = 'ampi' | 'colegio_corredores' | 'portal_listado' | 'linkedin_manual'
 type Estado = 'nuevo' | 'en_revision' | 'contactado' | 'interesado' | 'descartado' | 'convertido'
@@ -97,6 +99,11 @@ export default function ProspectosBrokerPage() {
   const [convirtiendo, setConvirtiendo] = useState<Prospecto | null>(null)
   const [licenciaForm, setLicenciaForm] = useState<{ tieneLicencia: TieneLicencia; notas: string }>({ tieneLicencia: 'no_se', notas: '' })
   const [guardandoConversion, setGuardandoConversion] = useState(false)
+  // Gate real del aviso LFPDPPP (ver AvisoSimplificado): "Invitar a esta cuenta" ya no dispara
+  // el correo directo -- primero pide confirmar que se puso el aviso a disposición del
+  // prospecto, mismo criterio para las 4 fuentes de este módulo (todas son de un tercero, no
+  // el titular llenando su propio formulario -- ver Sección V del Aviso Integral).
+  const [confirmandoInvite, setConfirmandoInvite] = useState<Prospecto | null>(null)
   // Estado de la invitación disparada desde "convertido" — mismo patrón que /panel
   // (ver enviarInvitacion en app/panel/page.tsx).
   const [inviteEstado, setInviteEstado] = useState<Record<string, { estado: 'enviando' | 'ok' | 'error'; mensaje?: string }>>({})
@@ -118,10 +125,10 @@ export default function ProspectosBrokerPage() {
 
       // Misma protección que /panel — esta pantalla dispara importación real de AMPI e
       // invitaciones reales por correo, no debe quedar abierta a cualquier usuario autenticado.
-      const HOME_POR_ROL: Record<string, string> = { propietario: '/dashboard', broker: '/portal-broker', inversionista: '/portal-inversion' }
+      // Mismo mapa de "home por rol" que /panel, /dashboard y Topbar (ver lib/roles.ts).
       const rolUsuario = (profile as { rol: string | null } | null)?.rol
       if (rolUsuario !== 'broker_maestro') {
-        router.push(HOME_POR_ROL[rolUsuario ?? ''] || '/dashboard')
+        router.push((rolUsuario && rolUsuario in HOME_POR_ROL) ? HOME_POR_ROL[rolUsuario as keyof typeof HOME_POR_ROL] : '/dashboard')
         return
       }
 
@@ -327,7 +334,10 @@ export default function ProspectosBrokerPage() {
 
           <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
             <p className="text-[12.5px] text-paper-dim">
-              <b className="text-gold-400">Cuidado con el botón "Invitar a esta cuenta":</b> mandarle un correo real a alguien tomado de una fuente como AMPI SÍ es contacto real a un tercero — el aviso de privacidad LFPDPPP sigue sin redactarse. Úsalo solo si ya tienes una base legal para ese contacto (relación previa, consentimiento, etc.), no como parte del flujo estándar de prospección hasta que el aviso exista.
+              <b className="text-gold-400">Sobre "Invitar a esta cuenta":</b> los prospectos de este módulo vienen de una fuente
+              distinta al titular (directorio público, alta manual desde LinkedIn, etc.), así que antes de invitar se te pedirá
+              confirmar que se le puso a disposición el Aviso de Privacidad Simplificado — ver el{' '}
+              <a href="/aviso-privacidad" target="_blank" className="text-gold-400 underline">Aviso de Privacidad Integral</a>.
             </p>
           </div>
 
@@ -452,7 +462,7 @@ export default function ProspectosBrokerPage() {
                               <span className="text-[10px] text-slate">Enviando…</span>
                             ) : p.email ? (
                               <div className="flex flex-col gap-1">
-                                <button onClick={() => invitarProspecto(p)}
+                                <button onClick={() => setConfirmandoInvite(p)}
                                   className="font-plex-mono text-[10px] px-2 py-1 border border-gold-500 text-gold-400 hover:bg-gold-500/10 transition-colors">
                                   Invitar a esta cuenta
                                 </button>
@@ -477,6 +487,39 @@ export default function ProspectosBrokerPage() {
         </div>
       </main>
       </div>
+
+      {confirmandoInvite && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50">
+          <div className="relative w-full max-w-[440px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2 before:translate-y-2 before:-z-10">
+            <div className="bg-navy-800 border border-white/10 p-6">
+              <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-1">Antes de invitar</p>
+              <h3 className="font-fraunces text-[18px] font-medium text-paper mb-4">{confirmandoInvite.nombre}</h3>
+
+              <div className="bg-white/[0.04] border border-white/10 px-3.5 py-3 mb-4">
+                <AvisoSimplificado contexto="prospeccion" tema="oscuro" />
+              </div>
+
+              <p className="text-[12.5px] text-paper-dim mb-4">
+                Confirmas que este aviso ya se le puso o se le pondrá a disposición al momento de este primer contacto.
+                El correo de invitación lo genera Supabase con su plantilla de "Invite user" — si esa plantilla todavía
+                no incluye el texto del aviso, agrégalo ahí antes de usar este flujo en producción.
+              </p>
+
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setConfirmandoInvite(null)}
+                  className="flex-1 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                  Cancelar
+                </button>
+                <button type="button"
+                  onClick={() => { invitarProspecto(confirmandoInvite); setConfirmandoInvite(null) }}
+                  className="flex-1 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors">
+                  Confirmar y enviar invitación
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {convirtiendo && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50">
