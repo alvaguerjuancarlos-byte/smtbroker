@@ -79,6 +79,15 @@ async function main() {
     { propietario: 1, nombre: 'Local Comercial Vasconcelos', tipo: 'Local', municipio: 'San Pedro Garza García', estado: 'Nuevo León', superficie: 90, precio_total: 3100000, status: 'cerrado', broker: 1 },
     { propietario: 2, nombre: 'Casa Contry Sol', tipo: 'Casa', municipio: 'Monterrey', estado: 'Nuevo León', superficie: 280, precio_total: 4100000, status: 'marketing', broker: 1 },
     { propietario: 2, nombre: 'Terreno Corredor Constitución', tipo: 'Terreno', municipio: 'Santa Catarina', estado: 'Nuevo León', superficie: 1200, precio_total: 7300000, status: 'cerrado', broker: 2 },
+    // Ampliación (2026-09-27) -- el set original dejaba /panel con muy poco volumen para una
+    // demo grabada (solo 6 activos, pipeline desbalanceado). Se completan las 4 fases con más
+    // peso y se reparte mejor entre los 3 brokers (quedan ~3 activos c/u en vez de 2).
+    { propietario: 0, nombre: 'Local Renta San Agustín', tipo: 'Local', municipio: 'San Pedro Garza García', estado: 'Nuevo León', superficie: 60, precio_total: 2400000, status: 'leads', broker: 0 },
+    { propietario: 0, nombre: 'Bodega Apodaca Norte', tipo: 'Bodega', municipio: 'Apodaca', estado: 'Nuevo León', superficie: 900, precio_total: 6200000, status: 'cerrado', broker: 1 },
+    { propietario: 1, nombre: 'Casa Residencial del Valle', tipo: 'Casa', municipio: 'San Pedro Garza García', estado: 'Nuevo León', superficie: 410, precio_total: 8100000, status: 'valoracion', broker: null },
+    { propietario: 1, nombre: 'Terreno Carretera Nacional', tipo: 'Terreno', municipio: 'Monterrey', estado: 'Nuevo León', superficie: 2000, precio_total: 11500000, status: 'marketing', broker: 2 },
+    { propietario: 2, nombre: 'Departamento Punto Valle', tipo: 'Depto', municipio: 'San Pedro Garza García', estado: 'Nuevo León', superficie: 180, precio_total: 5600000, status: 'leads', broker: 2 },
+    { propietario: 2, nombre: 'Edificio Oficinas Valle Oriente', tipo: 'Edificio', municipio: 'San Pedro Garza García', estado: 'Nuevo León', superficie: 650, precio_total: 18000000, status: 'cerrado', broker: 0 },
   ]
 
   for (const a of ACTIVOS_DEMO) {
