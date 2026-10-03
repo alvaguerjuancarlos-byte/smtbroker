@@ -5,7 +5,23 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../../components/Topbar'
 import { MapView } from '../../components/MapPicker'
-import { DiagnosticoLegal } from '../../components/DiagnosticoLegal'
+import { DiagnosticoLegal, type TriageLegalReal } from '../../components/DiagnosticoLegal'
+
+interface MercadoReal {
+  comparablesAnalizados: number
+  precioPromedioM2Zona: number | null
+  rangoMinMXN: number | null
+  rangoMaxMXN: number | null
+  precioSalidaRecomendadoMXN: number | null
+  percentilPosicionamiento: number | null
+  plusvalia3AniosTexto: string
+  absorcionTexto: string
+  demandaLabel: string | null
+  scoreConfianza: number
+  scoreComponentes: { comparablesMercado: number; documentacionLegal: number; condicionActivo: number }
+  interpretacion: string
+  grounded: boolean
+}
 
 interface Activo {
   id: string
@@ -75,18 +91,38 @@ export default function ActivoPage() {
 
   const [activo,  setActivo]  = useState<Activo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [legal,      setLegal]      = useState<TriageLegalReal | null>(null)
+  const [legalError, setLegalError] = useState<string | null>(null)
+  const [mercado,      setMercado]      = useState<MercadoReal | null>(null)
+  const [mercadoError, setMercadoError] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) { router.push('/login'); return }
 
       const { data } = await supabase
-        .from('activos').select('*').eq('id', id).eq('usuario_id', user.id).single()
+        .from('activos').select('*').eq('id', id).eq('usuario_id', session.user.id).single()
 
       if (!data) { router.push('/dashboard'); return }
       setActivo(data as Activo)
       setLoading(false)
+
+      // Agentes reales (Legal + Mercado) -- en paralelo, cada uno con su propio estado de carga/
+      // error independiente, para no bloquear uno por el otro (ver app/api/agentes/legal y
+      // app/api/agentes/mercado). Antes esta pantalla calculaba todo localmente de forma
+      // simulada (lib/legalTriage.ts + multiplicadores fijos sobre precio_total) -- ver auditoría
+      // 2026-10-03.
+      const token = session.access_token
+      const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
+      fetch('/api/agentes/legal', { method: 'POST', headers, body: JSON.stringify({ activoId: id }) })
+        .then(r => r.json())
+        .then(j => { if (j.error) setLegalError(j.error); else setLegal(j) })
+        .catch(() => setLegalError('Error de red'))
+      fetch('/api/agentes/mercado', { method: 'POST', headers, body: JSON.stringify({ activoId: id }) })
+        .then(r => r.json())
+        .then(j => { if (j.error) setMercadoError(j.error); else setMercado(j) })
+        .catch(() => setMercadoError('Error de red'))
     }
     init()
   }, [id, router])
@@ -101,15 +137,20 @@ export default function ActivoPage() {
 
   if (!activo) return null
 
-  // Datos simulados derivados del activo real
-  const precioBase    = activo.precio_total || 5000000
-  const superficieM2  = activo.superficie   || 200
-  const precioM2      = Math.round(precioBase / superficieM2)
-  const precioMin     = Math.round(precioBase * 0.92)
-  const precioMax     = Math.round(precioBase * 1.14)
-  const precioSalida  = Math.round(precioBase * 1.08)
-  const plusvalia     = '+12%'
-  const scoreConf     = 76
+  // Hasta que el Agente de Mercado responda, se usa el precio de lista como mejor estimación
+  // disponible (nunca un rango inventado) -- antes esto siempre eran multiplicadores fijos sobre
+  // precio_total, sin importar si había datos reales o no (ver auditoría 2026-10-03).
+  const precioBase    = activo.precio_total || 0
+  const superficieM2  = activo.superficie   || null
+  const precioM2Fallback = superficieM2 ? Math.round(precioBase / superficieM2) : null
+
+  const precioM2      = mercado?.precioPromedioM2Zona ?? precioM2Fallback
+  const precioMin     = mercado?.rangoMinMXN ?? null
+  const precioMax     = mercado?.rangoMaxMXN ?? null
+  const precioSalida  = mercado?.precioSalidaRecomendadoMXN ?? (precioBase || null)
+  const scoreConf     = mercado?.scoreConfianza ?? null
+  const mercadoListo  = !!mercado
+  const fmtOrDash = (n: number | null) => n != null ? formatMXN(n) : '—'
 
   return (
     <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
@@ -185,17 +226,17 @@ export default function ActivoPage() {
             <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-5 border-t border-white/10">
               <div>
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Precio salida</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{formatMXN(precioSalida)}</p>
-                <p className="text-[10px] text-slate">recomendado</p>
+                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{fmtOrDash(precioSalida)}</p>
+                <p className="text-[10px] text-slate">{mercadoListo ? 'recomendado' : 'cargando…'}</p>
               </div>
               <div>
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Precio / m²</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-paper leading-tight">{formatMXN(precioM2)}</p>
+                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-paper leading-tight">{fmtOrDash(precioM2)}</p>
                 <p className="text-[10px] text-slate">zona</p>
               </div>
               <div>
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Score</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{scoreConf}</p>
+                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{scoreConf ?? '—'}</p>
                 <p className="text-[10px] text-slate">/ 100</p>
               </div>
             </div>
@@ -205,11 +246,15 @@ export default function ActivoPage() {
           <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 p-6">
             <p className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.1em] uppercase mb-1">Estrategia recomendada</p>
             <h3 className="font-fraunces text-[18px] font-medium text-paper mb-2">
-              Venta directa a inversionista · Precio de salida {formatMXN(precioSalida)}
+              Venta directa a inversionista · Precio de salida {fmtOrDash(precioSalida)}
             </h3>
-            <p className="text-[14px] text-paper-dim leading-relaxed">
-              Con base en el análisis normativo del activo y la demanda activa en {activo.municipio}, la estrategia óptima es posicionar el {activo.tipo.toLowerCase()} como una oportunidad de inversión de alto potencial. El rango de mercado detectado es de <strong className="text-paper">{formatMXN(precioMin)}</strong> a <strong className="text-paper">{formatMXN(precioMax)}</strong>. Un precio de salida de <strong className="text-paper">{formatMXN(precioSalida)}</strong> maximiza la velocidad de cierre sin sacrificar rentabilidad.
-            </p>
+            {mercadoError ? (
+              <p className="text-[14px] text-paper-dim leading-relaxed">No se pudo generar la estrategia de mercado ({mercadoError}).</p>
+            ) : !mercadoListo ? (
+              <p className="text-[14px] text-paper-dim leading-relaxed">Buscando comparables reales y calculando rango de mercado…</p>
+            ) : (
+              <p className="text-[14px] text-paper-dim leading-relaxed">{mercado!.interpretacion}</p>
+            )}
           </div>
 
           {/* Mapa de ubicación */}
@@ -220,13 +265,13 @@ export default function ActivoPage() {
             </div>
           )}
 
-          {/* Due Diligence Legal — diagnóstico del Agente Legal (catastro/RPP), ver
-              lib/legalTriage.ts. Datos de recap reales; los 4 checks son simulados hasta que se
-              cierren los spikes de integración (ver HANDOFF_Catastro_Input_Output.md). */}
+          {/* Due Diligence Legal — Agente Legal real (uso de suelo vía GIS/búsqueda real,
+              título/RPP basado en documentación declarada). Ver app/api/agentes/legal. */}
           <div>
             <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Diagnóstico Legal · Agente Due Diligence</h2>
             <DiagnosticoLegal
-              estadoDocumentacionLegal={activo.estado_documentacion_legal}
+              legal={legal}
+              error={legalError}
               ubicacion={`${activo.municipio}, ${activo.estado}`}
               tipo={activo.tipo}
               superficieTerreno={activo.superficie}
@@ -235,34 +280,48 @@ export default function ActivoPage() {
             />
           </div>
 
-          {/* Análisis de Mercado */}
+          {/* Análisis de Mercado — Agente de Mercado real (comparables de reventa vía búsqueda
+              real, plusvalía SHF y absorción SNIIV reales). Ver app/api/agentes/mercado. */}
           <div>
             <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Análisis de Mercado · Agente de Comparables</h2>
+            {mercadoError ? (
+              <div className="bg-navy-800 border border-red-900/40 p-5 text-[13px] text-paper-dim">
+                No se pudo generar el análisis de mercado ({mercadoError}).
+              </div>
+            ) : !mercado ? (
+              <div className="bg-navy-800 border border-white/10 p-5 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
+                <p className="text-[13px] text-slate font-plex-mono">Buscando comparables reales y calculando rango de mercado…</p>
+              </div>
+            ) : (
             <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
               <div className="flex items-center gap-3 mb-4 md:mb-5">
-                <span className="inline-flex items-center gap-1.5 font-plex-mono text-[11px] font-medium px-3 py-1.5 border border-gold-500/40 text-gold-400 bg-gold-500/10">
-                  <span className="w-2 h-2 rounded-full bg-gold-500" />
-                  Demanda Activa
+                <span className={`inline-flex items-center gap-1.5 font-plex-mono text-[11px] font-medium px-3 py-1.5 border ${mercado.demandaLabel ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/10 text-slate'}`}>
+                  <span className={`w-2 h-2 rounded-full ${mercado.demandaLabel ? 'bg-gold-500' : 'bg-slate'}`} />
+                  {mercado.demandaLabel ? `Demanda ${mercado.demandaLabel}` : 'Demanda sin determinar'}
                 </span>
                 <span className="text-[12px] text-paper-dim">{activo.municipio}, {activo.estado}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 mb-4 md:mb-5">
                 <div>
-                  <MetricRow label="Activos comparables analizados" value="12 propiedades" />
-                  <MetricRow label="Precio promedio zona" value={formatMXN(precioM2) + '/m²'} />
-                  <MetricRow label="Plusvalía 3 años" value={plusvalia} valueClass="text-gold-400 font-medium" />
+                  <MetricRow label="Comparables reales encontrados" value={`${mercado.comparablesAnalizados} propiedades`} />
+                  <MetricRow label="Precio promedio zona" value={mercado.precioPromedioM2Zona ? formatMXN(mercado.precioPromedioM2Zona) + '/m²' : 'Sin dato'} />
+                  <MetricRow label="Plusvalía 3 años (SHF)" value={mercado.plusvalia3AniosTexto} valueClass="text-gold-400 font-medium" />
                 </div>
                 <div>
-                  <MetricRow label="Tiempo promedio de venta" value="4.5 meses" />
-                  <MetricRow label="Rango de precio detectado" value={`${formatMXN(precioMin)} – ${formatMXN(precioMax)}`} />
-                  <MetricRow label="Demanda estimada" value="Alta" valueClass="text-gold-400 font-medium" />
+                  <MetricRow label="Absorción (SNIIV)" value={mercado.absorcionTexto} />
+                  <MetricRow label="Rango de precio detectado" value={precioMin && precioMax ? `${formatMXN(precioMin)} – ${formatMXN(precioMax)}` : 'Sin suficientes comparables'} />
+                  <MetricRow label="Demanda estimada" value={mercado.demandaLabel || 'Sin base para estimar'} valueClass={mercado.demandaLabel ? 'text-gold-400 font-medium' : ''} />
                 </div>
               </div>
               <div className="border border-white/10 bg-white/[0.02] px-4 py-3">
                 <p className="font-plex-mono text-[10.5px] font-medium text-gold-400 uppercase tracking-wide mb-1">Precio de salida recomendado</p>
-                <p className="text-[13px] font-medium text-paper">{formatMXN(precioSalida)} · posicionamiento en percentil 65 del mercado local</p>
+                <p className="text-[13px] font-medium text-paper">
+                  {fmtOrDash(precioSalida)}{mercado.percentilPosicionamiento != null ? ` · posicionamiento en percentil ${mercado.percentilPosicionamiento} del mercado local` : ''}
+                </p>
               </div>
             </div>
+            )}
           </div>
 
           {/* Score de confianza */}
@@ -271,26 +330,31 @@ export default function ActivoPage() {
             <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
               <div className="flex flex-col md:flex-row md:items-start md:gap-8">
                 <div className="flex justify-center md:justify-start mb-4 md:mb-0">
-                  <ScoreGauge score={scoreConf} />
+                  <ScoreGauge score={scoreConf ?? 0} />
                 </div>
                 <div className="flex-1">
                   <p className="text-[13px] md:text-[14px] text-paper-dim leading-relaxed mb-4">
-                    El Score de Confianza mide la precisión de la valoración en función de la disponibilidad de comparables, calidad de la documentación y condiciones del mercado local. Un puntaje de <strong className="text-paper">{scoreConf}/100</strong> indica una <strong className="text-gold-400">valoración confiable</strong> con margen de error estimado del ±8%.
+                    {mercado
+                      ? <>El Score de Confianza mide la precisión de la valoración en función de la disponibilidad de comparables reales, calidad de la documentación y condiciones del mercado local. Un puntaje de <strong className="text-paper">{scoreConf}/100</strong> {scoreConf! >= 70 ? <>indica una <strong className="text-gold-400">valoración confiable</strong></> : scoreConf! >= 50 ? 'indica una valoración razonable, con margen de error mayor al ideal' : <>indica una <strong className="text-[#e8b568]">valoración poco confiable</strong> — faltan comparables o datos reales de respaldo</>}.</>
+                      : 'Calculando score de confianza…'}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
-                      { label: 'Comparables de mercado', score: 82, color: '#ddc06a' },
-                      { label: 'Documentación legal',    score: 78, color: '#ddc06a' },
-                      { label: 'Condición del activo',   score: 68, color: '#D97706' },
-                    ].map(d => (
+                      { label: 'Comparables de mercado', score: mercado?.scoreComponentes.comparablesMercado ?? 0 },
+                      { label: 'Documentación legal',    score: mercado?.scoreComponentes.documentacionLegal ?? 0 },
+                      { label: 'Condición del activo',   score: mercado?.scoreComponentes.condicionActivo ?? 0 },
+                    ].map(d => {
+                      const color = d.score >= 70 ? '#ddc06a' : d.score >= 40 ? '#D97706' : '#e05a5a'
+                      return (
                       <div key={d.label} className="bg-navy-950/60 border border-white/5 p-3">
                         <p className="text-[10px] text-slate mb-2">{d.label}</p>
                         <div className="h-1 bg-white/10 overflow-hidden mb-1">
-                          <div className="h-full" style={{ width: `${d.score}%`, backgroundColor: d.color }} />
+                          <div className="h-full" style={{ width: `${d.score}%`, backgroundColor: color }} />
                         </div>
-                        <p className="font-plex-mono text-[12px] font-medium" style={{ color: d.color }}>{d.score}/100</p>
+                        <p className="font-plex-mono text-[12px] font-medium" style={{ color }}>{d.score}/100</p>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>

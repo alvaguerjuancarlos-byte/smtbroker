@@ -1,10 +1,27 @@
 'use client'
 
 // Reemplaza el bloque "Ficha Legal · Agente Due Diligence" hardcodeado de
-// app/activo/[id]/page.tsx — puerto de smtbroker-output-catastro.html. Recap y datos de
-// ubicación/tipo/superficie/folio son REALES (vienen del activo); los 4 checks siguen siendo
-// simulados (sin conexión a catastro/RPP/CONANP/SENER real — ver plan).
-import { legalTriage, CHECK_AMBIENTAL, CHECK_CFE, type CheckLegal } from '@/lib/legalTriage'
+// app/activo/[id]/page.tsx — puerto de smtbroker-output-catastro.html. Recap (ubicación/tipo/
+// superficie/folio) y los 4 checks son REALES desde 2026-10-03: el padre (ActivoPage) llama a
+// POST /api/agentes/legal y pasa el resultado aquí vía `legal` — este componente ya no calcula
+// nada, solo renderiza. `legal` llega null mientras carga o si el agente falló (ver `error`).
+import type { CheckLegal } from '@/lib/legalTriage'
+
+export interface TriageLegalReal {
+  ruta: 'fast' | 'hybrid' | 'slow'
+  rutaLabel: string
+  rutaDesc: string
+  verdictCls: 'ok' | 'warn' | 'bad'
+  verdictBadge: string
+  verdictTitle: string
+  verdictDesc: string
+  score: string
+  usoSuelo: CheckLegal
+  rpp: CheckLegal
+  ambiental: CheckLegal
+  cfe: CheckLegal
+  grounded: boolean
+}
 
 const verdictChipCls: Record<'ok' | 'warn' | 'bad', string> = {
   ok: 'border-[#3fbe72]/40 text-[#6bdb9a] bg-[#3fbe72]/10',
@@ -39,19 +56,37 @@ function CheckRow({ titulo, check }: { titulo: string; check: CheckLegal }) {
 }
 
 export function DiagnosticoLegal({
-  estadoDocumentacionLegal, ubicacion, tipo, superficieTerreno, superficieConstruccion, folioOClave,
+  legal, error, ubicacion, tipo, superficieTerreno, superficieConstruccion, folioOClave,
 }: {
-  estadoDocumentacionLegal: string | null | undefined
+  legal: TriageLegalReal | null
+  error: string | null
   ubicacion: string
   tipo: string
   superficieTerreno: number | null
   superficieConstruccion: number | null
   folioOClave: string | null
 }) {
-  const t = legalTriage(estadoDocumentacionLegal)
   const superficieTxt = superficieTerreno
     ? `${superficieTerreno} m² terreno${superficieConstruccion ? ` · ${superficieConstruccion} m² const.` : ''}`
     : '—'
+
+  if (error) {
+    return (
+      <div className="bg-navy-800 border border-red-900/40 p-5 text-[13px] text-paper-dim">
+        No se pudo generar el diagnóstico legal ({error}). Intenta recargar la página.
+      </div>
+    )
+  }
+
+  if (!legal) {
+    return (
+      <div className="bg-navy-800 border border-white/10 p-5 flex items-center gap-3">
+        <span className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
+        <p className="text-[13px] text-slate font-plex-mono">Analizando uso de suelo, título y restricciones reales…</p>
+      </div>
+    )
+  }
+  const t = legal
 
   return (
     <div>
@@ -87,13 +122,15 @@ export function DiagnosticoLegal({
       <div className="flex flex-col gap-3">
         <CheckRow titulo="Uso de suelo" check={t.usoSuelo} />
         <CheckRow titulo="Titularidad y gravámenes (RPP)" check={t.rpp} />
-        <CheckRow titulo="Restricciones ambientales" check={CHECK_AMBIENTAL} />
-        <CheckRow titulo="Restricciones por infraestructura federal (CFE)" check={CHECK_CFE} />
+        <CheckRow titulo="Restricciones ambientales" check={t.ambiental} />
+        <CheckRow titulo="Restricciones por infraestructura federal (CFE)" check={t.cfe} />
       </div>
 
       <div className="mt-4 border border-dashed border-white/15 bg-white/[0.02] p-3.5">
         <p className="text-[11.5px] text-slate">
-          <b className="text-paper-dim font-medium">Nota de transparencia:</b> este diagnóstico combina fuentes gratuitas verificables (INEGI, CONANP/CONABIO, SENER) con los gaps ya documentados (RPP, SIGEIA, CFE). Ningún resultado proviene de una consulta real todavía — son estados simulados mientras se cierran los spikes técnicos de integración.
+          <b className="text-paper-dim font-medium">Nota de transparencia:</b> {t.grounded
+            ? 'diagnóstico generado por el Agente Legal con búsqueda real y GIS municipal (ver fuente de cada check). No existe API pública del Registro Público de la Propiedad — el check de título nunca certifica contra el registro en vivo, se basa en lo que el propietario declaró/aportó.'
+            : 'no se encontraron fuentes reales para fundamentar este diagnóstico (búsqueda sin resultados) — trátalo como una estimación sin verificar, no como un diagnóstico confiable.'}
         </p>
       </div>
     </div>
