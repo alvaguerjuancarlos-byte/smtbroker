@@ -137,6 +137,26 @@ export default function ActivoPage() {
 
   if (!activo) return null
 
+  // Las etiquetas de estado (badge del encabezado, hero y CTA final) se derivan del veredicto real
+  // del Agente Legal -- antes eran fijas ("Diagnóstico completado" / "Listo para marketing") y
+  // contradecían al agente cuando marcaba el expediente como no apto para publicar.
+  const agentesCorriendo = (!legal && !legalError) || (!mercado && !mercadoError)
+  const estadoDiag: { badge: string; cta: string; ctaDesc: string; tono: 'ok' | 'warn' | 'bad' } =
+    agentesCorriendo
+      ? { badge: 'Diagnóstico en curso', cta: 'Diagnóstico en curso…', ctaDesc: 'Los agentes Legal y de Mercado siguen analizando el activo.', tono: 'warn' }
+      : legalError
+        ? { badge: 'Diagnóstico legal pendiente', cta: 'Diagnóstico incompleto · Falta el dictamen legal', ctaDesc: 'El agente legal no pudo completar el análisis. Puedes avanzar a marketing, pero sin dictamen legal.', tono: 'warn' }
+        : legal!.verdictCls === 'ok'
+          ? { badge: 'Diagnóstico completado', cta: 'Diagnóstico completo · Listo para marketing', ctaDesc: 'El agente de marketing generará el media kit y la campaña de captación.', tono: 'ok' }
+          : legal!.verdictCls === 'warn'
+            ? { badge: 'Publicable con nota', cta: 'Diagnóstico completo · Publicable con nota', ctaDesc: 'Hay pendientes legales menores: atiéndelos en paralelo a la campaña de marketing.', tono: 'warn' }
+            : { badge: 'Requiere validación legal', cta: 'Diagnóstico completo · Falta documentación legal', ctaDesc: 'Completa el expediente antes de publicar: el agente legal marcó pendientes que bloquean la venta.', tono: 'bad' }
+  const tonoBadgeCls = {
+    ok: 'border-gold-500/40 text-gold-400 bg-gold-500/10',
+    warn: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
+    bad: 'border-red-900/60 text-[#f3a3a3] bg-red-950/20',
+  }[estadoDiag.tono]
+
   // Hasta que el Agente de Mercado responda, se usa el precio de lista como mejor estimación
   // disponible (nunca un rango inventado) -- antes esto siempre eran multiplicadores fijos sobre
   // precio_total, sin importar si había datos reales o no (ver auditoría 2026-10-03).
@@ -182,8 +202,8 @@ export default function ActivoPage() {
                 <h1 className="font-fraunces text-[24px] md:text-[28px] font-medium text-paper">{activo.nombre}</h1>
                 <p className="text-[14px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
               </div>
-              <span className="font-plex-mono text-[10.5px] font-medium px-3 py-1.5 border border-gold-500/40 text-gold-400 bg-gold-500/10 self-start shrink-0">
-                Diagnóstico completado
+              <span className={`font-plex-mono text-[10.5px] font-medium px-3 py-1.5 border self-start shrink-0 ${tonoBadgeCls}`}>
+                {estadoDiag.badge}
               </span>
             </div>
           </div>
@@ -218,7 +238,7 @@ export default function ActivoPage() {
             <div className="mb-4 md:mb-5">
               <span className="inline-flex items-center gap-1.5 font-plex-mono text-[10px] font-medium tracking-[0.1em] uppercase bg-gold-500 text-navy-950 px-3 py-1 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-navy-950 animate-pulse" />
-                Análisis Completado
+                {agentesCorriendo ? 'Analizando' : 'Análisis Completado'}
               </span>
               <h2 className="font-fraunces text-[18px] md:text-[22px] font-medium text-paper leading-tight">{activo.nombre}</h2>
               <p className="text-[13px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
@@ -362,10 +382,10 @@ export default function ActivoPage() {
           </div>
 
           {/* CTA */}
-          <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className={`p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-2 ${estadoDiag.tono === 'bad' ? 'bg-red-950/20 border-[#e05a5a]' : 'bg-gold-500/[0.06] border-gold-500'}`}>
             <div>
-              <p className="text-[15px] font-medium text-gold-400 mb-1">Diagnóstico completo · Listo para marketing</p>
-              <p className="text-[13px] text-paper-dim">El agente de marketing generará el media kit y la campaña de captación.</p>
+              <p className={`text-[15px] font-medium mb-1 ${estadoDiag.tono === 'bad' ? 'text-[#f3a3a3]' : 'text-gold-400'}`}>{estadoDiag.cta}</p>
+              <p className="text-[13px] text-paper-dim">{estadoDiag.ctaDesc}</p>
             </div>
             <button
               onClick={() => router.push(`/activo/${id}/marketing`)}
