@@ -1,0 +1,39 @@
+-- SNAPSHOT (solo documentación, no ejecuta nada) del estado de seguridad de la base ANTES de
+-- 20261005000100_v6_broker_protagonista.sql. Tomado por JC del SQL Editor el 2026-10-05
+-- (consultas de solo lectura a pg_policies, pg_class, information_schema). La mayoría de estas
+-- políticas se crearon a mano y nunca habían quedado versionadas.
+--
+-- RLS activada:   activos, perfiles_intencion, prospectos_broker, solicitudes, usuarios,
+--                 verificaciones_broker
+-- RLS desactivada: proyectos (tabla ajena a SMTBROKER: id, usuario_id, nombre, flujo, status,
+--                 datos, created_at; 3 filas) y activos_publicos (vista)
+--
+-- Grants: anon y authenticated con DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+--         en todas las tablas y en la vista activos_publicos (default de Supabase), salvo
+--         usuarios/authenticated sin UPDATE a nivel tabla (grant update (nombre), 2026-10-03).
+--
+-- Políticas:
+--   activos               | usuarios ven sus activos                     | ALL    | public        | USING (auth.uid() = usuario_id)
+--   perfiles_intencion    | (ninguna -- RLS activada sin políticas: nadie puede leer ni escribir)
+--   prospectos_broker     | solo_broker_maestro_prospectos               | ALL    | authenticated | USING/CHECK exists(usuarios.rol = 'broker_maestro')
+--   solicitudes           | anon_puede_insertar_solicitud                | INSERT | anon,authenticated | CHECK (true)   <-- anula la siguiente
+--   solicitudes           | cualquiera puede enviar una solicitud...     | INSERT | anon,authenticated | CHECK (status = 'pendiente')
+--   solicitudes           | solo_broker_maestro_actualiza_solicitudes    | UPDATE | authenticated | USING/CHECK exists(rol = 'broker_maestro')
+--   solicitudes           | solo_broker_maestro_lee_solicitudes          | SELECT | authenticated | USING exists(rol = 'broker_maestro')
+--   usuarios              | usuarios_select_propio                       | SELECT | public        | USING (auth.uid() = id)
+--   usuarios              | usuarios_update_propio                       | UPDATE | public        | USING (auth.uid() = id)
+--   verificaciones_broker | solo_broker_maestro_verificaciones           | ALL    | authenticated | USING/CHECK exists(rol = 'broker_maestro')
+--
+-- Vista activos_publicos: SELECT id, nombre, tipo, municipio, estado, superficie, precio_total,
+--   created_at FROM activos  (sin security_invoker: corre como su dueño y se salta la RLS).
+--
+-- Hallazgos derivados (2026-10-05, confirmado en vivo el #1 con un activo temporal ya borrado):
+--   1. CRÍTICO: con la clave anónima se pudo UPDATE y DELETE de activos a través de la vista.
+--   2. solicitudes: la política CHECK (true) permite crear solicitudes ya "aprobadas".
+--   3. perfiles_intencion sin políticas: el perfil del comprador nunca se ha podido guardar.
+--   4. /panel (broker_maestro) solo puede leer sus propios activos y su propio usuario.
+--   5. proyectos: sin RLS y con escritura para anon (pendiente de decisión de JC).
+--
+-- Columnas relevantes: activos.usuario_id NOT NULL (FK auth.users ON DELETE CASCADE),
+--   activos.broker_id NULL (FK usuarios); perfiles_intencion.usuario_id NOT NULL UNIQUE
+--   (FK auth.users ON DELETE CASCADE), perfiles_intencion.fuente_captura NOT NULL (sin CHECK).

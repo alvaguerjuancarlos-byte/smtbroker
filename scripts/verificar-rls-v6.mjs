@@ -1,6 +1,7 @@
-// Verifica contra la base REAL las reglas de acceso del Documento Maestro V6.1 (migración
-// 20261005000100_v6_broker_protagonista.sql) y que siguen cerrados los dos hallazgos de la
-// auditoría del 2026-10-03. Crea 3 cuentas temporales (2 brokers y 1 propietario) y las borra al
+// Verifica contra la base REAL las reglas de acceso del Documento Maestro V6.1 y los hallazgos de
+// seguridad del 2026-10-05 (migración 20261005000100_v6_broker_protagonista.sql), y que siguen
+// cerrados los de la auditoría del 2026-10-03. Crea 5 cuentas temporales (2 brokers, propietario,
+// comprador y Operación) y las borra al
 // final con todo lo que hayan creado -- no deja datos en producción, aunque una prueba falle.
 //
 // Cada insert se prueba EXACTAMENTE como lo hace el código real (sin .select() cuando el código
@@ -48,6 +49,8 @@ async function main() {
   const brokerA = await cuenta('broker')
   const brokerB = await cuenta('broker')
   const prop = await cuenta('propietario')
+  const comprador = await cuenta('inversionista')
+  const operacion = await cuenta('broker_maestro')
 
   // ── Activos ──────────────────────────────────────────────────────────────────────────────
   // Igual que app/activo/nuevo/page.tsx: insert + .select('id').single()
@@ -132,6 +135,48 @@ async function main() {
     check('broker B NO puede borrar al cliente de A', sigue?.length === 1, eBorrarB?.message)
   }
 
+  // ── Perfil propio del comprador (antes: RLS sin políticas, nunca se guardaba) ────────────
+  // Igual que app/portal-inversion/page.tsx: upsert onConflict usuario_id, SIN .select()
+  const { error: eUp } = await comprador.cli.from('perfiles_intencion').upsert({
+    usuario_id: comprador.id, presupuesto: '$2M – $5M', zona: 'San Pedro', tipo_activo_interes: 'Casa',
+    tesis_inversion: null, fuente_captura: 'registro_directo',
+  }, { onConflict: 'usuario_id' })
+  check('comprador guarda su perfil', !eUp, eUp?.message)
+  const { data: suyo } = await comprador.cli.from('perfiles_intencion').select('id').eq('usuario_id', comprador.id)
+  check('comprador ve su perfil', suyo?.length === 1)
+  for (const f of suyo || []) creados.perfiles.push(f.id)
+  const { data: ajeno } = await brokerA.cli.from('perfiles_intencion').select('id').eq('usuario_id', comprador.id)
+  check('broker NO ve el perfil propio de un comprador', (ajeno?.length ?? 0) === 0)
+
+  // ── Operación MindBridge (rol interno broker_maestro) lee toda la plataforma ─────────────
+  if (aA) {
+    const { data: opA } = await operacion.cli.from('activos').select('id').eq('id', aA.id)
+    check('Operación ve activos de cualquier broker', opA?.length === 1)
+  }
+  const { data: opU } = await operacion.cli.from('usuarios').select('id').in('id', [brokerA.id, prop.id])
+  check('Operación ve usuarios de la plataforma', opU?.length === 2)
+  const { data: opC } = await operacion.cli.from('perfiles_intencion').select('id').eq('alias_cliente', alias)
+  check('Operación ve perfiles de búsqueda', opC?.length === 1)
+  const { data: noOp } = await brokerA.cli.from('usuarios').select('id').eq('id', prop.id)
+  check('un broker NO ve otros usuarios', (noOp?.length ?? 0) === 0)
+
+  // ── Vista activos_publicos (hallazgo crítico 2026-10-05) ─────────────────────────────────
+  if (aP) {
+    const a = anon()
+    const { count: nAnon } = await a.from('activos_publicos').select('*', { count: 'exact', head: true })
+    check('anon NO lee la vista activos_publicos', !nAnon, `filas=${nAnon}`)
+    await a.from('activos_publicos').update({ nombre: 'HACKEADO' }).eq('id', aP.id)
+    await a.from('activos_publicos').delete().eq('id', aP.id)
+    const { data: intacto } = await admin.from('activos').select('nombre').eq('id', aP.id)
+    check('anon NO modifica ni borra activos vía la vista', intacto?.length === 1 && intacto[0].nombre !== 'HACKEADO')
+    await comprador.cli.from('activos_publicos').update({ nombre: 'HACKEADO' }).eq('id', aP.id)
+    await comprador.cli.from('activos_publicos').delete().eq('id', aP.id)
+    const { data: intacto2 } = await admin.from('activos').select('nombre').eq('id', aP.id)
+    check('usuario con sesión NO modifica ni borra activos vía la vista', intacto2?.length === 1 && intacto2[0].nombre !== 'HACKEADO')
+    const { data: lista } = await comprador.cli.from('activos_publicos').select('id').eq('id', aP.id)
+    check('comprador sigue viendo el listado público', lista?.length === 1)
+  }
+
   // ── Hallazgos de la auditoría del 2026-10-03 siguen cerrados ─────────────────────────────
   await brokerA.cli.from('usuarios').update({ rol: 'broker_maestro' }).eq('id', brokerA.id)
   const { data: rolTras } = await admin.from('usuarios').select('rol').eq('id', brokerA.id).single()
@@ -141,6 +186,11 @@ async function main() {
   const emailSol = `rls-v6-solicitud-${sufijo}@prueba.smtbroker.mx`
   const { error: eSol } = await anon().from('solicitudes').insert({ nombre: 'Prueba RLS', email: emailSol, rol: 'broker', status: 'pendiente' })
   check('/bienvenida sigue guardando solicitudes', !eSol, eSol?.message)
+  const emailAprob = `rls-v6-aprobada-${sufijo}@prueba.smtbroker.mx`
+  const { error: eAprob } = await anon().from('solicitudes').insert({ nombre: 'Prueba RLS', email: emailAprob, rol: 'broker', status: 'aprobada' })
+  check('NO se puede crear una solicitud ya aprobada', !!eAprob, eAprob?.message)
+  const { data: solsA } = await admin.from('solicitudes').select('id').eq('email', emailAprob)
+  for (const x of solsA || []) creados.solicitudes.push(x.id)
   const { data: sols } = await admin.from('solicitudes').select('id').eq('email', emailSol)
   for (const s of sols || []) creados.solicitudes.push(s.id)
 }
@@ -151,6 +201,7 @@ async function limpiar() {
   for (const id of creados.solicitudes) await admin.from('solicitudes').delete().eq('id', id)
   for (const id of creados.usuarios) {
     await admin.from('perfiles_intencion').delete().eq('broker_id', id)
+    await admin.from('perfiles_intencion').delete().eq('usuario_id', id)
     await admin.from('activos').delete().eq('usuario_id', id)
     await admin.from('usuarios').delete().eq('id', id)
     await admin.auth.admin.deleteUser(id)

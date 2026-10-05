@@ -51,6 +51,7 @@ export default function PortalInversionPage() {
   const [editando, setEditando] = useState(false)
   const [perfil, setPerfil] = useState<PerfilIntencion>(PERFIL_VACIO)
   const [guardando, setGuardando] = useState(false)
+  const [errorPerfil, setErrorPerfil] = useState('')
   const [activos, setActivos] = useState<Activo[]>([])
 
   useEffect(() => {
@@ -95,7 +96,10 @@ export default function PortalInversionPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setGuardando(false); return }
 
-    await supabase.from('perfiles_intencion').upsert({
+    setErrorPerfil('')
+    // Antes no se revisaba el error: perfiles_intencion tenía RLS sin políticas y el guardado
+    // fallaba en silencio mostrando el perfil como guardado (hallazgo 2026-10-05).
+    const { error } = await supabase.from('perfiles_intencion').upsert({
       usuario_id: user.id,
       presupuesto: perfil.presupuesto || null,
       zona: perfil.zona || null,
@@ -105,6 +109,7 @@ export default function PortalInversionPage() {
     }, { onConflict: 'usuario_id' })
 
     setGuardando(false)
+    if (error) { setErrorPerfil('No se pudo guardar. Intenta de nuevo.'); return }
     setTienePerfil(true)
     setEditando(false)
   }
@@ -192,6 +197,7 @@ export default function PortalInversionPage() {
                   <textarea value={perfil.tesis_inversion} onChange={e => setPerfil(p => ({ ...p, tesis_inversion: e.target.value }))}
                     placeholder="Ej. casa de 3 recámaras cerca de escuelas, para mudarnos el próximo año…" rows={3} className={inputCls(false, 'oscuro')} />
                 </Field>
+                {errorPerfil && <p className="text-[12px] text-[#f3a3a3]">{errorPerfil}</p>}
                 <div className="flex gap-2">
                   {tienePerfil && (
                     <button type="button" onClick={() => setEditando(false)}
