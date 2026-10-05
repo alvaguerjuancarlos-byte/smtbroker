@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { callClaudeJson, serieSHFParaCiudad, calcularApreciacionSHF, resolverAbsorcionSNIIV } from '@smt/shared-realestate'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
+import { filtroAccesoActivo } from '@/lib/accesoActivo'
 
 // Agente de Mercado real para REVENTA -- distinto del "Agente Mercado" de smt-developer (que
 // analiza oferta/demanda de un PROYECTO nuevo en preventa). Aquí la pregunta es "¿en qué rango
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
   if (!activoId) return NextResponse.json({ error: 'Falta activoId' }, { status: 400 })
 
   const { data: activo, error: activoErr } = await supabaseAdmin
-    .from('activos').select('*').eq('id', activoId).eq('usuario_id', caller.user.id).single()
+    .from('activos').select('*').eq('id', activoId).or(filtroAccesoActivo(caller.user.id)).single()
   if (activoErr || !activo) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
 
   // Datos reales, calculados (no pedidos al LLM) -- ver cabecera del archivo.

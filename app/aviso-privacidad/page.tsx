@@ -55,8 +55,9 @@ export default function AvisoPrivacidadPage() {
             <Seccion n="I" titulo="Datos personales que recabamos">
               <p>Según cómo llegaste a la plataforma, podemos recabar:</p>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li><b className="text-paper">Si solicitaste acceso</b> (propietario, inversionista o broker, vía "Solicitar acceso"): nombre, correo electrónico y teléfono, más — según el rol elegido — tipo de activo y municipio, presupuesto e intereses de inversión, o años de experiencia y zona de operación.</li>
+                <li><b className="text-paper">Si solicitaste acceso</b> (propietario, comprador o broker, vía "Solicitar acceso"): nombre, correo electrónico y teléfono, más — según el rol elegido — tipo de activo y municipio, presupuesto y tipo de propiedad que buscas, o años de experiencia y zona de operación.</li>
                 <li><b className="text-paper">Si publicaste un activo:</b> dirección del inmueble, datos catastrales y legales (clave catastral, folio real, escritura pública, gravámenes conocidos, uso de suelo declarado), superficie y precio.</li>
+                <li><b className="text-paper">Si un broker registró lo que buscas:</b> solo el alias que el broker te asigne, tu presupuesto, la zona y el tipo de propiedad que buscas. <b className="text-paper">No recabamos tu nombre completo, teléfono ni correo</b>: tu contacto se queda con tu broker, quien declara contar con tu autorización para registrar esta información.</li>
                 <li><b className="text-paper">Si eres broker y tu perfil llegó al módulo interno de Prospección de Brokers:</b> nombre, correo, teléfono y zona/volumen de actividad aparente — en algunos casos obtenidos de un directorio público de un tercero antes de tener contacto directo contigo (ver Sección VII).</li>
               </ul>
               <p>No solicitamos ni tratamos datos sensibles en términos del artículo 3, fracción VI de la Ley (origen étnico o racial, estado de salud, información genética, creencias religiosas/filosóficas/morales, afiliación sindical, opiniones políticas o preferencia sexual).</p>
@@ -66,7 +67,7 @@ export default function AvisoPrivacidadPage() {
               <p><b className="text-paper">Primarias</b> — necesarias para prestarte el servicio; sin ellas no podemos operar tu solicitud:</p>
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>Crear y administrar tu cuenta, y verificar tu acceso.</li>
-                <li>Dar seguimiento a tu solicitud de acceso, activo publicado, perfil de inversión, o alta como broker aliado.</li>
+                <li>Dar seguimiento a tu solicitud de acceso, activo publicado, perfil de búsqueda, o alta como broker aliado.</li>
                 <li>Operar el diagnóstico legal/catastral y el flujo de marketing y cierre de un activo.</li>
                 <li>Contactarte para verificar tu licencia o cédula profesional (si aplica) o para notificarte del estado de tu operación.</li>
               </ul>

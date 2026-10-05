@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { filtroAccesoActivo } from '@/lib/accesoActivo'
+import { useRolUsuario } from '@/lib/useRolUsuario'
 import Topbar from '../../components/Topbar'
 import { MapView } from '../../components/MapPicker'
 import { DiagnosticoLegal, type TriageLegalReal } from '../../components/DiagnosticoLegal'
@@ -86,6 +88,7 @@ const formatMXN = (n: number) =>
 
 export default function ActivoPage() {
   const router = useRouter()
+  const rol = useRolUsuario()
   const params = useParams()
   const id     = params.id as string
 
@@ -102,7 +105,7 @@ export default function ActivoPage() {
       if (!session?.user) { router.push('/login'); return }
 
       const { data } = await supabase
-        .from('activos').select('*').eq('id', id).eq('usuario_id', session.user.id).single()
+        .from('activos').select('*').eq('id', id).or(filtroAccesoActivo(session.user.id)).single()
 
       if (!data) { router.push('/dashboard'); return }
       setActivo(data as Activo)
@@ -183,7 +186,7 @@ export default function ActivoPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar rol="propietario" />
+      <Topbar rol={rol ?? 'propietario'} />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">

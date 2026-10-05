@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useRolUsuario } from '@/lib/useRolUsuario'
+import { homePorRol } from '@/lib/roles'
 import Topbar from '../../components/Topbar'
 import { MapPicker } from '../../components/MapPicker'
 import { Field, inputCls } from '../../components/FormField'
@@ -23,6 +25,12 @@ const CATASTRO_INICIAL: CatastroLegalValue = {
 
 export default function NuevoActivoPage() {
   const router = useRouter()
+  const rol = useRolUsuario()
+  // Documento Maestro V6.1, §6.2: un broker puede cargar la propiedad de un propietario que no
+  // tiene cuenta, declarando exclusiva o carta de representación. La RLS lo exige también
+  // (migración 20261005000100_v6_broker_protagonista.sql), así que no basta con saltarse este form.
+  const esBroker = rol === 'broker'
+  const [representacion, setRepresentacion] = useState({ propietario_nombre: '', tipo: 'exclusiva' as 'exclusiva' | 'carta', declarada: false })
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
   const [showMap,   setShowMap]   = useState(false)
@@ -59,6 +67,8 @@ export default function NuevoActivoPage() {
     municipio: !form.municipio.trim(),
     estado:    !form.estado.trim(),
     estado_documentacion_legal: !catastro.estado_documentacion_legal,
+    propietario_nombre: esBroker && !representacion.propietario_nombre.trim(),
+    representacion:     esBroker && !representacion.declarada,
   }
   const hasErrors = Object.values(required).some(Boolean)
 
@@ -98,6 +108,13 @@ export default function NuevoActivoPage() {
         gravamenes_conocidos:         catastro.gravamenes_conocidos,
         uso_suelo_declarado:          catastro.uso_suelo_declarado,
         superficie_construccion_m2:   catastro.superficie_construccion_m2 ? parseFloat(catastro.superficie_construccion_m2) : null,
+        ...(esBroker ? {
+          cargado_por:                 'broker',
+          broker_id:                   user.id,
+          propietario_nombre:          representacion.propietario_nombre.trim(),
+          representacion_tipo:         representacion.tipo,
+          representacion_declarada_at: new Date().toISOString(),
+        } : {}),
       })
       .select('id')
       .single()
@@ -126,21 +143,21 @@ export default function NuevoActivoPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar rol="propietario" />
+      <Topbar rol={rol ?? 'propietario'} />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[640px] mx-auto flex flex-col gap-6 md:gap-8">
 
           {/* Header */}
           <div>
-            <button onClick={() => router.push('/dashboard')}
+            <button onClick={() => router.push(homePorRol(rol))}
               className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              Volver al dashboard
+              Volver
             </button>
-            <h1 className="font-fraunces text-[26px] font-medium text-paper">Registrar activo</h1>
+            <h1 className="font-fraunces text-[26px] font-medium text-paper">{esBroker ? 'Cargar propiedad a tu portafolio' : 'Registrar activo'}</h1>
             <p className="text-[14px] text-slate mt-1.5">Ingresa los datos del inmueble para iniciar el análisis</p>
           </div>
 
@@ -151,6 +168,34 @@ export default function NuevoActivoPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+
+            {/* Sección 0 (solo broker): representación del propietario */}
+            {esBroker && (
+              <div className="bg-navy-800 border border-gold-500/30 p-4 md:p-6 flex flex-col gap-5">
+                <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Representación del propietario</p>
+                <Field label="Nombre del propietario" required error={submitted && required.propietario_nombre}>
+                  <input type="text" value={representacion.propietario_nombre}
+                    onChange={e => setRepresentacion(r => ({ ...r, propietario_nombre: e.target.value }))}
+                    placeholder="Nombre completo o razón social" className={inputCls(submitted && required.propietario_nombre, 'oscuro')} />
+                </Field>
+                <Field label="Tipo de representación" required>
+                  <select value={representacion.tipo}
+                    onChange={e => setRepresentacion(r => ({ ...r, tipo: e.target.value as 'exclusiva' | 'carta' }))}
+                    className={inputCls(false, 'oscuro')}>
+                    <option value="exclusiva" className="bg-navy-900">Contrato de exclusiva</option>
+                    <option value="carta" className="bg-navy-900">Carta de representación</option>
+                  </select>
+                </Field>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={representacion.declarada}
+                    onChange={e => setRepresentacion(r => ({ ...r, declarada: e.target.checked }))}
+                    className="mt-0.5 accent-[#c9a227]" />
+                  <span className={`text-[13px] leading-relaxed ${submitted && required.representacion ? 'text-[#f3a3a3]' : 'text-paper-dim'}`}>
+                    Declaro que represento a este propietario con el documento indicado y que cuento con su autorización para comercializar el inmueble.
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* Sección 1: Datos generales */}
             <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
@@ -290,8 +335,8 @@ export default function NuevoActivoPage() {
         <div className="fixed inset-0 bg-navy-950 flex items-center justify-center z-50">
           <div className="text-center">
             <span className="block w-2.5 h-2.5 rounded-full bg-gold-500 mx-auto mb-4 animate-pulse" />
-            <p className="text-[15px] text-paper font-medium">Mastermind está coordinando al Agente Legal…</p>
-            <p className="text-[12px] text-slate mt-1.5 font-plex-mono">Simulación — sin conexión real a catastro todavía</p>
+            <p className="text-[15px] text-paper font-medium">Mastermind está coordinando a los agentes Legal y de Mercado…</p>
+            <p className="text-[12px] text-slate mt-1.5 font-plex-mono">Abriendo el diagnóstico</p>
           </div>
         </div>
       )}

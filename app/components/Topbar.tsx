@@ -7,9 +7,9 @@ import { HOME_POR_ROL, type Rol } from '@/lib/roles'
 
 // Navegación visible en el Topbar por rol — mismo componente y misma forma para los cuatro,
 // para que la barra se sienta consistente en toda la plataforma (antes cada rol tenía a lo más
-// un link suelto, o ninguno). El Broker Maestro ve enlaces a las cuatro áreas (incluidas las
-// vistas propias de propietario/inversionista/broker) porque es quien supervisa todo el
-// ecosistema — los demás roles solo ven lo suyo.
+// un link suelto, o ninguno). Operación MindBridge (rol interno 'broker_maestro', ver
+// lib/roles.ts) ve enlaces a todas las áreas porque supervisa la plataforma — los demás roles solo
+// ven lo suyo.
 const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   propietario: [
     { href: '/dashboard', label: 'Mis activos' },
@@ -17,15 +17,16 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   ],
   broker: [
     { href: '/portal-broker', label: 'Mi portal' },
+    { href: '/activo/nuevo', label: 'Cargar propiedad' },
   ],
   inversionista: [
     { href: '/portal-inversion', label: 'Mi portal' },
   ],
   broker_maestro: [
-    { href: '/panel', label: 'Panel' },
+    { href: '/panel', label: 'Operación' },
     { href: '/panel/prospectos-broker', label: 'Prospección' },
     { href: '/dashboard', label: 'Vista propietario' },
-    { href: '/portal-inversion', label: 'Vista inversionista' },
+    { href: '/portal-inversion', label: 'Vista comprador' },
     { href: '/portal-broker', label: 'Vista broker' },
   ],
 }

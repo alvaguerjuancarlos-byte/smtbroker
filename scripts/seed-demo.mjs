@@ -121,6 +121,42 @@ async function main() {
   }
   console.log('Perfiles de intención listos:', PERFILES_DEMO.length, '\n')
 
+  // Documento Maestro V6.1: el broker como protagonista. Diego (broker 0) carga propiedades que
+  // representa (cargado_por = 'broker', con exclusiva declarada) y registra lo que buscan sus
+  // clientes (perfiles_intencion con broker_id y alias, sin datos de contacto). Requiere la
+  // migración 20261005000100_v6_broker_protagonista.sql.
+  const diego = brokers[0]
+  const PORTAFOLIO_DIEGO = [
+    { nombre: 'Casa Fuentes del Valle', tipo: 'Casa', municipio: 'San Pedro Garza García', superficie: 380, precio_total: 14500000, status: 'valoracion', propietario_nombre: 'Familia Treviño Garza' },
+    { nombre: 'Departamento Arboleda 1204', tipo: 'Depto', municipio: 'San Pedro Garza García', superficie: 160, precio_total: 7900000, status: 'marketing', propietario_nombre: 'Lorena Cantú Ayala' },
+    { nombre: 'Terreno Chipinque Residencial', tipo: 'Terreno', municipio: 'San Pedro Garza García', superficie: 720, precio_total: 10800000, status: 'ingresado', propietario_nombre: 'Inmobiliaria Sierra Madre SA de CV' },
+  ]
+  for (const a of PORTAFOLIO_DIEGO) {
+    const { data: existente } = await supabase.from('activos').select('id').eq('broker_id', diego.id).eq('nombre', a.nombre).maybeSingle()
+    if (existente) continue
+    const { error } = await supabase.from('activos').insert({
+      usuario_id: diego.id, broker_id: diego.id, cargado_por: 'broker',
+      propietario_nombre: a.propietario_nombre, representacion_tipo: 'exclusiva', representacion_declarada_at: new Date().toISOString(),
+      nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, estado: 'Nuevo León',
+      superficie: a.superficie, precio_total: a.precio_total, status: a.status,
+    })
+    if (error) throw new Error(`insertar activo de broker ${a.nombre}: ${error.message}`)
+  }
+  const CLIENTES_DIEGO = [
+    { alias_cliente: 'Familia G.', presupuesto: '$5M – $15M', zona: 'San Pedro Garza García', tipo_activo_interes: 'Casa', tesis_inversion: 'Casa de 4 recámaras cerca de escuelas, para mudarse en 2027' },
+    { alias_cliente: 'Dr. R.', presupuesto: '$5M – $15M', zona: 'Valle Oriente', tipo_activo_interes: 'Departamento', tesis_inversion: 'Departamento con amenidades, cerca de su consultorio' },
+    { alias_cliente: 'Cliente 07', presupuesto: '$15M – $50M', zona: 'San Pedro / Carretera Nacional', tipo_activo_interes: 'Terreno', tesis_inversion: 'Terreno para construir casa propia' },
+  ]
+  for (const c of CLIENTES_DIEGO) {
+    const { data: existente } = await supabase.from('perfiles_intencion').select('id').eq('broker_id', diego.id).eq('alias_cliente', c.alias_cliente).maybeSingle()
+    if (existente) continue
+    const { error } = await supabase.from('perfiles_intencion').insert({
+      ...c, usuario_id: null, broker_id: diego.id, consentimiento_declarado_at: new Date().toISOString(), fuente_captura: 'broker',
+    })
+    if (error) throw new Error(`insertar cliente ${c.alias_cliente}: ${error.message}`)
+  }
+  console.log('Portafolio y clientes de', diego.nombre, 'listos:', PORTAFOLIO_DIEGO.length, 'propiedades,', CLIENTES_DIEGO.length, 'clientes\n')
+
   console.log('=== Credenciales de demo (contraseña igual para las 9) ===')
   console.log('Contraseña:', PASSWORD_DEMO, '\n')
   const todos = [...propietarios, ...inversionistas, ...brokers]

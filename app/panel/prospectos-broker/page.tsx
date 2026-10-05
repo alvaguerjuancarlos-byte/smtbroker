@@ -132,7 +132,7 @@ export default function ProspectosBrokerPage() {
         return
       }
 
-      setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Broker Maestro')
+      setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Operación MindBridge')
 
       await cargar()
       setLoading(false)
@@ -327,7 +327,7 @@ export default function ProspectosBrokerPage() {
               </svg>
               Panel del ecosistema
             </button>
-            <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Broker Maestro</span>
+            <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
             <h1 className="font-fraunces text-[24px] md:text-[30px] font-medium text-paper mt-1">Prospección de Brokers</h1>
             <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Cola de revisión manual — ingesta automatizada desde AMPI ya activa</p>
           </div>

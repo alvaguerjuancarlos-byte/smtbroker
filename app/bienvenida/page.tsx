@@ -31,9 +31,9 @@ const ROLES = [
   },
   {
     id:     'inversionista' as Rol,
-    titulo: 'Soy inversionista',
-    sub:    'Busco oportunidades de compra',
-    desc:   'Accede a activos calificados con due diligence completo antes de invertir un peso.',
+    titulo: 'Quiero comprar',
+    sub:    'Busco una propiedad',
+    desc:   'Encuentra propiedades con diagnóstico legal y de mercado completo antes de comprometerte.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -41,13 +41,13 @@ const ROLES = [
     ),
     accent: '#a5a1f5',
     chip:   'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10',
-    beneficios: ['Activos pre-analizados y valuados', 'Due diligence legal incluido', 'Alertas de nuevas oportunidades'],
+    beneficios: ['Propiedades con diagnóstico y valuación', 'Revisión legal incluida', 'Describe una vez lo que buscas'],
   },
   {
     id:     'broker' as Rol,
     titulo: 'Soy broker',
     sub:    'Quiero ser aliado SMTBROKER',
-    desc:   'Potencia tu cartera con tecnología IA. Trae operaciones y nosotros ponemos la plataforma.',
+    desc:   'Certifica tu portafolio con diagnóstico IA y registra lo que buscan tus clientes. Tú eres la pieza clave del ecosistema.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.6" fill="none"/>
@@ -57,7 +57,7 @@ const ROLES = [
     ),
     accent: '#e8b568',
     chip:   'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
-    beneficios: ['Plataforma IA sin costo inicial', 'Comisión compartida por cierre', 'Soporte del Broker Maestro'],
+    beneficios: ['Registro sin costo', 'Tus clientes siguen siendo tuyos', 'Comisión compartida por cierre'],
   },
 ]
 
@@ -140,7 +140,7 @@ export default function BienvenidaPage() {
           <div>
             <h1 className="font-fraunces text-[26px] font-medium text-paper">¡Solicitud recibida!</h1>
             <p className="text-[14px] text-slate mt-2 leading-relaxed">
-              Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. El Broker Maestro revisará tu solicitud y te contactará en menos de 24 horas.
+              Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. Nuestro equipo revisará tu solicitud y te contactará en menos de 24 horas.
             </p>
           </div>
           <button onClick={() => router.push('/login')}
@@ -182,7 +182,7 @@ export default function BienvenidaPage() {
                 Únete al ecosistema<br /><span className="italic font-normal text-gold-400">SMTBROKER.</span>
               </h1>
               <p className="text-[15px] text-paper-dim mt-5 max-w-[52ch] leading-relaxed">
-                Conectamos propietarios, inversionistas y brokers con tecnología de agentes IA para cerrar operaciones más rápido y con mayor rentabilidad.
+                Conectamos propietarios, brokers y compradores con tecnología de agentes IA para cerrar operaciones más rápido y con mayor rentabilidad.
               </p>
             </div>
 
@@ -221,7 +221,7 @@ export default function BienvenidaPage() {
                     <span className="font-plex-mono text-[11px] font-medium">{rolActivo.titulo}</span>
                   </div>
                   <h2 className="font-fraunces text-[19px] md:text-[21px] font-medium text-paper">Completa tu registro</h2>
-                  <p className="text-[13px] text-slate mt-1">El Broker Maestro revisará tu solicitud y te dará acceso.</p>
+                  <p className="text-[13px] text-slate mt-1">Nuestro equipo revisará tu solicitud y te dará acceso.</p>
                 </div>
 
                 {/* Campos comunes */}
@@ -271,9 +271,9 @@ export default function BienvenidaPage() {
                         {['Menos de $2M','$2M – $5M','$5M – $15M','$15M – $50M','Más de $50M'].map(p => <option key={p} className="bg-navy-900">{p}</option>)}
                       </select>
                     </Field>
-                    <Field label="Tipo de activos de interés" tema="oscuro">
+                    <Field label="Tipo de propiedad que buscas" tema="oscuro">
                       <input type="text" value={form.intereses} onChange={e => set('intereses', e.target.value)}
-                        placeholder="Ej. Terrenos, Edificios" className={inputCls(false, 'oscuro')} />
+                        placeholder="Ej. Casa, departamento, terreno" className={inputCls(false, 'oscuro')} />
                     </Field>
                   </div>
                 )}

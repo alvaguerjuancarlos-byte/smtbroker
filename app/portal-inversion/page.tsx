@@ -137,13 +137,13 @@ export default function PortalInversionPage() {
 
           <div>
             <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
-            <p className="text-[14px] text-slate mt-1.5">Tu perfil de inversión y los activos disponibles</p>
+            <p className="text-[14px] text-slate mt-1.5">Lo que buscas y las propiedades disponibles</p>
           </div>
 
           {/* Perfil de intención */}
           <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Tu perfil de inversión</p>
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Lo que buscas</p>
               {tienePerfil && !editando && (
                 <button onClick={() => setEditando(true)} className="text-[12px] font-medium text-gold-400 hover:text-gold-100 transition-colors">
                   Editar
@@ -162,11 +162,11 @@ export default function PortalInversionPage() {
                   <p className="text-[14px] text-paper mt-1">{perfil.zona || '—'}</p>
                 </div>
                 <div>
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tipo de activo</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tipo de propiedad</p>
                   <p className="text-[14px] text-paper mt-1">{perfil.tipo_activo_interes || '—'}</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tesis de inversión</p>
+                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Qué buscas y por qué</p>
                   <p className="text-[13px] text-paper-dim mt-1 leading-relaxed">{perfil.tesis_inversion || '—'}</p>
                 </div>
               </div>
@@ -184,13 +184,13 @@ export default function PortalInversionPage() {
                       placeholder="Ej. San Pedro Garza García" className={inputCls(false, 'oscuro')} />
                   </Field>
                 </div>
-                <Field label="Tipo de activo de interés">
+                <Field label="Tipo de propiedad">
                   <input type="text" value={perfil.tipo_activo_interes} onChange={e => setPerfil(p => ({ ...p, tipo_activo_interes: e.target.value }))}
-                    placeholder="Ej. Terrenos, edificios, desarrollos verticales" className={inputCls(false, 'oscuro')} />
+                    placeholder="Ej. Casa, departamento, terreno" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Tesis de inversión (opcional)">
+                <Field label="¿Qué buscas y por qué? (opcional)">
                   <textarea value={perfil.tesis_inversion} onChange={e => setPerfil(p => ({ ...p, tesis_inversion: e.target.value }))}
-                    placeholder="¿Qué buscas y por qué? Ej. terreno para desarrollo vertical, horizonte de 3-5 años…" rows={3} className={inputCls(false, 'oscuro')} />
+                    placeholder="Ej. casa de 3 recámaras cerca de escuelas, para mudarnos el próximo año…" rows={3} className={inputCls(false, 'oscuro')} />
                 </Field>
                 <div className="flex gap-2">
                   {tienePerfil && (

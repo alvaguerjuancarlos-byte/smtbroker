@@ -15,3 +15,20 @@ export const HOME_POR_ROL: Record<Rol, string> = {
 export function homePorRol(rol: string | null | undefined): string {
   return (rol && rol in HOME_POR_ROL) ? HOME_POR_ROL[rol as Rol] : '/dashboard'
 }
+
+// Documento Maestro V6.1 (2026-10-04): el "Broker Maestro" deja de ser una persona del ecosistema
+// y pasa a ser la consola interna de Operación MindBridge; "inversionista" se presenta como
+// "comprador". Los identificadores internos ('broker_maestro', 'inversionista') NO se renombran a
+// propósito: las políticas RLS de Supabase los referencian literalmente y no están todas
+// versionadas -- renombrarlos arriesga reabrir los hallazgos de la auditoría del 2026-10-03. Toda
+// etiqueta visible al usuario debe pasar por aquí.
+export const ETIQUETA_ROL: Record<Rol, string> = {
+  propietario: 'Propietario',
+  broker: 'Broker',
+  inversionista: 'Comprador',
+  broker_maestro: 'Operación MindBridge',
+}
+
+export function etiquetaRol(rol: string | null | undefined): string {
+  return (rol && rol in ETIQUETA_ROL) ? ETIQUETA_ROL[rol as Rol] : (rol || '')
+}

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { filtroAccesoActivo } from '@/lib/accesoActivo'
+import { useRolUsuario } from '@/lib/useRolUsuario'
 import Topbar from '../../../components/Topbar'
 import { EjemploBadge } from '../../../components/EjemploBadge'
 
@@ -174,6 +176,7 @@ function CanalCard({ nombre, icono, alcance, status, leads }: {
 
 export default function MarketingPage() {
   const router = useRouter()
+  const rol = useRolUsuario()
   const params = useParams()
   const id     = params.id as string
 
@@ -189,7 +192,7 @@ export default function MarketingPage() {
         .from('activos')
         .select('id, nombre, tipo, municipio, estado, superficie, precio_total')
         .eq('id', id)
-        .eq('usuario_id', user.id)
+        .or(filtroAccesoActivo(user.id))
         .single()
 
       if (!data) { router.push('/dashboard'); return }
@@ -224,7 +227,7 @@ export default function MarketingPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar rol="propietario" />
+      <Topbar rol={rol ?? 'propietario'} />
 
       <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">

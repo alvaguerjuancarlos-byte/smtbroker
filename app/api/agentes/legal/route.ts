@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { callClaudeJson, consultarNormativaReal } from '@smt/shared-realestate'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
+import { filtroAccesoActivo } from '@/lib/accesoActivo'
 
 // Agente Legal real para REVENTA de un activo existente -- distinto a propósito del "Agente
 // Legal" de smt-developer (que evalúa factibilidad de desarrollo nuevo: COS/CUS/cajones/régimen
@@ -66,11 +67,11 @@ export async function POST(req: NextRequest) {
 
   // El cliente solo manda el id -- los datos del predio se leen del servidor, nunca se confía en
   // lo que mande el navegador para armar el diagnóstico (evita que alguien arme un "diagnóstico"
-  // favorable para un activo que no es suyo). Se verifica dueño del activo con el mismo criterio
-  // que ya usa RLS (usuario_id = caller), vía supabaseAdmin porque este check corre antes de
-  // decidir si la petición procede.
+  // favorable para un activo que no es suyo). Se verifica acceso con el mismo criterio que la RLS
+  // (dueño o broker que lo representa, ver lib/accesoActivo.ts), vía supabaseAdmin porque este
+  // check corre antes de decidir si la petición procede.
   const { data: activo, error: activoErr } = await supabaseAdmin
-    .from('activos').select('*').eq('id', activoId).eq('usuario_id', caller.user.id).single()
+    .from('activos').select('*').eq('id', activoId).or(filtroAccesoActivo(caller.user.id)).single()
   if (activoErr || !activo) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
 
   const esSanPedro = /san\s*pedro/i.test(activo.municipio || '')

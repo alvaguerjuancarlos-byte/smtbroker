@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
-import { HOME_POR_ROL } from '@/lib/roles'
+import { etiquetaRol, HOME_POR_ROL } from '@/lib/roles'
 import { EjemploBadge } from '../components/EjemploBadge'
 
 interface Solicitud {
@@ -126,9 +126,9 @@ function PipelineBar({ activos }: { activos: Activo[] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const rolLabel = (rol: string) => {
-  if (rol === 'propietario')   return { label: 'Propietario',   chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
-  if (rol === 'inversionista') return { label: 'Inversionista', chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
-  if (rol === 'broker')        return { label: 'Broker',        chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
+  if (rol === 'propietario')   return { label: etiquetaRol(rol), chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
+  if (rol === 'inversionista') return { label: etiquetaRol(rol), chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
+  if (rol === 'broker')        return { label: etiquetaRol(rol), chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
   return                              { label: rol,             chip: 'border-white/15 text-slate bg-white/5' }
 }
 
@@ -168,7 +168,7 @@ export default function PanelPage() {
         return
       }
 
-      setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Broker Maestro')
+      setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Operación MindBridge')
 
       const [{ data: solicitudesData }, { data: activosData }, { data: usuariosData }, { data: perfilesData }] = await Promise.all([
         supabase.from('solicitudes').select('*').order('created_at', { ascending: false }),
@@ -304,9 +304,9 @@ export default function PanelPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Broker Maestro</span>
+              <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
               <h1 className="font-fraunces text-[24px] md:text-[30px] font-medium text-paper mt-1">Panel del Ecosistema</h1>
-              <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Vista global de activos, brokers, propietarios e inversionistas</p>
+              <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Consola interna: activos, brokers, propietarios y compradores de la plataforma</p>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <button onClick={() => router.push('/panel/prospectos-broker')}
@@ -420,7 +420,7 @@ export default function PanelPage() {
               { label: 'Cerrados',       value: String(cerrados),                      sub: 'este ciclo',       color: 'text-gold-400' },
               { label: 'Volumen',        value: formatMXN(volumenTotal),               sub: 'valor portafolio', color: 'text-[#a5a1f5]' },
               { label: 'Brokers',        value: String(brokersAliados.length),         sub: 'activos',          color: 'text-[#e8b568]' },
-              { label: 'Inversionistas', value: String(inversionistasRegistrados.length), sub: 'registrados',   color: 'text-paper' },
+              { label: 'Compradores', value: String(inversionistasRegistrados.length), sub: 'registrados',   color: 'text-paper' },
             ].map(m => (
               <div key={m.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-2">{m.label}</p>
@@ -574,10 +574,10 @@ export default function PanelPage() {
 
             {/* Inversionistas */}
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Inversionistas registrados</h2>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Compradores registrados</h2>
               {inversionistasRegistradosTodos.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
-                  <p className="text-[13px] text-slate">Sin inversionistas registrados todavía.</p>
+                  <p className="text-[13px] text-slate">Sin compradores registrados todavía.</p>
                 </div>
               ) : (
               <div className="bg-navy-800 border border-white/10 overflow-hidden">

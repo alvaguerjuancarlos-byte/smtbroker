@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { statusCfg, formatDate } from '@/lib/estadoActivo'
 import Topbar from '../components/Topbar'
 import { HOME_POR_ROL } from '@/lib/roles'
 
@@ -15,17 +16,6 @@ interface Activo {
   status: string
   created_at: string
 }
-
-const statusCfg = (status: string) => {
-  if (status === 'valoracion')  return { label: 'En valoración', chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
-  if (status === 'marketing')   return { label: 'En marketing',  chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
-  if (status === 'leads')       return { label: 'Leads activos', chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
-  if (status === 'cerrado')     return { label: 'Cerrado',       chip: 'border-white/15 text-slate bg-white/5' }
-  return { label: 'Ingresado', chip: 'border-white/15 text-slate bg-white/5' }
-}
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -104,19 +94,6 @@ export default function DashboardPage() {
               <p className="text-[14px] text-slate mt-1.5">Gestiona tus activos inmobiliarios</p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/panel')}
-                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] text-paper-dim px-4 md:px-5 py-2.5 md:py-3 border border-white/15 hover:border-gold-500 hover:text-gold-400 transition-colors"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
-                  <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
-                  <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
-                  <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
-                </svg>
-                <span className="hidden sm:inline">Panel maestro</span>
-                <span className="sm:hidden">Panel</span>
-              </button>
               <button
                 onClick={() => router.push('/activo/nuevo')}
                 className="flex items-center gap-2 bg-gold-500 text-navy-950 font-plex-mono text-[11.5px] tracking-[0.03em] px-4 md:px-5 py-2.5 md:py-3 hover:bg-gold-400 transition-colors"
