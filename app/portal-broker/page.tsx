@@ -3,15 +3,18 @@
 // Portal del broker — Documento Maestro V6.1, §5.2 y §10: el broker es protagonista del
 // ecosistema como proveedor de los dos lados del matching:
 //   - Mi portafolio: las propiedades que representa (oferta). Cada una pasa por el diagnóstico.
+//     Desde aquí reporta cierres (cierres_reportados; Operación los verifica, V6.1 §6.2).
 //   - Mis clientes: lo que buscan sus clientes (demanda), como filas de perfiles_intencion con
-//     broker_id y alias. Sin teléfono ni correo del cliente: el contacto sigue siendo del broker
-//     (V6 §6.2, decisión aprobada por JC el 2026-10-04).
-//   - Mi desempeño: conteos reales de su propia operación.
-// El motor de matching todavía no existe (Fase B del plan) -- este portal no inventa matches.
+//     broker_id y alias. Sin teléfono ni correo del cliente: el contacto sigue siendo del broker.
+//   - Matches: coincidencias de app/api/matches (reglas explicables de lib/matching.ts). Operación
+//     valida cada conexión a mano; nunca se revela quién es el cliente o el broker ajeno.
+//   - Mi desempeño: conteos reales y nivel de Broker Certificado SMT (lib/nivelesBroker.ts,
+//     umbrales provisionales, V6.1 §6.3 y §7).
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { statusCfg, formatDate, ESTADOS_ACTIVO } from '@/lib/estadoActivo'
+import { calcularNivel, tieneDocumentacion } from '@/lib/nivelesBroker'
 import Topbar from '../components/Topbar'
 import { Field, inputCls } from '../components/FormField'
 
@@ -24,6 +27,8 @@ interface ActivoPortafolio {
   status: string
   created_at: string
   propietario_nombre: string | null
+  folio_real: string | null
+  escritura_publica: string | null
 }
 
 interface Cliente {
@@ -36,9 +41,51 @@ interface Cliente {
   created_at: string
 }
 
+interface Cierre {
+  id: string
+  activo_id: string
+  precio_cierre: number
+  fecha_cierre: string
+  estado: 'pendiente' | 'verificado' | 'rechazado'
+}
+
+interface MatchCliente {
+  perfilId: string; activoId: string; cliente: string; score: number; razones: string[]
+  activo: { id: string; nombre: string; tipo: string; municipio: string; precio_total: number | null }
+  representacion: string; solicitud: string | null
+}
+
+interface MatchPortafolio {
+  activoId: string; perfilId: string; activo: string; score: number; razones: string[]
+  contraparte: string; criterios: { presupuesto: string | null; zona: string | null; tipo: string | null }
+  solicitud: string | null
+}
+
 const PRESUPUESTOS = ['Menos de $2M', '$2M – $5M', '$5M – $15M', '$15M – $50M', 'Más de $50M']
 const CLIENTE_VACIO = { alias_cliente: '', presupuesto: '', zona: '', tipo_activo_interes: '', tesis_inversion: '' }
-type Pestana = 'portafolio' | 'clientes' | 'desempeno'
+const ETIQUETA_SOLICITUD: Record<string, string> = {
+  solicitado: 'Solicitado · Operación lo revisa', en_contacto: 'En contacto', descartado: 'Descartado', cerrado: 'Cerrado',
+}
+const ORIGENES = [
+  { v: 'mi_cliente', l: 'Un cliente mío' },
+  { v: 'otro_broker', l: 'Cliente de otro broker' },
+  { v: 'comprador_directo', l: 'Comprador directo de la plataforma' },
+  { v: 'fuera_de_plataforma', l: 'Fuera de la plataforma' },
+]
+const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+type Pestana = 'portafolio' | 'clientes' | 'matches' | 'desempeno'
+
+function BotonConectar({ estado, ocupado, onClick }: { estado: string | null; ocupado: boolean; onClick: () => void }) {
+  if (estado) {
+    return <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">{ETIQUETA_SOLICITUD[estado] ?? estado}</span>
+  }
+  return (
+    <button disabled={ocupado} onClick={onClick}
+      className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0">
+      Me interesa conectar
+    </button>
+  )
+}
 
 export default function PortalBrokerPage() {
   const router = useRouter()
@@ -48,12 +95,23 @@ export default function PortalBrokerPage() {
   const [pestana, setPestana] = useState<Pestana>('portafolio')
   const [activos, setActivos] = useState<ActivoPortafolio[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [cierres, setCierres] = useState<Cierre[]>([])
 
   const [editandoId, setEditandoId] = useState<string | 'nuevo' | null>(null)
   const [form, setForm] = useState(CLIENTE_VACIO)
   const [consentimiento, setConsentimiento] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorCliente, setErrorCliente] = useState('')
+
+  const [matches, setMatches] = useState<{ paraMisClientes: MatchCliente[]; paraMiPortafolio: MatchPortafolio[] } | null>(null)
+  const [errorMatches, setErrorMatches] = useState('')
+  const [solicitando, setSolicitando] = useState<string | null>(null)
+
+  const [cierreDe, setCierreDe] = useState<ActivoPortafolio | null>(null)
+  const [formCierre, setFormCierre] = useState({ precio: '', fecha: new Date().toISOString().slice(0, 10), origen: 'mi_cliente' })
+  const [errorCierre, setErrorCierre] = useState('')
+
+  const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
 
   const cargarClientes = async (uid: string) => {
     const { data } = await supabase
@@ -63,6 +121,22 @@ export default function PortalBrokerPage() {
       .is('usuario_id', null)
       .order('created_at', { ascending: false })
     setClientes((data as Cliente[]) || [])
+  }
+
+  const cargarCierres = async (uid: string) => {
+    const { data } = await supabase.from('cierres_reportados')
+      .select('id, activo_id, precio_cierre, fecha_cierre, estado')
+      .eq('broker_id', uid)
+      .order('created_at', { ascending: false })
+    setCierres((data as Cierre[]) || [])
+  }
+
+  const cargarMatches = async () => {
+    setErrorMatches('')
+    const r = await fetch('/api/matches', { headers: { Authorization: 'Bearer ' + await token() } })
+    const j = await r.json().catch(() => ({ error: 'Respuesta inválida' }))
+    if (!r.ok || j.error) { setErrorMatches(j.error || 'No se pudieron cargar los matches'); return }
+    setMatches({ paraMisClientes: j.paraMisClientes, paraMiPortafolio: j.paraMiPortafolio })
   }
 
   useEffect(() => {
@@ -76,16 +150,32 @@ export default function PortalBrokerPage() {
 
       const { data: activosData } = await supabase
         .from('activos')
-        .select('id, nombre, tipo, municipio, estado, status, created_at, propietario_nombre')
+        .select('id, nombre, tipo, municipio, estado, status, created_at, propietario_nombre, folio_real, escritura_publica')
         .eq('broker_id', user.id)
         .order('created_at', { ascending: false })
       setActivos((activosData as ActivoPortafolio[]) || [])
 
-      await cargarClientes(user.id)
+      await Promise.all([cargarClientes(user.id), cargarCierres(user.id)])
       setLoading(false)
     }
     init()
   }, [router])
+
+  const abrirPestana = (t: Pestana) => {
+    setPestana(t)
+    if (t === 'matches' && !matches) cargarMatches()
+  }
+
+  const solicitarMatch = async (activoId: string, perfilId: string) => {
+    setSolicitando(`${activoId}:${perfilId}`)
+    await fetch('/api/matches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
+      body: JSON.stringify({ activoId, perfilId }),
+    })
+    setSolicitando(null)
+    await cargarMatches()
+  }
 
   const abrirCliente = (c: Cliente | null) => {
     setErrorCliente('')
@@ -131,17 +221,46 @@ export default function PortalBrokerPage() {
     setGuardando(false)
     if (error) { setErrorCliente('No se pudo guardar. Intenta de nuevo.'); return }
     setEditandoId(null)
+    setMatches(null)
     await cargarClientes(userId)
   }
 
   const borrarCliente = async (id: string) => {
     await supabase.from('perfiles_intencion').delete().eq('id', id)
     setEditandoId(null)
+    setMatches(null)
     await cargarClientes(userId)
+  }
+
+  const reportarCierre = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!cierreDe) return
+    const precio = parseFloat(formCierre.precio)
+    if (!precio || precio <= 0) { setErrorCierre('Captura el precio de cierre.'); return }
+    setErrorCierre('')
+    // Insert SIN .select(), igual que lo prueba scripts/verificar-rls-fase-b.mjs: el broker solo
+    // puede crear reportes 'pendiente' y no puede editarlos; Operación los verifica.
+    const { error } = await supabase.from('cierres_reportados').insert({
+      activo_id: cierreDe.id, broker_id: userId, precio_cierre: precio,
+      fecha_cierre: formCierre.fecha, origen_comprador: formCierre.origen,
+    })
+    if (error) { setErrorCierre('No se pudo reportar. Intenta de nuevo.'); return }
+    await supabase.from('activos').update({ status: 'cerrado' }).eq('id', cierreDe.id)
+    setActivos(as => as.map(a => (a.id === cierreDe.id ? { ...a, status: 'cerrado' } : a)))
+    setCierreDe(null)
+    setMatches(null)
+    await cargarCierres(userId)
   }
 
   const firstName = userName.split(' ')[0]
   const porEstado = ESTADOS_ACTIVO.map(s => ({ s, n: activos.filter(a => a.status === s).length }))
+  const cierresVerificados = cierres.filter(c => c.estado === 'verificado').length
+  const nivel = calcularNivel({
+    propiedades: activos.length,
+    conDocumentacion: activos.filter(tieneDocumentacion).length,
+    cierresVerificados,
+  })
+  const nombreActivo = (id: string) => activos.find(a => a.id === id)?.nombre ?? 'Propiedad'
 
   if (loading) {
     return (
@@ -170,7 +289,9 @@ export default function PortalBrokerPage() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
-              <p className="text-[14px] text-slate mt-1.5">Tu portafolio y lo que buscan tus clientes, en un solo lugar</p>
+              <p className="text-[14px] text-slate mt-1.5">
+                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}</span>
+              </p>
             </div>
             <button
               onClick={() => router.push('/activo/nuevo')}
@@ -184,13 +305,14 @@ export default function PortalBrokerPage() {
           </div>
 
           {/* Pestañas */}
-          <div className="grid grid-cols-3 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
             {([
               { id: 'portafolio', label: 'Mi portafolio', n: activos.length },
               { id: 'clientes',   label: 'Mis clientes',  n: clientes.length },
+              { id: 'matches',    label: 'Matches',       n: matches ? matches.paraMisClientes.length + matches.paraMiPortafolio.length : null },
               { id: 'desempeno',  label: 'Mi desempeño',  n: null },
             ] as { id: Pestana; label: string; n: number | null }[]).map(t => (
-              <button key={t.id} onClick={() => setPestana(t.id)}
+              <button key={t.id} onClick={() => abrirPestana(t.id)}
                 className={`flex items-center justify-center gap-2 px-3 py-3 border transition-colors ${
                   pestana === t.id ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-navy-800 border-white/10 text-paper-dim hover:border-gold-500/40'
                 }`}>
@@ -227,6 +349,12 @@ export default function PortalBrokerPage() {
                           {a.propietario_nombre ? ` · Propietario: ${a.propietario_nombre}` : ''} · {formatDate(a.created_at)}
                         </p>
                       </div>
+                      {a.status !== 'cerrado' && (
+                        <button onClick={e => { e.stopPropagation(); setErrorCierre(''); setCierreDe(a) }}
+                          className="hidden sm:inline font-plex-mono text-[10.5px] text-gold-400 hover:text-gold-100 border border-gold-500/30 hover:border-gold-500 px-2.5 py-1 shrink-0 transition-colors">
+                          Reportar cierre
+                        </button>
+                      )}
                       <span className={`font-plex-mono text-[10px] font-medium px-2.5 py-1 border shrink-0 ${chip}`}>{label}</span>
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-slate-dim shrink-0">
                         <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -236,6 +364,40 @@ export default function PortalBrokerPage() {
                 })}
               </div>
             )
+          )}
+
+          {/* Reportar cierre */}
+          {pestana === 'portafolio' && cierreDe && (
+            <form onSubmit={reportarCierre} className="bg-navy-800 border border-gold-500/30 p-4 md:p-6 flex flex-col gap-4">
+              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Reportar cierre · {cierreDe.nombre}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Field label="Precio de cierre (MXN)" required>
+                  <input type="number" min="0" value={formCierre.precio} onChange={e => setFormCierre(f => ({ ...f, precio: e.target.value }))}
+                    className={inputCls(false, 'oscuro')} />
+                </Field>
+                <Field label="Fecha de cierre" required>
+                  <input type="date" value={formCierre.fecha} onChange={e => setFormCierre(f => ({ ...f, fecha: e.target.value }))}
+                    className={inputCls(false, 'oscuro')} />
+                </Field>
+                <Field label="¿Quién compró?" required>
+                  <select value={formCierre.origen} onChange={e => setFormCierre(f => ({ ...f, origen: e.target.value }))} className={inputCls(false, 'oscuro')}>
+                    {ORIGENES.map(o => <option key={o.v} value={o.v} className="bg-navy-900">{o.l}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <p className="text-[12px] text-slate">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Certificado SMT.</p>
+              {errorCierre && <p className="text-[12px] text-[#f3a3a3]">{errorCierre}</p>}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setCierreDe(null)}
+                  className="px-5 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit"
+                  className="px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors">
+                  Reportar cierre
+                </button>
+              </div>
+            </form>
           )}
 
           {/* Mis clientes */}
@@ -334,20 +496,96 @@ export default function PortalBrokerPage() {
                 </div>
               )}
 
-              <p className="text-[12px] text-slate">
-                Los matches entre tus clientes y las propiedades de toda la red llegan en la siguiente etapa de la plataforma.
-              </p>
+              <button onClick={() => abrirPestana('matches')}
+                className="text-[13px] font-medium text-gold-400 hover:text-gold-100 transition-colors w-fit">
+                Ver propiedades que coinciden con tus clientes →
+              </button>
+            </div>
+          )}
+
+          {/* Matches */}
+          {pestana === 'matches' && (
+            <div className="flex flex-col gap-5">
+              <div className="flex items-start gap-2.5 bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
+                <p className="text-[12.5px] text-paper-dim leading-relaxed">
+                  Coincidencias por tipo de propiedad, zona y presupuesto. <b className="text-paper">Operación MindBridge valida cada conexión</b> antes de ponerlos en contacto. Nunca mostramos quién es el cliente o el broker de la otra parte.
+                </p>
+              </div>
+              {errorMatches && <p className="text-[13px] text-[#f3a3a3]">{errorMatches}</p>}
+              {!matches && !errorMatches && <p className="text-[13px] text-slate font-plex-mono">Buscando coincidencias…</p>}
+              {matches && (
+                <>
+                  <div>
+                    <h2 className="font-fraunces text-[17px] font-medium text-paper mb-3">Para tus clientes</h2>
+                    {matches.paraMisClientes.length === 0 ? (
+                      <p className="text-[13px] text-slate">Sin coincidencias por ahora para lo que buscan tus clientes.</p>
+                    ) : (
+                      <div className="bg-navy-800 border border-white/10 overflow-hidden">
+                        {matches.paraMisClientes.map((m, i) => (
+                          <div key={m.perfilId + m.activoId}
+                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMisClientes.length - 1 ? 'border-b border-white/10' : ''}`}>
+                            <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] text-paper"><b>{m.cliente}</b> → {m.activo.nombre}</p>
+                              <p className="text-[11.5px] text-slate mt-0.5">
+                                {m.activo.tipo} · {m.activo.municipio}{m.activo.precio_total ? ` · ${mxn(m.activo.precio_total)}` : ''} · {m.representacion}
+                              </p>
+                              <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                            </div>
+                            <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
+                              onClick={() => solicitarMatch(m.activoId, m.perfilId)} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="font-fraunces text-[17px] font-medium text-paper mb-3">Para tu portafolio</h2>
+                    {matches.paraMiPortafolio.length === 0 ? (
+                      <p className="text-[13px] text-slate">Sin compradores registrados que coincidan con tus propiedades por ahora.</p>
+                    ) : (
+                      <div className="bg-navy-800 border border-white/10 overflow-hidden">
+                        {matches.paraMiPortafolio.map((m, i) => (
+                          <div key={m.activoId + m.perfilId}
+                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMiPortafolio.length - 1 ? 'border-b border-white/10' : ''}`}>
+                            <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] text-paper"><b>{m.activo}</b> ← {m.contraparte}</p>
+                              <p className="text-[11.5px] text-slate mt-0.5">
+                                Busca: {[m.criterios.tipo, m.criterios.zona, m.criterios.presupuesto].filter(Boolean).join(' · ')}
+                              </p>
+                              <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                            </div>
+                            <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
+                              onClick={() => solicitarMatch(m.activoId, m.perfilId)} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
           {/* Mi desempeño */}
           {pestana === 'desempeno' && (
             <div className="flex flex-col gap-4">
+              <div className="bg-navy-800 border border-gold-500/30 p-5">
+                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Certificado SMT</p>
+                <p className="font-fraunces text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
+                {nivel.siguiente ? (
+                  <p className="text-[13px] text-paper-dim mt-1.5">Siguiente nivel, <b className="text-paper">{nivel.siguiente.nombre}</b>: {nivel.siguiente.requisito}.</p>
+                ) : (
+                  <p className="text-[13px] text-paper-dim mt-1.5">Estás en el nivel más alto.</p>
+                )}
+                <p className="text-[11.5px] text-slate mt-2">Tu nivel da prioridad a tus matches ante Operación. Umbrales provisionales.</p>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'Propiedades', value: activos.length },
                   { label: 'Clientes', value: clientes.length },
-                  { label: 'Cerradas', value: activos.filter(a => a.status === 'cerrado').length },
+                  { label: 'Cierres verificados', value: cierresVerificados },
                 ].map(m => (
                   <div key={m.label} className="bg-navy-800 border border-white/10 p-5">
                     <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">{m.label}</p>
@@ -372,9 +610,27 @@ export default function PortalBrokerPage() {
                   })}
                 </div>
               </div>
-              <p className="text-[12px] text-slate">
-                Pronto: tu nivel de Broker Certificado SMT, calculado con tus cierres reportados y la calidad de tu portafolio.
-              </p>
+              <div className="bg-navy-800 border border-white/10 p-5">
+                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em] mb-3">Cierres reportados</p>
+                {cierres.length === 0 ? (
+                  <p className="text-[13px] text-slate">Aún no reportas cierres. Usa &quot;Reportar cierre&quot; en Mi portafolio.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {cierres.map(c => (
+                      <div key={c.id} className="flex items-center justify-between gap-3 text-[13px]">
+                        <span className="text-paper truncate">{nombreActivo(c.activo_id)}</span>
+                        <span className="text-slate shrink-0">{mxn(c.precio_cierre)} · {formatDate(c.fecha_cierre)}</span>
+                        <span className={`font-plex-mono text-[10px] px-2 py-0.5 border shrink-0 ${
+                          c.estado === 'verificado' ? 'border-gold-500/40 text-gold-400'
+                            : c.estado === 'rechazado' ? 'border-red-900/60 text-[#f3a3a3]' : 'border-white/15 text-slate'
+                        }`}>
+                          {c.estado === 'pendiente' ? 'Por verificar' : c.estado === 'verificado' ? 'Verificado' : 'Rechazado'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

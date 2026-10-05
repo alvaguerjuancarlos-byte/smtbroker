@@ -33,6 +33,11 @@ interface Activo {
   created_at: string
 }
 
+interface Coincidencia {
+  activoId: string; perfilId: string; score: number; razones: string[]; solicitud: string | null
+  activo: { id: string; nombre: string; tipo: string; municipio: string; estado: string; superficie: number | null; precio_total: number | null }
+}
+
 const PRESUPUESTOS = ['Menos de $2M', '$2M – $5M', '$5M – $15M', '$15M – $50M', 'Más de $50M']
 
 const PERFIL_VACIO: PerfilIntencion = { presupuesto: '', zona: '', tipo_activo_interes: '', tesis_inversion: '' }
@@ -53,6 +58,26 @@ export default function PortalInversionPage() {
   const [guardando, setGuardando] = useState(false)
   const [errorPerfil, setErrorPerfil] = useState('')
   const [activos, setActivos] = useState<Activo[]>([])
+  // Fase B: coincidencias con su perfil (app/api/matches, reglas de lib/matching.ts).
+  const [coincidencias, setCoincidencias] = useState<Coincidencia[] | null>(null)
+  const [solicitando, setSolicitando] = useState<string | null>(null)
+
+  const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
+  const cargarCoincidencias = async () => {
+    const r = await fetch('/api/matches', { headers: { Authorization: 'Bearer ' + await token() } })
+    const j = await r.json().catch(() => ({}))
+    setCoincidencias(r.ok && Array.isArray(j.coincidencias) ? j.coincidencias : [])
+  }
+  const meInteresa = async (c: Coincidencia) => {
+    setSolicitando(c.activoId)
+    await fetch('/api/matches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
+      body: JSON.stringify({ activoId: c.activoId, perfilId: c.perfilId }),
+    })
+    setSolicitando(null)
+    await cargarCoincidencias()
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -84,6 +109,7 @@ export default function PortalInversionPage() {
         .order('created_at', { ascending: false })
         .limit(50)
       setActivos((activosData as Activo[]) || [])
+      cargarCoincidencias()
 
       setLoading(false)
     }
@@ -110,6 +136,7 @@ export default function PortalInversionPage() {
 
     setGuardando(false)
     if (error) { setErrorPerfil('No se pudo guardar. Intenta de nuevo.'); return }
+    cargarCoincidencias()
     setTienePerfil(true)
     setEditando(false)
   }
@@ -214,13 +241,51 @@ export default function PortalInversionPage() {
             )}
           </div>
 
+          {/* Coincidencias con lo que busca */}
+          {tienePerfil && coincidencias && (
+            <div>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-1">Coinciden con lo que buscas</h2>
+              <p className="text-[12px] text-slate mb-4">Por tipo de propiedad, zona y presupuesto. Si te interesa alguna, nuestro equipo te pone en contacto.</p>
+              {coincidencias.length === 0 ? (
+                <div className="bg-navy-800 border border-white/10 px-8 py-8 text-center">
+                  <p className="text-[13px] text-slate">Por ahora ninguna propiedad coincide con lo que buscas. Te mostraremos las nuevas aquí.</p>
+                </div>
+              ) : (
+                <div className="bg-navy-800 border border-gold-500/30 overflow-hidden">
+                  {coincidencias.map((c, i) => (
+                    <div key={c.activoId} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== coincidencias.length - 1 ? 'border-b border-white/10' : ''}`}>
+                      <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{c.score}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-paper">{c.activo.nombre}</p>
+                        <p className="text-[11.5px] text-slate mt-0.5">
+                          {c.activo.tipo} · {c.activo.municipio}{c.activo.precio_total != null ? ` · ${formatMXN(c.activo.precio_total)}` : ''}
+                        </p>
+                        <p className="text-[11.5px] text-paper-dim mt-1">{c.razones.join(' · ')}</p>
+                      </div>
+                      {c.solicitud ? (
+                        <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">
+                          {c.solicitud === 'solicitado' ? 'Solicitado · te contactaremos' : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
+                        </span>
+                      ) : (
+                        <button disabled={solicitando === c.activoId} onClick={() => meInteresa(c)}
+                          className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0">
+                          Me interesa
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Activos disponibles */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-fraunces text-[17px] font-medium text-paper">Propiedades disponibles</h2>
               <span className="text-[12px] text-slate">{activos.length}</span>
             </div>
-            <p className="text-[12px] text-slate mb-4">Todas las propiedades de la plataforma. Pronto verás primero las que coinciden con lo que buscas.</p>
+            <p className="text-[12px] text-slate mb-4">Todas las propiedades de la plataforma.</p>
 
             {activos.length === 0 ? (
               <div className="bg-navy-800 border border-white/10 px-8 py-14 text-center">

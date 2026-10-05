@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
+import ValidacionOperacion from './ValidacionOperacion'
 import { etiquetaRol, HOME_POR_ROL } from '@/lib/roles'
 import { EjemploBadge } from '../components/EjemploBadge'
 
@@ -410,6 +411,9 @@ export default function PanelPage() {
               </div>
             </div>
           )}
+
+          {/* Fase B: matches por validar y cierres por verificar (ver ValidacionOperacion.tsx) */}
+          <ValidacionOperacion />
 
           {/* Métricas globales — ya vienen de activos/usuarios reales de Supabase. */}
           <div>
