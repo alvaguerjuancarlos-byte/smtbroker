@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { callClaudeJson, serieSHFParaCiudad, calcularApreciacionSHF, resolverAbsorcionSNIIV } from '@smt/shared-realestate'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { filtroAccesoActivo } from '@/lib/accesoActivo'
+import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
 
 // Agente de Mercado real para REVENTA -- distinto del "Agente Mercado" de smt-developer (que
 // analiza oferta/demanda de un PROYECTO nuevo en preventa). Aquí la pregunta es "¿en qué rango
@@ -101,12 +102,20 @@ export async function POST(req: NextRequest) {
   const { data: caller, error: callerError } = await supabaseAdmin.auth.getUser(token)
   if (callerError || !caller?.user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  const { activoId } = await req.json()
+  const { activoId, regenerar } = await req.json()
   if (!activoId) return NextResponse.json({ error: 'Falta activoId' }, { status: 400 })
 
   const { data: activo, error: activoErr } = await supabaseAdmin
     .from('activos').select('*').eq('id', activoId).or(filtroAccesoActivo(caller.user.id)).single()
   if (activoErr || !activo) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
+
+  // Diagnóstico guardado (lib/diagnosticoGuardado.ts): si ya existe y no se pidió "Actualizar
+  // diagnóstico", se devuelve tal cual -- sin llamar a Claude ni a Serper, y con el mismo resultado
+  // en cada visita.
+  if (!regenerar) {
+    const previo = await leerUltimo(supabaseAdmin, activoId, 'mercado')
+    if (previo) return NextResponse.json(conGuardado(previo.resultado, previo, false))
+  }
 
   // Datos reales, calculados (no pedidos al LLM) -- ver cabecera del archivo.
   const serieShf = serieSHFParaCiudad(activo.municipio)
@@ -179,7 +188,8 @@ Retorna ÚNICAMENTE el JSON.`
     parsed.grounded = grounded
     parsed.comparables = comparables
     parsed.fuentesConsultadas = fuentesConsultadas
-    return NextResponse.json(parsed)
+    const g = await guardar(supabaseAdmin, { activoId, agente: 'mercado', resultado: parsed, modelo: 'claude-sonnet-4-6', creadoPor: caller.user.id })
+    return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
     console.error('Agente Mercado (SMTBROKER) error:', error)
     return NextResponse.json({ error: 'Error en Agente Mercado' }, { status: 500 })

@@ -86,6 +86,27 @@ function ScoreGauge({ score }: { score: number }) {
 const formatMXN = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 
+// Llama a un agente (app/api/agentes/legal|mercado). Desde 2026-10-07 el servidor devuelve el
+// diagnóstico GUARDADO si ya existe (mismo resultado en cada visita, sin costo); con
+// regenerar = true lo vuelve a calcular y guarda uno nuevo (lib/diagnosticoGuardado.ts).
+type Guardado = { id: string; fecha: string; nuevo: boolean } | null
+async function llamarAgente(agente: 'legal' | 'mercado', activoId: string, token: string, regenerar: boolean) {
+  try {
+    const r = await fetch(`/api/agentes/${agente}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ activoId, regenerar }),
+    })
+    const j = await r.json()
+    return j.error ? { error: j.error as string } : { data: j, guardado: (j._guardado ?? null) as Guardado }
+  } catch {
+    return { error: 'Error de red' }
+  }
+}
+
+const formatFechaHora = (iso: string) =>
+  new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
 export default function ActivoPage() {
   const router = useRouter()
   const rol = useRolUsuario()
@@ -98,6 +119,8 @@ export default function ActivoPage() {
   const [legalError, setLegalError] = useState<string | null>(null)
   const [mercado,      setMercado]      = useState<MercadoReal | null>(null)
   const [mercadoError, setMercadoError] = useState<string | null>(null)
+  const [fechaDiagnostico, setFechaDiagnostico] = useState<string | null>(null)
+  const [actualizando, setActualizando] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -117,18 +140,33 @@ export default function ActivoPage() {
       // simulada (lib/legalTriage.ts + multiplicadores fijos sobre precio_total) -- ver auditoría
       // 2026-10-03.
       const token = session.access_token
-      const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
-      fetch('/api/agentes/legal', { method: 'POST', headers, body: JSON.stringify({ activoId: id }) })
-        .then(r => r.json())
-        .then(j => { if (j.error) setLegalError(j.error); else setLegal(j) })
-        .catch(() => setLegalError('Error de red'))
-      fetch('/api/agentes/mercado', { method: 'POST', headers, body: JSON.stringify({ activoId: id }) })
-        .then(r => r.json())
-        .then(j => { if (j.error) setMercadoError(j.error); else setMercado(j) })
-        .catch(() => setMercadoError('Error de red'))
+      llamarAgente('legal', id, token, false).then(r => {
+        if (r.error) setLegalError(r.error)
+        else { setLegal(r.data); if (r.guardado) setFechaDiagnostico(r.guardado.fecha) }
+      })
+      llamarAgente('mercado', id, token, false).then(r => {
+        if (r.error) setMercadoError(r.error)
+        else setMercado(r.data)
+      })
     }
     init()
   }, [id, router])
+
+  // "Actualizar diagnóstico": vuelve a correr ambos agentes y guarda un diagnóstico nuevo. Si un
+  // agente falla, se conserva el resultado anterior en pantalla (y en la base).
+  const actualizarDiagnostico = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setActualizando(true)
+    setLegal(null); setMercado(null); setLegalError(null); setMercadoError(null)
+    const [l, m] = await Promise.all([
+      llamarAgente('legal', id, session.access_token, true),
+      llamarAgente('mercado', id, session.access_token, true),
+    ])
+    if (l.error) setLegalError(l.error); else { setLegal(l.data); if (l.guardado) setFechaDiagnostico(l.guardado.fecha) }
+    if (m.error) setMercadoError(m.error); else setMercado(m.data)
+    setActualizando(false)
+  }
 
   if (loading) {
     return (
@@ -204,6 +242,16 @@ export default function ActivoPage() {
               <div>
                 <h1 className="font-fraunces text-[24px] md:text-[28px] font-medium text-paper">{activo.nombre}</h1>
                 <p className="text-[14px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
+                {(fechaDiagnostico || actualizando) && (
+                  <p className="font-plex-mono text-[11px] text-slate mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {actualizando ? 'Actualizando diagnóstico…' : `Diagnóstico del ${formatFechaHora(fechaDiagnostico as string)}`}
+                    {!actualizando && !agentesCorriendo && (
+                      <button onClick={actualizarDiagnostico} className="text-gold-400 hover:text-gold-100 underline underline-offset-2 transition-colors">
+                        Actualizar diagnóstico
+                      </button>
+                    )}
+                  </p>
+                )}
               </div>
               <span className={`font-plex-mono text-[10.5px] font-medium px-3 py-1.5 border self-start shrink-0 ${tonoBadgeCls}`}>
                 {estadoDiag.badge}
