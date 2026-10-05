@@ -24,6 +24,17 @@ const browser = await puppeteer.launch({ defaultViewport: { width: 1280, height:
 async function toma(nombre, email, inicio, fn) {
   const ctx = await browser.createBrowserContext()
   const page = await ctx.newPage()
+  // Chrome headless deja de emitir cuadros nuevos cuando la página cambia poco y luego queda quieta:
+  // el resultado de un clic ("Solicitado", "En contacto", cierre verificado) nunca llegaba al video
+  // (hallazgo 2026-10-05). Un punto invisible con animación continua obliga a seguir pintando.
+  await page.evaluateOnNewDocument(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const st = document.createElement('style')
+      st.textContent = '@keyframes smtpulso{from{opacity:.011}to{opacity:.012}}#smt-rec{position:fixed;left:0;top:0;width:2px;height:2px;background:#000;animation:smtpulso .1s infinite alternate;z-index:2147483647;pointer-events:none}'
+      document.head.appendChild(st)
+      const d = document.createElement('div'); d.id = 'smt-rec'; document.body.appendChild(d)
+    })
+  })
   if (email) {
     await page.goto(`${BASE}/login`, { waitUntil: 'networkidle2' })
     await page.type('input[type="email"]', email)
