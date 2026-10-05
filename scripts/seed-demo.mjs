@@ -157,9 +157,33 @@ async function main() {
   }
   console.log('Portafolio y clientes de', diego.nombre, 'listos:', PORTAFOLIO_DIEGO.length, 'propiedades,', CLIENTES_DIEGO.length, 'clientes\n')
 
-  console.log('=== Credenciales de demo (contraseña igual para las 9) ===')
+  // Guion v4 (escenas 17–20): una cuenta demo de Operación MindBridge (rol interno 'broker_maestro')
+  // para grabar la consola sin usar la cuenta personal de JC, y a Diego con nivel Plata:
+  // folios demo en su portafolio (Certificado: ≥3 propiedades y ≥50% documentadas) y un cierre
+  // verificado (Plata). Ver lib/nivelesBroker.ts.
+  const operacion = await obtenerOCrearUsuario('Operación MindBridge (demo)', 'operacion', 'broker_maestro')
+  const { data: portafolioDiego } = await supabase.from('activos').select('id, nombre, folio_real, status')
+    .eq('broker_id', diego.id).order('created_at')
+  for (const [i, a] of (portafolioDiego || []).entries()) {
+    if (a.folio_real) continue
+    await supabase.from('activos').update({ folio_real: `DEMO-FR-${String(i + 1).padStart(4, '0')}` }).eq('id', a.id)
+  }
+  const cerrada = (portafolioDiego || []).find((a) => a.nombre === 'Edificio Oficinas Valle Oriente')
+  if (cerrada) {
+    const { data: yaHay } = await supabase.from('cierres_reportados').select('id').eq('activo_id', cerrada.id).maybeSingle()
+    if (!yaHay) {
+      const { error } = await supabase.from('cierres_reportados').insert({
+        activo_id: cerrada.id, broker_id: diego.id, precio_cierre: 17_400_000, fecha_cierre: '2026-09-20',
+        origen_comprador: 'otro_broker', estado: 'verificado', verificado_at: new Date().toISOString(),
+      })
+      if (error) throw new Error(`cierre demo de Diego: ${error.message}`)
+    }
+  }
+  console.log('Operación demo y nivel de Diego listos:', operacion.email, '\n')
+
+  console.log('=== Credenciales de demo (misma contraseña para todas) ===')
   console.log('Contraseña:', PASSWORD_DEMO, '\n')
-  const todos = [...propietarios, ...inversionistas, ...brokers]
+  const todos = [...propietarios, ...inversionistas, ...brokers, operacion]
   for (const u of todos) console.log(' -', u.email.padEnd(32), u.nombre)
 }
 
