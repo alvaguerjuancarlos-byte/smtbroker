@@ -37,7 +37,11 @@ const agente = async (u, nombre, activoId, regenerar = false) => {
   const j = await r.json().catch(() => ({}))
   return { status: r.status, j, ms: Date.now() - t0 }
 }
-const sinMeta = ({ _guardado, ...resto }) => JSON.stringify(resto)
+// Postgres (jsonb) reordena las llaves al guardar: se compara el CONTENIDO con llaves ordenadas,
+// no el texto literal.
+const canon = (v) => Array.isArray(v) ? v.map(canon)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v
+const sinMeta = ({ _guardado, ...resto }) => JSON.stringify(canon(resto))
 
 async function main() {
   const { error: eTabla } = await admin.from('diagnosticos').select('id').limit(1)
