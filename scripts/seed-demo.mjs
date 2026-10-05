@@ -105,7 +105,7 @@ async function main() {
 
   // Perfiles de intención -- uno por inversionista.
   const PERFILES_DEMO = [
-    { inversionista: 0, presupuesto: '$3M - $8M', zona: 'San Pedro Garza García', tipo_activo_interes: 'Departamentos, casas', tesis_inversion: 'Vivienda para renta, plusvalía de mediano plazo' },
+    { inversionista: 0, presupuesto: '$3M - $8M', zona: 'San Pedro Garza García', tipo_activo_interes: 'Departamentos, casas', tesis_inversion: 'Departamento para vivir con su familia, cerca de su trabajo en Valle Oriente' },
     { inversionista: 1, presupuesto: '$10M - $30M', zona: 'Monterrey, corredor de desarrollo', tipo_activo_interes: 'Terrenos, uso mixto', tesis_inversion: 'Desarrollo vertical, horizonte 3-5 años' },
     { inversionista: 2, presupuesto: '$2M - $5M', zona: 'San Pedro / Santa Catarina', tipo_activo_interes: 'Locales comerciales', tesis_inversion: 'Ingreso por renta, bajo riesgo' },
   ]
