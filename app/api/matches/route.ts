@@ -79,7 +79,8 @@ export async function GET(req: NextRequest) {
         return [{
           perfilId: p.id, activoId: a.id, cliente: p.alias_cliente, score: r.score, razones: r.razones,
           activo: activoPublico(a),
-          representacion: propio ? 'Tu portafolio' : 'Representada por otro broker de la red',
+          representacion: propio ? 'Tu portafolio'
+            : a.broker_id ? 'Representada por otro broker de la red' : 'Directo con el propietario',
           solicitud: solicitud(a, p),
         }]
       })))
