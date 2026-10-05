@@ -217,10 +217,10 @@ export default function PortalInversionPage() {
           {/* Activos disponibles */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos disponibles</h2>
+              <h2 className="font-fraunces text-[17px] font-medium text-paper">Propiedades disponibles</h2>
               <span className="text-[12px] text-slate">{activos.length}</span>
             </div>
-            <p className="text-[12px] text-slate mb-4">Listado general — todavía no hay un motor de match contra tu perfil, se muestran todos los activos cargados en la plataforma.</p>
+            <p className="text-[12px] text-slate mb-4">Todas las propiedades de la plataforma. Pronto verás primero las que coinciden con lo que buscas.</p>
 
             {activos.length === 0 ? (
               <div className="bg-navy-800 border border-white/10 px-8 py-14 text-center">
