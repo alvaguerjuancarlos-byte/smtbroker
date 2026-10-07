@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Capturas de los recorridos con Puppeteer
+scripts/capturas-*/

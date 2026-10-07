@@ -57,29 +57,31 @@ async function main() {
     status: 'valoracion', precio_total: 9_000_000, superficie: 300,
   }).select('id').single()
 
-  for (const nombre of ['legal', 'mercado']) {
-    const r1 = await agente(A, nombre, act.id)
-    check(`${nombre}: la primera llamada calcula y guarda`, r1.status === 200 && r1.j._guardado?.nuevo === true, `status=${r1.status} ${r1.j.error ?? ''} ${r1.ms}ms`)
-    const r2 = await agente(A, nombre, act.id)
-    check(`${nombre}: la segunda devuelve el guardado (mismo id)`, r2.j._guardado?.id === r1.j._guardado?.id && r2.j._guardado?.nuevo === false)
-    check(`${nombre}: mismo resultado en ambas visitas`, sinMeta(r2.j) === sinMeta(r1.j))
-    check(`${nombre}: la segunda es rápida (sin llamar a Claude)`, r2.ms < 2000, `${r2.ms}ms`)
-    if (nombre === 'legal') {
-      const r3 = await agente(A, nombre, act.id, true)
-      check('legal: regenerar crea un diagnóstico nuevo', r3.j._guardado?.nuevo === true && r3.j._guardado?.id !== r1.j._guardado?.id)
-      const r4 = await agente(A, nombre, act.id)
-      check('legal: después se usa el más reciente', r4.j._guardado?.id === r3.j._guardado?.id)
-    }
-  }
+  // Desde el paso 4 V6.3 (2026-10-07) el dictamen LEGAL ya no corre al abrir un activo: solo dentro
+  // de una certificación pagada (scripts/verificar-certificacion.mjs). Aquí se prueba que no corre,
+  // y el guardado/reutilización con el Agente de Mercado.
+  const rl = await agente(A, 'legal', act.id)
+  check('legal: sin certificación no se genera dictamen', rl.status === 403 && rl.j.sinDictamen === true, `status=${rl.status}`)
 
-  const rB = await agente(B, 'legal', act.id)
+  const r1 = await agente(A, 'mercado', act.id)
+  check('mercado: la primera llamada calcula y guarda', r1.status === 200 && r1.j._guardado?.nuevo === true, `status=${r1.status} ${r1.j.error ?? ''} ${r1.ms}ms`)
+  const r2 = await agente(A, 'mercado', act.id)
+  check('mercado: la segunda devuelve el guardado (mismo id)', r2.j._guardado?.id === r1.j._guardado?.id && r2.j._guardado?.nuevo === false)
+  check('mercado: mismo resultado en ambas visitas', sinMeta(r2.j) === sinMeta(r1.j))
+  check('mercado: la segunda es rápida (sin llamar a Claude)', r2.ms < 2000, `${r2.ms}ms`)
+  const r3 = await agente(A, 'mercado', act.id, true)
+  check('mercado: regenerar crea un diagnóstico nuevo', r3.j._guardado?.nuevo === true && r3.j._guardado?.id !== r1.j._guardado?.id)
+  const r4 = await agente(A, 'mercado', act.id)
+  check('mercado: después se usa el más reciente', r4.j._guardado?.id === r3.j._guardado?.id)
+
+  const rB = await agente(B, 'mercado', act.id)
   check('otro broker NO obtiene el diagnóstico por la API', rB.status === 404)
   const { data: vA } = await A.cli.from('diagnosticos').select('id').eq('activo_id', act.id)
-  check('el broker del activo lee sus diagnósticos', vA?.length === 3, `filas=${vA?.length}`)
+  check('el broker del activo lee sus diagnósticos', vA?.length === 2, `filas=${vA?.length}`)
   const { data: vB } = await B.cli.from('diagnosticos').select('id').eq('activo_id', act.id)
   check('otro broker NO los lee', (vB?.length ?? 0) === 0)
   const { data: vOp } = await OP.cli.from('diagnosticos').select('id').eq('activo_id', act.id)
-  check('Operación los lee', vOp?.length === 3)
+  check('Operación los lee', vOp?.length === 2)
   const { data: vAnon } = await anon().from('diagnosticos').select('id').eq('activo_id', act.id)
   check('anon NO los lee', (vAnon?.length ?? 0) === 0)
   const { error: eIns } = await A.cli.from('diagnosticos').insert({ activo_id: act.id, agente: 'legal', resultado: { falso: true } })
