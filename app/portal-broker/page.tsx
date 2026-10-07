@@ -74,7 +74,16 @@ const ORIGENES = [
   { v: 'fuera_de_plataforma', l: 'Fuera de la plataforma' },
 ]
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-type Pestana = 'portafolio' | 'clientes' | 'matches' | 'desempeno'
+type Pestana = 'portafolio' | 'oportunidades' | 'clientes' | 'matches' | 'desempeno'
+
+// Propiedad que un propietario le ofreció a este broker (V6.3 §15, app/api/oportunidades).
+interface Oportunidad {
+  id: string
+  estado: 'ofrecida' | 'aceptada' | 'rechazada'
+  created_at: string
+  activo: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null } | null
+  diagnostico: { precioSalidaRecomendadoMXN: number | null; comparables: number | null; documentosFaltantes: string[] } | null
+}
 
 function BotonConectar({ estado, ocupado, onClick }: { estado: string | null; ocupado: boolean; onClick: () => void }) {
   if (estado) {
@@ -95,6 +104,9 @@ export default function PortalBrokerPage() {
   const [userName, setUserName] = useState('')
   const [pionero, setPionero] = useState(false)
   const [certificadas, setCertificadas] = useState<Set<string>>(new Set())
+  const [oportunidades, setOportunidades] = useState<Oportunidad[]>([])
+  const [respondiendo, setRespondiendo] = useState<string | null>(null)
+  const [errorOportunidad, setErrorOportunidad] = useState('')
   const [pestana, setPestana] = useState<Pestana>('portafolio')
   const [activos, setActivos] = useState<ActivoPortafolio[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -115,6 +127,34 @@ export default function PortalBrokerPage() {
   const [errorCierre, setErrorCierre] = useState('')
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
+
+  const cargarPortafolio = async (uid: string) => {
+    const { data: activosData } = await supabase
+      .from('activos')
+      .select('id, nombre, tipo, municipio, estado, status, created_at, propietario_nombre, folio_real, escritura_publica')
+      .eq('broker_id', uid)
+      .order('created_at', { ascending: false })
+    setActivos((activosData as ActivoPortafolio[]) || [])
+  }
+
+  const cargarOportunidades = async () => {
+    const r = await fetch('/api/oportunidades', { headers: { Authorization: 'Bearer ' + (await token()) } })
+      .then(res => res.json()).catch(() => ({ oportunidades: [] }))
+    setOportunidades((r.oportunidades as Oportunidad[]) || [])
+  }
+
+  // Aceptar: el broker pasa a representar la propiedad y aparece en su portafolio.
+  const responderOportunidad = async (id: string, accion: 'aceptar' | 'rechazar') => {
+    setRespondiendo(id); setErrorOportunidad('')
+    const r = await fetch(`/api/oportunidades/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (await token()) },
+      body: JSON.stringify({ accion }),
+    }).then(res => res.json()).catch(() => ({ error: 'Error de red' }))
+    setRespondiendo(null)
+    if (r.error) { setErrorOportunidad(r.error); return }
+    await Promise.all([cargarOportunidades(), cargarPortafolio(userId)])
+  }
 
   const cargarClientes = async (uid: string) => {
     const { data } = await supabase
@@ -152,21 +192,18 @@ export default function PortalBrokerPage() {
       setUserName((cuenta as { nombre: string } | null)?.nombre || user.email || 'Usuario')
       setPionero(!!(cuenta as { pionero: boolean | null } | null)?.pionero)
 
-      const { data: activosData } = await supabase
-        .from('activos')
-        .select('id, nombre, tipo, municipio, estado, status, created_at, propietario_nombre, folio_real, escritura_publica')
-        .eq('broker_id', user.id)
-        .order('created_at', { ascending: false })
-      setActivos((activosData as ActivoPortafolio[]) || [])
+      await cargarPortafolio(user.id)
 
       // Propiedades con certificación legal otorgada (paso 4 V6.3): sello en el portafolio.
       const { data: certs } = await supabase.from('certificaciones').select('activo_id').eq('estado', 'certificada')
       setCertificadas(new Set(((certs as { activo_id: string }[]) || []).map(c => c.activo_id)))
 
-      await Promise.all([cargarClientes(user.id), cargarCierres(user.id)])
+      await Promise.all([cargarClientes(user.id), cargarCierres(user.id), cargarOportunidades()])
       setLoading(false)
     }
     init()
+    // Carga inicial única; los cargadores se vuelven a llamar desde las acciones.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   const abrirPestana = (t: Pestana) => {
@@ -315,9 +352,10 @@ export default function PortalBrokerPage() {
           </div>
 
           {/* Pestañas */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
             {([
               { id: 'portafolio', label: 'Mi portafolio', n: activos.length },
+              { id: 'oportunidades', label: 'Oportunidades', n: oportunidades.filter(o => o.estado === 'ofrecida').length },
               { id: 'clientes',   label: 'Mis clientes',  n: clientes.length },
               { id: 'matches',    label: 'Matches',       n: matches ? matches.paraMisClientes.length + matches.paraMiPortafolio.length : null },
               { id: 'desempeno',  label: 'Mi desempeño',  n: null },
@@ -578,6 +616,58 @@ export default function PortalBrokerPage() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Oportunidades: propiedades que un propietario te eligió para representar (V6.3 §15) */}
+          {pestana === 'oportunidades' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] text-paper-dim">
+                Propietarios de tu zona que eligieron a un broker certificado. Tu nivel te hace visible: más nivel, más oportunidades.
+              </p>
+              {errorOportunidad && <p className="text-[12px] text-[#f3a3a3]">{errorOportunidad}</p>}
+              {oportunidades.length === 0 ? (
+                <div className="bg-navy-800 border border-white/10 p-6 text-center">
+                  <p className="text-[13px] text-slate">Todavía no recibes oportunidades. Los propietarios ven a los brokers Plata, Oro y Platino de su municipio.</p>
+                </div>
+              ) : oportunidades.map(o => (
+                <div key={o.id} className={`bg-navy-800 border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-white/10 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[14.5px] font-medium text-paper">{o.activo?.nombre ?? 'Propiedad'}</p>
+                      <p className="text-[12px] text-slate mt-0.5">
+                        {o.activo?.tipo} · {[o.activo?.colonia, o.activo?.municipio].filter(Boolean).join(', ')}
+                        {o.activo?.superficie ? ` · ${o.activo.superficie} m²` : ''} · {formatDate(o.created_at)}
+                      </p>
+                    </div>
+                    <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2 py-1 shrink-0">
+                      {o.estado === 'ofrecida' ? 'Nueva' : o.estado === 'aceptada' ? 'Aceptada' : 'Rechazada'}
+                    </span>
+                  </div>
+                  <p className="text-[12.5px] text-paper-dim">
+                    Precio de lista {o.activo?.precio_total ? mxn(o.activo.precio_total) : '—'}
+                    {o.diagnostico?.precioSalidaRecomendadoMXN ? ` · precio de salida recomendado ${mxn(o.diagnostico.precioSalidaRecomendadoMXN)}` : ''}
+                    {o.diagnostico?.comparables ? ` (${o.diagnostico.comparables} comparables)` : ''}
+                  </p>
+                  <p className="text-[12px] text-slate">
+                    {o.diagnostico?.documentosFaltantes.length
+                      ? `Para certificar le falta: ${o.diagnostico.documentosFaltantes.join(', ').toLowerCase()}.`
+                      : 'Expediente completo: lista para certificar.'}
+                  </p>
+                  {o.estado === 'ofrecida' && (
+                    <div className="flex gap-2 mt-1">
+                      <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'aceptar')}
+                        className="font-plex-mono text-[12px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50">
+                        {respondiendo === o.id ? 'Enviando…' : 'Aceptar y representar'}
+                      </button>
+                      <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'rechazar')}
+                        className="font-plex-mono text-[12px] px-4 py-2 border border-white/15 text-slate hover:text-paper disabled:opacity-50">
+                        Rechazar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 

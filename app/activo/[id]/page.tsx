@@ -9,6 +9,7 @@ import Topbar from '../../components/Topbar'
 import { MapView } from '../../components/MapPicker'
 import { DiagnosticoLegal, type TriageLegalReal } from '../../components/DiagnosticoLegal'
 import { DiagnosticoRapido, type DiagnosticoRapidoData } from '../../components/DiagnosticoRapido'
+import { ElegirBroker } from '../../components/ElegirBroker'
 
 interface MercadoReal {
   comparablesAnalizados: number
@@ -28,6 +29,8 @@ interface MercadoReal {
 
 interface Activo {
   id: string
+  usuario_id: string
+  broker_id: string | null
   nombre: string
   tipo: string
   direccion: string
@@ -131,6 +134,7 @@ export default function ActivoPage() {
   const id     = params.id as string
 
   const [activo,  setActivo]  = useState<Activo | null>(null)
+  const [uid,     setUid]     = useState('')
   const [loading, setLoading] = useState(true)
   const [rapido,      setRapido]      = useState<DiagnosticoRapidoData | null>(null)
   const [rapidoError, setRapidoError] = useState<string | null>(null)
@@ -156,6 +160,7 @@ export default function ActivoPage() {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.push('/login'); return }
+      setUid(session.user.id)
 
       const { data } = await supabase
         .from('activos').select('*').eq('id', id).or(filtroAccesoActivo(session.user.id)).single()
@@ -407,6 +412,11 @@ export default function ActivoPage() {
               folioOClave={activo.folio_real || activo.clave_catastral}
             />
           </div>
+          )}
+
+          {/* Propietario sin broker: elige un broker certificado de su zona (V6.3 §15, paso 3B). */}
+          {activo.usuario_id === uid && !activo.broker_id && rol === 'propietario' && (
+            <ElegirBroker activoId={activo.id} onAsignado={refrescarExpediente} />
           )}
 
           {/* Análisis de Mercado — Agente de Mercado real (comparables de reventa vía búsqueda

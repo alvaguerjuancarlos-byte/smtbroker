@@ -112,7 +112,8 @@ export function normalizarZonas(texto: string | null | undefined): Set<string> {
   return out
 }
 
-const municipioCanonico = (m: string | null | undefined) => [...normalizarZonas(m)][0] ?? (m || '')
+/** "San Pedro" / "SPGG" / "San Pedro Garza García" → "San Pedro Garza García" (también para comparar zonas de brokers). */
+export const municipioCanonico = (m: string | null | undefined) => [...normalizarZonas(m)][0] ?? (m || '')
 
 // ── Puntuación ─────────────────────────────────────────────────────────────────────────────
 
