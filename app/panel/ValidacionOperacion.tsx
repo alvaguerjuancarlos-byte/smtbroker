@@ -31,7 +31,7 @@ interface Activo {
   folio_real: string | null; escritura_publica: string | null; es_demo: boolean
 }
 interface Perfil { id: string; usuario_id: string | null; broker_id: string | null; alias_cliente: string | null }
-interface Usuario { id: string; nombre: string | null; es_demo: boolean; fundador: boolean }
+interface Usuario { id: string; nombre: string | null; es_demo: boolean; pionero: boolean }
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 const ORIGEN: Record<string, string> = {
@@ -55,7 +55,7 @@ export default function ValidacionOperacion() {
         supabase.from('cierres_reportados').select('id, activo_id, broker_id, precio_cierre, fecha_cierre, origen_comprador, estado, created_at').order('created_at', { ascending: false }),
         supabase.from('activos').select('id, nombre, municipio, broker_id, usuario_id, folio_real, escritura_publica, es_demo'),
         supabase.from('perfiles_intencion').select('id, usuario_id, broker_id, alias_cliente'),
-        supabase.from('usuarios').select('id, nombre, es_demo, fundador'),
+        supabase.from('usuarios').select('id, nombre, es_demo, pionero'),
       ])
       const todosUsuarios = (u.data as Usuario[]) || []
       const yoDemo = todosUsuarios.find(x => x.id === user?.id)?.es_demo
@@ -73,7 +73,7 @@ export default function ValidacionOperacion() {
 
   const nombre = (id: string | null | undefined) => usuarios.find(u => u.id === id)?.nombre || '—'
   const activo = (id: string) => activos.find(a => a.id === id)
-  const esFundador = (id: string | null | undefined) => !!usuarios.find(u => u.id === id)?.fundador
+  const esPionero = (id: string | null | undefined) => !!usuarios.find(u => u.id === id)?.pionero
 
   const nivelDe = (brokerId: string | null | undefined) => {
     if (!brokerId) return null
@@ -82,7 +82,7 @@ export default function ValidacionOperacion() {
       propiedades: propios.length,
       conDocumentacion: propios.filter(tieneDocumentacion).length,
       cierresVerificados: cierres.filter(c => c.broker_id === brokerId && c.estado === 'verificado').length,
-      fundador: esFundador(brokerId),
+      pionero: esPionero(brokerId),
     }).actual
   }
 
@@ -132,7 +132,7 @@ export default function ValidacionOperacion() {
                 <span className="font-fraunces text-[18px] text-gold-400 shrink-0">{m.score}</span>
               </div>
               <p className="text-[11.5px] text-slate">
-                Broker de la propiedad: {nombre(a?.broker_id)}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esFundador(a?.broker_id) ? ' · ★ Fundador' : ''} · Solicitó: {nombre(m.solicitado_por)}
+                Broker de la propiedad: {nombre(a?.broker_id)}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esPionero(a?.broker_id) ? ' · ★ Pionero' : ''} · Solicitó: {nombre(m.solicitado_por)}
               </p>
               <p className="text-[11.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
               <div className="flex flex-wrap gap-2">

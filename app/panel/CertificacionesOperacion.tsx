@@ -3,7 +3,7 @@
 // Consola de Operación MindBridge — certificaciones legales (Documento Maestro V6.3, §13; paso 4
 // del plan, migración 20261008000200_certificaciones.sql):
 //   solicitada → "Confirmar pago" (en el piloto el pago se confirma a mano: transferencia o
-//   cortesía Fundador) → pagada → "Correr dictamen" (Agente Legal completo, solo Operación puede
+//   cortesía Pionero) → pagada → "Correr dictamen" (Agente Legal completo, solo Operación puede
 //   generarlo) → revisar → "Certificar" | "Rechazar".
 // La RLS deja a Operación leer y actualizar certificaciones (es_operacion()). Solo se muestra el
 // mundo de la cuenta de Operación (lib/mundo.ts), igual que ValidacionOperacion.
@@ -17,7 +17,7 @@ interface Certificacion {
   pago_referencia: string | null; created_at: string
 }
 interface Activo { id: string; nombre: string; municipio: string; es_demo: boolean }
-interface Usuario { id: string; nombre: string | null; es_demo: boolean; fundador: boolean }
+interface Usuario { id: string; nombre: string | null; es_demo: boolean; pionero: boolean }
 interface Dictamen {
   verdictCls: 'ok' | 'warn' | 'bad'; verdictBadge: string; verdictTitle: string; verdictDesc: string; score: string
   _guardado?: { id: string } | null
@@ -41,7 +41,7 @@ export default function CertificacionesOperacion() {
       const [c, a, u] = await Promise.all([
         supabase.from('certificaciones').select('id, activo_id, solicitado_por, estado, pago_referencia, created_at').order('created_at', { ascending: true }),
         supabase.from('activos').select('id, nombre, municipio, es_demo'),
-        supabase.from('usuarios').select('id, nombre, es_demo, fundador'),
+        supabase.from('usuarios').select('id, nombre, es_demo, pionero'),
       ])
       const todos = (u.data as Usuario[]) || []
       const yoDemo = todos.find(x => x.id === user?.id)?.es_demo
@@ -103,14 +103,14 @@ export default function CertificacionesOperacion() {
               </span>
             </div>
             <p className="text-[11.5px] text-slate">
-              Solicitó: {quien?.nombre ?? '—'}{quien?.fundador ? ' · ★ Fundador (cortesía en el piloto)' : ''} · {new Date(c.created_at).toLocaleDateString('es-MX')}
+              Solicitó: {quien?.nombre ?? '—'}{quien?.pionero ? ' · ★ Pionero (cortesía en el piloto)' : ''} · {new Date(c.created_at).toLocaleDateString('es-MX')}
               {c.pago_referencia ? ` · Pago: ${c.pago_referencia}` : ''}
             </p>
 
             {c.estado === 'solicitada' && (
               <div className="flex flex-wrap gap-2 items-center">
                 <input value={referencia[c.id] ?? ''} onChange={e => setReferencia(r => ({ ...r, [c.id]: e.target.value }))}
-                  placeholder="Referencia de pago o “Cortesía Fundador”"
+                  placeholder="Referencia de pago o “Cortesía Pionero”"
                   className="flex-1 min-w-[200px] bg-navy-950/60 border border-white/15 px-3 py-1.5 text-[12.5px] text-paper placeholder:text-slate" />
                 <button disabled={!referencia[c.id]?.trim()}
                   onClick={() => actualizar(c, { estado: 'pagada', pago_referencia: referencia[c.id].trim() })}

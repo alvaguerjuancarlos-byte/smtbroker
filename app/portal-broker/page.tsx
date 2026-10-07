@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { statusCfg, formatDate, ESTADOS_ACTIVO } from '@/lib/estadoActivo'
-import { calcularNivel } from '@/lib/nivelesBroker'
+import { calcularNivel, NIVELES, ORDEN_NIVEL } from '@/lib/nivelesBroker'
 import { tieneDocumentacion } from '@/lib/expediente'
 import Topbar from '../components/Topbar'
 import { Field, inputCls } from '../components/FormField'
@@ -93,7 +93,7 @@ export default function PortalBrokerPage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
   const [userName, setUserName] = useState('')
-  const [fundador, setFundador] = useState(false)
+  const [pionero, setPionero] = useState(false)
   const [certificadas, setCertificadas] = useState<Set<string>>(new Set())
   const [pestana, setPestana] = useState<Pestana>('portafolio')
   const [activos, setActivos] = useState<ActivoPortafolio[]>([])
@@ -148,9 +148,9 @@ export default function PortalBrokerPage() {
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      const { data: cuenta } = await supabase.from('usuarios').select('nombre, fundador').eq('id', user.id).single()
+      const { data: cuenta } = await supabase.from('usuarios').select('nombre, pionero').eq('id', user.id).single()
       setUserName((cuenta as { nombre: string } | null)?.nombre || user.email || 'Usuario')
-      setFundador(!!(cuenta as { fundador: boolean | null } | null)?.fundador)
+      setPionero(!!(cuenta as { pionero: boolean | null } | null)?.pionero)
 
       const { data: activosData } = await supabase
         .from('activos')
@@ -263,12 +263,13 @@ export default function PortalBrokerPage() {
   const firstName = userName.split(' ')[0]
   const porEstado = ESTADOS_ACTIVO.map(s => ({ s, n: activos.filter(a => a.status === s).length }))
   const cierresVerificados = cierres.filter(c => c.estado === 'verificado').length
-  const nivel = calcularNivel({
+  const metricas = {
     propiedades: activos.length,
     conDocumentacion: activos.filter(tieneDocumentacion).length,
     cierresVerificados,
-    fundador,
-  })
+    pionero,
+  }
+  const nivel = calcularNivel(metricas)
   const nombreActivo = (id: string) => activos.find(a => a.id === id)?.nombre ?? 'Propiedad'
 
   if (loading) {
@@ -299,7 +300,7 @@ export default function PortalBrokerPage() {
             <div>
               <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
               <p className="text-[14px] text-slate mt-1.5">
-                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}{fundador ? ' · ★ Fundador' : ''}</span>
+                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}{pionero ? ' · ★ Pionero' : ''}</span>
               </p>
             </div>
             <button
@@ -586,15 +587,47 @@ export default function PortalBrokerPage() {
               <div className="bg-navy-800 border border-gold-500/30 p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Certificado SMT</p>
                 <p className="font-fraunces text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
-                {fundador && (
-                  <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Fundador · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
+                {pionero && (
+                  <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
                 )}
+
+                {/* Escalera de niveles (gamificación, 2026-10-07): dónde estás y qué sigue. */}
+                <div className="grid grid-cols-4 gap-1.5 mt-4">
+                  {NIVELES.map(n => {
+                    const logrado = ORDEN_NIVEL[n.id] <= ORDEN_NIVEL[nivel.actual.id]
+                    const actual = n.id === nivel.actual.id
+                    return (
+                      <div key={n.id} className={`px-2 py-2 text-center border ${actual ? 'bg-gold-500 border-gold-500 text-navy-950' : logrado ? 'border-gold-500/50 text-gold-400' : 'border-white/10 text-slate'}`}>
+                        <p className="font-plex-mono text-[10.5px] uppercase tracking-wide">{logrado && !actual ? '✓ ' : ''}{n.nombre}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
                 {nivel.siguiente ? (
-                  <p className="text-[13px] text-paper-dim mt-1.5">Siguiente nivel, <b className="text-paper">{nivel.siguiente.nombre}</b>: {nivel.siguiente.requisito}.</p>
+                  <div className="mt-4">
+                    <p className="text-[13px] text-paper-dim mb-2.5">Para subir a <b className="text-paper">{nivel.siguiente.nombre}</b>:</p>
+                    <div className="flex flex-col gap-2.5">
+                      {nivel.siguiente.metas(metricas).map(m => {
+                        const listo = m.actual >= m.meta
+                        return (
+                          <div key={m.etiqueta}>
+                            <div className="flex justify-between text-[12px] mb-1">
+                              <span className={listo ? 'text-[#6bdb9a]' : 'text-paper-dim'}>{listo ? '✓ ' : ''}{m.etiqueta}</span>
+                              <span className="font-plex-mono text-paper">{Math.min(m.actual, m.meta)} / {m.meta}</span>
+                            </div>
+                            <div className="h-1.5 bg-white/10 overflow-hidden">
+                              <div className={`h-full ${listo ? 'bg-[#3fbe72]' : 'bg-gold-500'}`} style={{ width: `${Math.min(100, (m.actual / m.meta) * 100)}%` }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 ) : (
-                  <p className="text-[13px] text-paper-dim mt-1.5">Estás en el nivel más alto.</p>
+                  <p className="text-[13px] text-paper-dim mt-3">Estás en el nivel más alto: Platino.</p>
                 )}
-                <p className="text-[11.5px] text-slate mt-2">Tu nivel da prioridad a tus matches ante Operación. Umbrales provisionales.</p>
+                <p className="text-[11.5px] text-slate mt-3">Tu nivel da prioridad a tus matches ante Operación. Umbrales provisionales.</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[

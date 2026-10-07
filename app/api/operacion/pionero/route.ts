@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
-// Activa o quita la marca "Fundador" de un broker (Plan Piloto V1; migración
-// 20261008000100_broker_fundador.sql). Solo Operación MindBridge (rol interno 'broker_maestro').
+// Activa o quita la marca "Pionero" de un broker (Plan Piloto V1; migración
+// 20261008000100_broker_fundador.sql, renombrada a pionero en 20261008000300). Solo Operación
+// MindBridge (rol interno 'broker_maestro').
 // Corre con service_role porque authenticated solo puede editar su propio `nombre` en usuarios --
 // a propósito, para que nadie se otorgue la marca a sí mismo.
 
@@ -21,19 +22,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    const { brokerId, fundador } = await req.json().catch(() => ({}))
-    if (!brokerId || typeof fundador !== 'boolean') {
-      return NextResponse.json({ error: 'Faltan brokerId y fundador (true/false)' }, { status: 400 })
+    const { brokerId, pionero } = await req.json().catch(() => ({}))
+    if (!brokerId || typeof pionero !== 'boolean') {
+      return NextResponse.json({ error: 'Faltan brokerId y pionero (true/false)' }, { status: 400 })
     }
 
     const { data: broker } = await admin.from('usuarios').select('rol').eq('id', brokerId).maybeSingle()
     if ((broker as { rol: string | null } | null)?.rol !== 'broker') {
-      return NextResponse.json({ error: 'Solo un broker puede ser Fundador' }, { status: 422 })
+      return NextResponse.json({ error: 'Solo un broker puede ser Pionero' }, { status: 422 })
     }
 
-    const { error: errUpd } = await admin.from('usuarios').update({ fundador }).eq('id', brokerId)
+    const { error: errUpd } = await admin.from('usuarios').update({ pionero }).eq('id', brokerId)
     if (errUpd) return NextResponse.json({ error: errUpd.message }, { status: 500 })
-    return NextResponse.json({ ok: true, fundador })
+    return NextResponse.json({ ok: true, pionero })
   } catch (e) {
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })
   }
