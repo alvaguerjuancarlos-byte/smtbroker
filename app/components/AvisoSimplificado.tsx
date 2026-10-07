@@ -7,7 +7,10 @@ import Link from 'next/link'
 //   - 'prospeccion': el dato NO vino del titular (p. ej. directorio público de AMPI) — este
 //     es el caso que exige mostrar el aviso en el primer contacto real, antes de que ese
 //     contacto ocurra. Ver el gate en app/panel/prospectos-broker/page.tsx.
-const TEXTOS: Record<'directo' | 'prospeccion', string> = {
+const TEXTOS: Record<'directo' | 'prospeccion' | 'interesado', string> = {
+  // 'interesado': "Me interesa" de la página pública de una propiedad (app/p/[id]).
+  interesado:
+    'MindBridge tratará los datos de este formulario para hacerlos llegar al broker o al propietario de esta propiedad, que te contactará sobre ella. No los usaremos para otros fines sin tu consentimiento.',
   directo:
     'MindBridge tratará los datos de este formulario para gestionar tu solicitud en SMTBROKER y, salvo que te opongas, para contactarte sobre oportunidades relacionadas con tu perfil.',
   prospeccion:
@@ -18,7 +21,7 @@ export function AvisoSimplificado({
   contexto,
   tema = 'oscuro',
 }: {
-  contexto: 'directo' | 'prospeccion'
+  contexto: 'directo' | 'prospeccion' | 'interesado'
   tema?: 'oscuro' | 'claro'
 }) {
   const esOscuro = tema === 'oscuro'

@@ -4,7 +4,7 @@
 // reciente y solo se recalcula con "Actualizar diagnóstico".
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type Agente = 'legal' | 'mercado'
+export type Agente = 'legal' | 'mercado' | 'ficha'
 
 export interface DiagnosticoGuardado {
   id: string
