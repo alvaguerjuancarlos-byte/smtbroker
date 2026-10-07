@@ -9,9 +9,13 @@
 //   - Cierres por verificar: reportes de cierres_reportados; los verificados suben el nivel.
 // La RLS ya permite a Operación leer y actualizar todo esto (es_operacion(), migraciones
 // 20261005000100 y 20261006000000).
+// Mundos (lib/mundo.ts, migración 20261008000000): la consola solo muestra el mundo de la cuenta de
+// Operación -- la cuenta demo del video nunca enseña solicitudes reales del piloto, y la real no
+// se llena de solicitudes ficticias.
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { calcularNivel, tieneDocumentacion, ORDEN_NIVEL } from '@/lib/nivelesBroker'
+import { mismoMundo } from '@/lib/mundo'
 
 interface Match {
   id: string; activo_id: string; perfil_id: string; solicitado_por: string
@@ -23,10 +27,10 @@ interface Cierre {
 }
 interface Activo {
   id: string; nombre: string; municipio: string; broker_id: string | null; usuario_id: string
-  folio_real: string | null; escritura_publica: string | null
+  folio_real: string | null; escritura_publica: string | null; es_demo: boolean
 }
 interface Perfil { id: string; usuario_id: string | null; broker_id: string | null; alias_cliente: string | null }
-interface Usuario { id: string; nombre: string | null }
+interface Usuario { id: string; nombre: string | null; es_demo: boolean }
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 const ORIGEN: Record<string, string> = {
@@ -44,18 +48,23 @@ export default function ValidacionOperacion() {
 
   useEffect(() => {
     const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
       const [m, c, a, p, u] = await Promise.all([
         supabase.from('matches').select('id, activo_id, perfil_id, solicitado_por, score, razones, estado, created_at').order('created_at', { ascending: false }),
         supabase.from('cierres_reportados').select('id, activo_id, broker_id, precio_cierre, fecha_cierre, origen_comprador, estado, created_at').order('created_at', { ascending: false }),
-        supabase.from('activos').select('id, nombre, municipio, broker_id, usuario_id, folio_real, escritura_publica'),
+        supabase.from('activos').select('id, nombre, municipio, broker_id, usuario_id, folio_real, escritura_publica, es_demo'),
         supabase.from('perfiles_intencion').select('id, usuario_id, broker_id, alias_cliente'),
-        supabase.from('usuarios').select('id, nombre'),
+        supabase.from('usuarios').select('id, nombre, es_demo'),
       ])
-      setMatches((m.data as Match[]) || [])
-      setCierres((c.data as Cierre[]) || [])
-      setActivos((a.data as Activo[]) || [])
+      const todosUsuarios = (u.data as Usuario[]) || []
+      const yoDemo = todosUsuarios.find(x => x.id === user?.id)?.es_demo
+      const delMundo = ((a.data as Activo[]) || []).filter(x => mismoMundo(x.es_demo, yoDemo))
+      const ids = new Set(delMundo.map(x => x.id))
+      setMatches(((m.data as Match[]) || []).filter(x => ids.has(x.activo_id)))
+      setCierres(((c.data as Cierre[]) || []).filter(x => ids.has(x.activo_id)))
+      setActivos(delMundo)
       setPerfiles((p.data as Perfil[]) || [])
-      setUsuarios((u.data as Usuario[]) || [])
+      setUsuarios(todosUsuarios)
       setCargando(false)
     }
     init()

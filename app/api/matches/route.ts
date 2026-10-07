@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching'
+import { mismoMundo } from '@/lib/mundo'
 
 // Matches v0 (Documento Maestro V6.1, §4 y §6). Corre en el servidor con service_role porque
 // cruza datos que la RLS oculta a propósito entre brokers -- por eso esta ruta es la que
@@ -12,20 +13,23 @@ import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching
 //        coincidencias con su perfil).
 // POST → {activoId, perfilId}: "me interesa conectar". Recalcula el score aquí (nunca confía en
 //        el que mande el navegador) y crea la solicitud que Operación valida a mano.
+//
+// Mundos (lib/mundo.ts, migración 20261008000000): una cuenta real solo cruza datos reales y una
+// cuenta demo solo datos demo -- los brokers del piloto nunca ven a los personajes del video.
 
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
 
-const COLS_ACTIVO = 'id, nombre, tipo, municipio, colonia, estado, superficie, precio_total, status, broker_id, usuario_id, created_at'
-const COLS_PERFIL = 'id, usuario_id, broker_id, alias_cliente, presupuesto, zona, tipo_activo_interes'
+const COLS_ACTIVO = 'id, nombre, tipo, municipio, colonia, estado, superficie, precio_total, status, broker_id, usuario_id, created_at, es_demo'
+const COLS_PERFIL = 'id, usuario_id, broker_id, alias_cliente, presupuesto, zona, tipo_activo_interes, es_demo'
 
 interface Activo {
   id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; estado: string
   superficie: number | null; precio_total: number | null; status: string | null
-  broker_id: string | null; usuario_id: string; created_at: string
+  broker_id: string | null; usuario_id: string; created_at: string; es_demo: boolean
 }
 interface Perfil {
   id: string; usuario_id: string | null; broker_id: string | null; alias_cliente: string | null
-  presupuesto: string | null; zona: string | null; tipo_activo_interes: string | null
+  presupuesto: string | null; zona: string | null; tipo_activo_interes: string | null; es_demo: boolean
 }
 
 // Lo único que se expone de un activo que no es del usuario: las columnas de activos_publicos.
@@ -42,19 +46,20 @@ async function autenticar(req: NextRequest) {
   const admin = getSupabaseAdmin()
   const { data, error } = await admin.auth.getUser(token)
   if (error || !data?.user) return null
-  const { data: perfil } = await admin.from('usuarios').select('rol').eq('id', data.user.id).single()
-  return { uid: data.user.id, rol: (perfil as { rol: string | null } | null)?.rol ?? null, admin }
+  const { data: perfil } = await admin.from('usuarios').select('rol, es_demo').eq('id', data.user.id).single()
+  const u = perfil as { rol: string | null; es_demo: boolean | null } | null
+  return { uid: data.user.id, rol: u?.rol ?? null, esDemo: !!u?.es_demo, admin }
 }
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await autenticar(req)
     if (!auth) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    const { uid, rol, admin } = auth
+    const { uid, rol, esDemo, admin } = auth
 
     const [{ data: activos }, { data: perfiles }, { data: solicitudes }] = await Promise.all([
-      admin.from('activos').select(COLS_ACTIVO).neq('status', 'cerrado'),
-      admin.from('perfiles_intencion').select(COLS_PERFIL),
+      admin.from('activos').select(COLS_ACTIVO).neq('status', 'cerrado').eq('es_demo', esDemo),
+      admin.from('perfiles_intencion').select(COLS_PERFIL).eq('es_demo', esDemo),
       admin.from('matches').select('activo_id, perfil_id, estado'),
     ])
     const A = (activos as Activo[]) || []
@@ -119,7 +124,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await autenticar(req)
     if (!auth) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    const { uid, rol, admin } = auth
+    const { uid, rol, esDemo, admin } = auth
     if (rol !== 'broker' && rol !== 'inversionista') {
       return NextResponse.json({ error: 'Los matches son para brokers y compradores' }, { status: 403 })
     }
@@ -134,6 +139,9 @@ export async function POST(req: NextRequest) {
     const activo = a as Activo | null
     const perfil = p as Perfil | null
     if (!activo || !perfil) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+    if (!mismoMundo(esDemo, activo.es_demo, perfil.es_demo)) {
+      return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
+    }
 
     // Solo puede pedir la conexión quien es dueño de una de las dos partes.
     const esDueno =

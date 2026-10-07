@@ -143,6 +143,7 @@ export default function PanelPage() {
   const [usuarios, setUsuarios]       = useState<UsuarioMin[]>([])
   const [perfiles, setPerfiles]       = useState<PerfilIntencion[]>([])
   const [copiedLink, setCopiedLink]   = useState(false)
+  const [yoDemo, setYoDemo]           = useState(false)
   // Estado de la invitación por correo disparada al aprobar (ver app/api/invitar-usuario) —
   // separado del status de la solicitud: si la invitación falla, la solicitud sigue "aprobada",
   // pero se muestra la alerta para que el Broker Maestro sepa que hay que reintentar.
@@ -155,7 +156,7 @@ export default function PanelPage() {
 
       const { data: profile } = await supabase
         .from('usuarios')
-        .select('nombre, rol')
+        .select('nombre, rol, es_demo')
         .eq('id', user.id)
         .single()
 
@@ -177,9 +178,16 @@ export default function PanelPage() {
         supabase.from('usuarios').select('id, nombre, rol, es_demo'),
         supabase.from('perfiles_intencion').select('usuario_id, presupuesto, tipo_activo_interes'),
       ])
-      setSolicitudes((solicitudesData as Solicitud[]) || [])
-      setActivos((activosData as Activo[]) || [])
-      setUsuarios((usuariosData as UsuarioMin[]) || [])
+      // Mundos (lib/mundo.ts, migración 20261008000000): la cuenta demo de Operación (la del
+      // video) solo ve el mundo demo -- nunca solicitudes, brokers ni compradores reales del
+      // piloto. La cuenta real sigue viendo todo, con lo demo marcado y fuera de las métricas.
+      const demo = !!(profile as { es_demo: boolean | null } | null)?.es_demo
+      const todos = (usuariosData as UsuarioMin[]) || []
+      const idsDemo = new Set(todos.filter(u => u.es_demo).map(u => u.id))
+      setYoDemo(demo)
+      setSolicitudes(demo ? [] : (solicitudesData as Solicitud[]) || [])
+      setActivos(((activosData as Activo[]) || []).filter(a => !demo || idsDemo.has(a.usuario_id)))
+      setUsuarios(todos.filter(u => !demo || u.es_demo || u.id === user.id))
       setPerfiles((perfilesData as PerfilIntencion[]) || [])
 
       setLoading(false)
@@ -238,20 +246,21 @@ export default function PanelPage() {
   const nombreDe = (id: string | null) => id ? (usuarios.find(u => u.id === id)?.nombre ?? '—') : null
 
   // Personajes ficticios de scripts/seed-demo.mjs (cuentas reales de Auth, marcadas
-  // usuarios.es_demo) -- se siguen mostrando en las listas de abajo (tagueadas), pero se
-  // excluyen de Métricas globales / Pipeline / Actividad reciente para que esos números
-  // reflejen negocio real, no la demo. Ver migración 20260927000000_agrega_es_demo_usuarios.sql.
+  // usuarios.es_demo) -- se siguen mostrando en las listas de abajo (tagueadas), pero las
+  // Métricas globales / Pipeline / Actividad reciente cuentan solo el mundo de quien mira: para
+  // la cuenta real, negocio real; para la cuenta demo del video, la demo (antes salían en 0).
+  // Ver migraciones 20260927000000_agrega_es_demo_usuarios.sql y 20261008000000_mundos_demo_real.sql.
   const demoIds = new Set(usuarios.filter(u => u.es_demo).map(u => u.id))
   const esDemoActivo = (a: Activo) => demoIds.has(a.usuario_id)
-  const activosReales = activos.filter(a => !esDemoActivo(a))
+  const activosDelMundo = activos.filter(a => esDemoActivo(a) === yoDemo)
 
   const activosFiltrados = filtroFase === 'todos'
     ? activos
     : activos.filter(a => a.status === filtroFase)
 
-  const volumenTotal = activosReales.reduce((a, c) => a + (c.precio_total || 0), 0)
-  const cerrados     = activosReales.filter(a => a.status === 'cerrado').length
-  const enProceso    = activosReales.filter(a => a.status !== 'cerrado').length
+  const volumenTotal = activosDelMundo.reduce((a, c) => a + (c.precio_total || 0), 0)
+  const cerrados     = activosDelMundo.filter(a => a.status === 'cerrado').length
+  const enProceso    = activosDelMundo.filter(a => a.status !== 'cerrado').length
 
   const brokersAliadosTodos = usuarios.filter(u => u.rol === 'broker').map(b => {
     const propios = activos.filter(a => a.broker_id === b.id)
@@ -264,7 +273,7 @@ export default function PanelPage() {
       volumen: propios.reduce((s, a) => s + (a.precio_total || 0), 0),
     }
   })
-  const brokersAliados = brokersAliadosTodos.filter(b => !b.esDemo)
+  const brokersAliados = brokersAliadosTodos.filter(b => !!b.esDemo === yoDemo)
 
   const inversionistasRegistradosTodos = usuarios.filter(u => u.rol === 'inversionista').map(inv => {
     const perfil = perfiles.find(p => p.usuario_id === inv.id)
@@ -276,13 +285,13 @@ export default function PanelPage() {
       presupuesto: perfil?.presupuesto || '—',
     }
   })
-  const inversionistasRegistrados = inversionistasRegistradosTodos.filter(i => !i.esDemo)
+  const inversionistasRegistrados = inversionistasRegistradosTodos.filter(i => !!i.esDemo === yoDemo)
 
   // Actividad reciente real, derivada de dos fuentes con fecha (no hay tabla de eventos) —
   // activos nuevos (reales, no de demo) y solicitudes ya aprobadas — combinadas y ordenadas por
   // fecha real. solicitudes nunca las toca seed-demo.mjs (crea cuentas directo en Auth).
   const actividad = [
-    ...activosReales.map(a => ({ tipo: 'activo' as const, texto: `Nuevo activo registrado: ${a.nombre}`, fecha: a.created_at })),
+    ...activosDelMundo.map(a => ({ tipo: 'activo' as const, texto: `Nuevo activo registrado: ${a.nombre}`, fecha: a.created_at })),
     ...solicitudes.filter(s => s.status === 'aprobada').map(s => ({ tipo: 'registro' as const, texto: `Nuevo usuario aprobado: ${s.nombre} (${rolLabel(s.rol).label})`, fecha: s.created_at })),
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 6)
 
@@ -438,7 +447,7 @@ export default function PanelPage() {
           {/* Pipeline + Actividad reciente */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <PipelineBar activos={activosReales} />
+              <PipelineBar activos={activosDelMundo} />
             </div>
 
             {/* Actividad reciente */}
