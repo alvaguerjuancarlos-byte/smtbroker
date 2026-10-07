@@ -1,7 +1,7 @@
 // Uso: node --test lib/nivelesBroker.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { calcularNivel, tieneDocumentacion } from './nivelesBroker.ts'
+import { calcularNivel } from './nivelesBroker.ts'
 
 const nivel = (m: Parameters<typeof calcularNivel>[0]) => calcularNivel(m).actual.id
 
@@ -35,9 +35,4 @@ test('Fundador garantiza al menos Plata, pero no regala Oro', () => {
 test('siguiente nivel', () => {
   assert.equal(calcularNivel({ propiedades: 0, conDocumentacion: 0, cierresVerificados: 0 }).siguiente?.id, 'plata')
   assert.equal(calcularNivel({ propiedades: 10, conDocumentacion: 10, cierresVerificados: 9 }).siguiente, null)
-})
-
-test('documentación: folio real o escritura, sin contar espacios', () => {
-  assert.equal(tieneDocumentacion({ folio_real: '123', escritura_publica: null }), true)
-  assert.equal(tieneDocumentacion({ folio_real: '  ', escritura_publica: '' }), false)
 })

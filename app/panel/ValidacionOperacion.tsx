@@ -14,7 +14,8 @@
 // se llena de solicitudes ficticias.
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { calcularNivel, tieneDocumentacion, ORDEN_NIVEL } from '@/lib/nivelesBroker'
+import { calcularNivel, ORDEN_NIVEL } from '@/lib/nivelesBroker'
+import { tieneDocumentacion } from '@/lib/expediente'
 import { mismoMundo } from '@/lib/mundo'
 
 interface Match {

@@ -14,7 +14,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { statusCfg, formatDate, ESTADOS_ACTIVO } from '@/lib/estadoActivo'
-import { calcularNivel, tieneDocumentacion } from '@/lib/nivelesBroker'
+import { calcularNivel } from '@/lib/nivelesBroker'
+import { tieneDocumentacion } from '@/lib/expediente'
 import Topbar from '../components/Topbar'
 import { Field, inputCls } from '../components/FormField'
 
@@ -93,6 +94,7 @@ export default function PortalBrokerPage() {
   const [userId, setUserId] = useState('')
   const [userName, setUserName] = useState('')
   const [fundador, setFundador] = useState(false)
+  const [certificadas, setCertificadas] = useState<Set<string>>(new Set())
   const [pestana, setPestana] = useState<Pestana>('portafolio')
   const [activos, setActivos] = useState<ActivoPortafolio[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -156,6 +158,10 @@ export default function PortalBrokerPage() {
         .eq('broker_id', user.id)
         .order('created_at', { ascending: false })
       setActivos((activosData as ActivoPortafolio[]) || [])
+
+      // Propiedades con certificación legal otorgada (paso 4 V6.3): sello en el portafolio.
+      const { data: certs } = await supabase.from('certificaciones').select('activo_id').eq('estado', 'certificada')
+      setCertificadas(new Set(((certs as { activo_id: string }[]) || []).map(c => c.activo_id)))
 
       await Promise.all([cargarClientes(user.id), cargarCierres(user.id)])
       setLoading(false)
@@ -346,7 +352,10 @@ export default function PortalBrokerPage() {
                     <div key={a.id} onClick={() => router.push(`/activo/${a.id}`)}
                       className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors cursor-pointer`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-paper truncate">{a.nombre}</p>
+                        <p className="text-[14px] font-medium text-paper truncate">
+                          {a.nombre}
+                          {certificadas.has(a.id) && <span className="ml-2 font-plex-mono text-[10px] text-gold-400 border border-gold-500/40 px-1.5 py-0.5 align-middle">★ Certificada</span>}
+                        </p>
                         <p className="text-[11px] text-slate mt-0.5 truncate">
                           {a.tipo} · {a.municipio}, {a.estado}
                           {a.propietario_nombre ? ` · Propietario: ${a.propietario_nombre}` : ''} · {formatDate(a.created_at)}

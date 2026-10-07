@@ -8,6 +8,7 @@ import { useRolUsuario } from '@/lib/useRolUsuario'
 import Topbar from '../../components/Topbar'
 import { MapView } from '../../components/MapPicker'
 import { DiagnosticoLegal, type TriageLegalReal } from '../../components/DiagnosticoLegal'
+import { DiagnosticoRapido, type DiagnosticoRapidoData } from '../../components/DiagnosticoRapido'
 
 interface MercadoReal {
   comparablesAnalizados: number
@@ -104,6 +105,22 @@ async function llamarAgente(agente: 'legal' | 'mercado', activoId: string, token
   }
 }
 
+// Diagnóstico rápido (app/api/diagnostico-rapido): uso de suelo GIS + documentos faltantes +
+// estado de la certificación. Sin LLM: se recalcula en cada visita.
+async function llamarRapido(activoId: string, token: string) {
+  try {
+    const r = await fetch('/api/diagnostico-rapido', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ activoId }),
+    })
+    const j = await r.json()
+    return j.error ? { error: j.error as string } : { data: j as DiagnosticoRapidoData }
+  } catch {
+    return { error: 'Error de red' }
+  }
+}
+
 const formatFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
@@ -115,12 +132,25 @@ export default function ActivoPage() {
 
   const [activo,  setActivo]  = useState<Activo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [rapido,      setRapido]      = useState<DiagnosticoRapidoData | null>(null)
+  const [rapidoError, setRapidoError] = useState<string | null>(null)
   const [legal,      setLegal]      = useState<TriageLegalReal | null>(null)
   const [legalError, setLegalError] = useState<string | null>(null)
   const [mercado,      setMercado]      = useState<MercadoReal | null>(null)
   const [mercadoError, setMercadoError] = useState<string | null>(null)
   const [fechaDiagnostico, setFechaDiagnostico] = useState<string | null>(null)
   const [actualizando, setActualizando] = useState(false)
+
+  const cargarRapido = async (token: string) => {
+    const r = await llamarRapido(id, token)
+    if (r.error || !r.data) { setRapidoError(r.error ?? 'Sin respuesta'); return }
+    setRapidoError(null)
+    setRapido(r.data)
+    if (r.data.certificacion?.estado === 'certificada') {
+      const l = await llamarAgente('legal', id, token, false)
+      if (l.error) setLegalError(l.error); else setLegal(l.data)
+    }
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -134,37 +164,41 @@ export default function ActivoPage() {
       setActivo(data as Activo)
       setLoading(false)
 
-      // Agentes reales (Legal + Mercado) -- en paralelo, cada uno con su propio estado de carga/
-      // error independiente, para no bloquear uno por el otro (ver app/api/agentes/legal y
-      // app/api/agentes/mercado). Antes esta pantalla calculaba todo localmente de forma
-      // simulada (lib/legalTriage.ts + multiplicadores fijos sobre precio_total) -- ver auditoría
-      // 2026-10-03.
+      // Diagnóstico en dos niveles (Documento Maestro V6.3, §13): al abrir el activo corre el
+      // diagnóstico GRATIS -- Agente de Mercado + diagnóstico rápido (uso de suelo GIS y documentos
+      // faltantes). El dictamen legal completo ya no corre aquí: es parte de la certificación de
+      // pago y solo se muestra cuando la propiedad está certificada.
       const token = session.access_token
-      llamarAgente('legal', id, token, false).then(r => {
-        if (r.error) setLegalError(r.error)
-        else { setLegal(r.data); if (r.guardado) setFechaDiagnostico(r.guardado.fecha) }
-      })
+      cargarRapido(token)
       llamarAgente('mercado', id, token, false).then(r => {
         if (r.error) setMercadoError(r.error)
-        else setMercado(r.data)
+        else { setMercado(r.data); if (r.guardado) setFechaDiagnostico(r.guardado.fecha) }
       })
     }
     init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, router])
 
-  // "Actualizar diagnóstico": vuelve a correr ambos agentes y guarda un diagnóstico nuevo. Si un
-  // agente falla, se conserva el resultado anterior en pantalla (y en la base).
+  // Tras completar el expediente o pedir la certificación: se relee el activo y el diagnóstico rápido.
+  const refrescarExpediente = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { data } = await supabase.from('activos').select('*').eq('id', id).single()
+    if (data) setActivo(data as Activo)
+    await cargarRapido(session.access_token)
+  }
+
+  // "Actualizar diagnóstico": vuelve a correr el Agente de Mercado y guarda un diagnóstico nuevo (el
+  // dictamen legal solo se regenera dentro de una certificación). Si falla, se conserva el
+  // resultado anterior en pantalla (y en la base).
   const actualizarDiagnostico = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     setActualizando(true)
-    setLegal(null); setMercado(null); setLegalError(null); setMercadoError(null)
-    const [l, m] = await Promise.all([
-      llamarAgente('legal', id, session.access_token, true),
-      llamarAgente('mercado', id, session.access_token, true),
-    ])
-    if (l.error) setLegalError(l.error); else { setLegal(l.data); if (l.guardado) setFechaDiagnostico(l.guardado.fecha) }
-    if (m.error) setMercadoError(m.error); else setMercado(m.data)
+    setMercado(null); setMercadoError(null)
+    const m = await llamarAgente('mercado', id, session.access_token, true)
+    if (m.error) setMercadoError(m.error); else { setMercado(m.data); if (m.guardado) setFechaDiagnostico(m.guardado.fecha) }
+    await cargarRapido(session.access_token)
     setActualizando(false)
   }
 
@@ -178,20 +212,21 @@ export default function ActivoPage() {
 
   if (!activo) return null
 
-  // Las etiquetas de estado (badge del encabezado, hero y CTA final) se derivan del veredicto real
-  // del Agente Legal -- antes eran fijas ("Diagnóstico completado" / "Listo para marketing") y
-  // contradecían al agente cuando marcaba el expediente como no apto para publicar.
-  const agentesCorriendo = (!legal && !legalError) || (!mercado && !mercadoError)
+  // Etiquetas de estado (badge del encabezado, hero y CTA final) según el nivel de diagnóstico
+  // (V6.3 §13): el rápido nunca dice "no apto"; dice qué falta para certificar.
+  const agentesCorriendo = (!rapido && !rapidoError) || (!mercado && !mercadoError)
+  const cert = rapido?.certificacion?.estado
+  const faltan = rapido?.faltantes.map(f => f.documento.toLowerCase()) ?? []
   const estadoDiag: { badge: string; cta: string; ctaDesc: string; tono: 'ok' | 'warn' | 'bad' } =
     agentesCorriendo
-      ? { badge: 'Diagnóstico en curso', cta: 'Diagnóstico en curso…', ctaDesc: 'Los agentes Legal y de Mercado siguen analizando el activo.', tono: 'warn' }
-      : legalError
-        ? { badge: 'Diagnóstico legal pendiente', cta: 'Diagnóstico incompleto · Falta el dictamen legal', ctaDesc: 'El agente legal no pudo completar el análisis. Puedes avanzar a marketing, pero sin dictamen legal.', tono: 'warn' }
-        : legal!.verdictCls === 'ok'
-          ? { badge: 'Diagnóstico completado', cta: 'Diagnóstico completo · Listo para marketing', ctaDesc: 'El agente de marketing generará el media kit y la campaña de captación.', tono: 'ok' }
-          : legal!.verdictCls === 'warn'
-            ? { badge: 'Publicable con nota', cta: 'Diagnóstico completo · Publicable con nota', ctaDesc: 'Hay pendientes legales menores: atiéndelos en paralelo a la campaña de marketing.', tono: 'warn' }
-            : { badge: 'Requiere validación legal', cta: 'Diagnóstico completo · Falta documentación legal', ctaDesc: 'Completa el expediente antes de publicar: el agente legal marcó pendientes que bloquean la venta.', tono: 'bad' }
+      ? { badge: 'Diagnóstico en curso', cta: 'Diagnóstico en curso…', ctaDesc: 'Revisando mercado, uso de suelo y expediente.', tono: 'warn' }
+      : cert === 'certificada'
+        ? { badge: '★ Inventario certificado', cta: 'Diagnóstico completo · Inventario certificado', ctaDesc: 'Con el sello de certificación, la ficha de venta da más confianza al comprador.', tono: 'ok' }
+        : cert === 'solicitada' || cert === 'pagada'
+          ? { badge: 'Certificación en proceso', cta: 'Diagnóstico rápido listo · Certificación en proceso', ctaDesc: 'Puedes avanzar a marketing mientras Operación MindBridge revisa el dictamen legal.', tono: 'warn' }
+          : faltan.length
+            ? { badge: 'Diagnóstico rápido listo', cta: 'Diagnóstico rápido listo · Para certificar te falta: ' + faltan.join(', '), ctaDesc: 'Puedes avanzar a marketing ya; la certificación legal suma confianza para el comprador.', tono: 'warn' }
+            : { badge: 'Diagnóstico rápido listo', cta: 'Diagnóstico rápido listo · Expediente completo', ctaDesc: 'Ya puedes solicitar la certificación legal o avanzar a marketing.', tono: 'ok' }
   const tonoBadgeCls = {
     ok: 'border-gold-500/40 text-gold-400 bg-gold-500/10',
     warn: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
@@ -336,10 +371,32 @@ export default function ActivoPage() {
             </div>
           )}
 
-          {/* Due Diligence Legal — Agente Legal real (uso de suelo vía GIS/búsqueda real,
-              título/RPP basado en documentación declarada). Ver app/api/agentes/legal. */}
+          {/* Diagnóstico rápido (gratis) + certificación legal (de pago) — V6.3 §13. Ver
+              app/api/diagnostico-rapido y app/api/certificaciones. */}
           <div>
-            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Diagnóstico Legal · Agente Due Diligence</h2>
+            <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
+              <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase">Uso de suelo y expediente legal</h2>
+              {cert === 'certificada' && (
+                <button onClick={() => router.push(`/activo/${id}/reporte`)} className="font-plex-mono text-[11px] text-gold-400 hover:text-gold-100 underline underline-offset-2">
+                  Ver reporte de transparencia
+                </button>
+              )}
+            </div>
+            <DiagnosticoRapido
+              key={cert ?? 'sin-cert'}
+              datos={rapido}
+              error={rapidoError}
+              activo={activo}
+              tipoActivo={activo.tipo}
+              onActualizado={refrescarExpediente}
+            />
+          </div>
+
+          {/* Dictamen legal completo — solo con la propiedad certificada (Agente Legal real: uso de
+              suelo vía GIS/búsqueda real, título/RPP basado en documentación declarada). */}
+          {cert === 'certificada' && (
+          <div>
+            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Dictamen legal · Certificación</h2>
             <DiagnosticoLegal
               legal={legal}
               error={legalError}
@@ -350,6 +407,7 @@ export default function ActivoPage() {
               folioOClave={activo.folio_real || activo.clave_catastral}
             />
           </div>
+          )}
 
           {/* Análisis de Mercado — Agente de Mercado real (comparables de reventa vía búsqueda
               real, plusvalía SHF y absorción SNIIV reales). Ver app/api/agentes/mercado. */}

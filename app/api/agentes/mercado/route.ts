@@ -4,6 +4,7 @@ import { callClaudeJson, serieSHFParaCiudad, calcularApreciacionSHF, resolverAbs
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { filtroAccesoActivo } from '@/lib/accesoActivo'
 import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
+import { MODELO_DICTAMEN, MODELO_EXTRACCION, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
 
 // Agente de Mercado real para REVENTA -- distinto del "Agente Mercado" de smt-developer (que
 // analiza oferta/demanda de un PROYECTO nuevo en preventa). Aquí la pregunta es "¿en qué rango
@@ -78,7 +79,7 @@ Retorna ÚNICAMENTE un array JSON válido, sin markdown.`
 
   try {
     const comparables = await callClaudeJson<ComparableReventa[]>(client, {
-      model: 'claude-haiku-4-5-20251001',
+      model: MODELO_EXTRACCION,
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     }, /\[[\s\S]*\]/)
@@ -181,14 +182,14 @@ Retorna ÚNICAMENTE el JSON.`
 
   try {
     const parsed = await callClaudeJson<Record<string, unknown>>(client, {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
+      model: MODELO_DICTAMEN,
+      max_tokens: MAX_TOKENS_DICTAMEN,
       messages: [{ role: 'user', content: prompt }],
     })
     parsed.grounded = grounded
     parsed.comparables = comparables
     parsed.fuentesConsultadas = fuentesConsultadas
-    const g = await guardar(supabaseAdmin, { activoId, agente: 'mercado', resultado: parsed, modelo: 'claude-sonnet-4-6', creadoPor: caller.user.id })
+    const g = await guardar(supabaseAdmin, { activoId, agente: 'mercado', resultado: parsed, modelo: MODELO_DICTAMEN, creadoPor: caller.user.id })
     return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
     console.error('Agente Mercado (SMTBROKER) error:', error)

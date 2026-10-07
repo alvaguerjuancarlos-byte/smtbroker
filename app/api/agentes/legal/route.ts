@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { callClaudeJson, consultarNormativaReal } from '@smt/shared-realestate'
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
-import { filtroAccesoActivo } from '@/lib/accesoActivo'
+import { sesionServidor } from '@/lib/sesionServidor'
+import { puedeAccederActivo } from '@/lib/accesoActivo'
+import { mismoMundo } from '@/lib/mundo'
 import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
+import { MODELO_DICTAMEN, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
 
 // Agente Legal real para REVENTA de un activo existente -- distinto a propósito del "Agente
 // Legal" de smt-developer (que evalúa factibilidad de desarrollo nuevo: COS/CUS/cajones/régimen
@@ -19,6 +21,12 @@ import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
 // del municipio. Nunca finge verificar el RPP contra una fuente en vivo -- no existe API pública
 // para eso (mismo gap documentado en smt-developer) -- el check de título siempre se basa en lo
 // que el propietario declaró/subió, nunca se presenta como "verificado contra el registro".
+//
+// Diagnóstico en dos niveles (Documento Maestro V6.3, §13; paso 4 del plan, 2026-10-07): este
+// dictamen completo YA NO corre al abrir un activo -- con el expediente vacío solo decía "no
+// apto". Ahora es el núcleo de la CERTIFICACIÓN legal (de pago): solo Operación lo genera, y solo
+// para un activo con una certificación en estado "pagada". El dueño y el broker leen el dictamen
+// guardado. El diagnóstico gratis es app/api/diagnostico-rapido + el Agente de Mercado.
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -50,37 +58,42 @@ interface TriageLegalReal {
 }
 
 export async function POST(req: NextRequest) {
-  let supabaseAdmin
+  let sesion
   try {
-    supabaseAdmin = getSupabaseAdmin()
+    sesion = await sesionServidor(req)
   } catch (e: unknown) {
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })
   }
+  if (!sesion) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  const supabaseAdmin = sesion.admin
 
-  const authHeader = req.headers.get('authorization') || ''
-  const token = authHeader.replace(/^Bearer\s+/i, '')
-  if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-  const { data: caller, error: callerError } = await supabaseAdmin.auth.getUser(token)
-  if (callerError || !caller?.user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-
-  const { activoId, regenerar } = await req.json()
+  const { activoId, regenerar } = await req.json().catch(() => ({}))
   if (!activoId) return NextResponse.json({ error: 'Falta activoId' }, { status: 400 })
 
   // El cliente solo manda el id -- los datos del predio se leen del servidor, nunca se confía en
   // lo que mande el navegador para armar el diagnóstico (evita que alguien arme un "diagnóstico"
-  // favorable para un activo que no es suyo). Se verifica acceso con el mismo criterio que la RLS
-  // (dueño o broker que lo representa, ver lib/accesoActivo.ts), vía supabaseAdmin porque este
-  // check corre antes de decidir si la petición procede.
-  const { data: activo, error: activoErr } = await supabaseAdmin
-    .from('activos').select('*').eq('id', activoId).or(filtroAccesoActivo(caller.user.id)).single()
-  if (activoErr || !activo) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
+  // favorable para un activo que no es suyo). Acceso: dueño o broker que lo representa (mismo
+  // criterio que la RLS, lib/accesoActivo.ts), u Operación dentro de su mismo mundo (lib/mundo.ts).
+  const { data: activo } = await supabaseAdmin.from('activos').select('*').eq('id', activoId).maybeSingle()
+  const acceso = activo && (puedeAccederActivo(activo, sesion.uid) || (sesion.esOperacion && mismoMundo(sesion.esDemo, activo.es_demo)))
+  if (!activo || !acceso) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
 
-  // Diagnóstico guardado (lib/diagnosticoGuardado.ts): si ya existe y no se pidió "Actualizar
-  // diagnóstico", se devuelve tal cual -- sin llamar a Claude ni a Serper, y con el mismo resultado
-  // en cada visita.
+  // Dictamen guardado (lib/diagnosticoGuardado.ts): si ya existe y no se pidió regenerarlo, se
+  // devuelve tal cual -- sin llamar a Claude ni a Serper.
   if (!regenerar) {
     const previo = await leerUltimo(supabaseAdmin, activoId, 'legal')
     if (previo) return NextResponse.json(conGuardado(previo.resultado, previo, false))
+  }
+
+  // Generar un dictamen nuevo cuesta (Claude + búsquedas) y es lo que se cobra: solo Operación, y
+  // solo con una certificación pagada.
+  const { data: pagada } = await supabaseAdmin.from('certificaciones').select('id')
+    .eq('activo_id', activoId).eq('estado', 'pagada').maybeSingle()
+  if (!sesion.esOperacion || !pagada) {
+    return NextResponse.json(
+      { error: 'El dictamen legal se genera dentro de una certificación pagada', sinDictamen: true },
+      { status: 403 },
+    )
   }
 
   const esSanPedro = /san\s*pedro/i.test(activo.municipio || '')
@@ -175,13 +188,13 @@ Retorna ÚNICAMENTE el JSON.`
 
   try {
     const parsed = await callClaudeJson<TriageLegalReal>(client, {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      model: MODELO_DICTAMEN,
+      max_tokens: MAX_TOKENS_DICTAMEN,
       messages: [{ role: 'user', content: prompt }],
     })
     parsed.grounded = grounded
     parsed.fuentesConsultadas = fuentesConsultadas
-    const g = await guardar(supabaseAdmin, { activoId, agente: 'legal', resultado: parsed, modelo: 'claude-sonnet-4-6', creadoPor: caller.user.id })
+    const g = await guardar(supabaseAdmin, { activoId, agente: 'legal', resultado: parsed, modelo: MODELO_DICTAMEN, creadoPor: sesion.uid })
     return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
     console.error('Agente Legal (SMTBROKER) error:', error)

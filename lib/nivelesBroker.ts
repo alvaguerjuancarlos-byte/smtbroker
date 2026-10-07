@@ -7,7 +7,7 @@
 //
 // UMBRALES PROVISIONALES (decisión pendiente de JC): viven SOLO en NIVELES para cambiarlos en un
 // solo lugar. Mientras no exista la certificación legal de propiedades, "documentada" = folio
-// real o escritura capturados (tieneDocumentacion).
+// real o escritura declarados (tieneDocumentacion, en lib/expediente.ts).
 //
 // Fundador (Plan Piloto V1): marca que pone Operación a los brokers del piloto. Garantiza como
 // mínimo Plata; si su desempeño da más, sube igual que cualquiera.
@@ -56,6 +56,3 @@ export function calcularNivel(m: MetricasBroker): { actual: Nivel; siguiente: Ni
   NIVELES.forEach((n, k) => { if (n.cumple(m)) i = k })
   return { actual: NIVELES[i], siguiente: NIVELES[i + 1] ?? null }
 }
-
-export const tieneDocumentacion = (a: { folio_real?: string | null; escritura_publica?: string | null }) =>
-  !!(a.folio_real?.trim() || a.escritura_publica?.trim())

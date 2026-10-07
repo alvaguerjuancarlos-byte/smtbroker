@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
 import ValidacionOperacion from './ValidacionOperacion'
+import CertificacionesOperacion from './CertificacionesOperacion'
 import { etiquetaRol, HOME_POR_ROL } from '@/lib/roles'
 import { EjemploBadge } from '../components/EjemploBadge'
 
@@ -437,6 +438,9 @@ export default function PanelPage() {
 
           {/* Fase B: matches por validar y cierres por verificar (ver ValidacionOperacion.tsx) */}
           <ValidacionOperacion />
+
+          {/* Paso 4 V6.3: certificaciones legales (ver CertificacionesOperacion.tsx) */}
+          <CertificacionesOperacion />
 
           {/* Métricas globales — ya vienen de activos/usuarios reales de Supabase. */}
           <div>
