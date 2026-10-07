@@ -283,14 +283,14 @@ export default function PortalBrokerPage() {
     const precio = parseFloat(formCierre.precio)
     if (!precio || precio <= 0) { setErrorCierre('Captura el precio de cierre.'); return }
     setErrorCierre('')
-    // Insert SIN .select(), igual que lo prueba scripts/verificar-rls-fase-b.mjs: el broker solo
-    // puede crear reportes 'pendiente' y no puede editarlos; Operación los verifica.
-    const { error } = await supabase.from('cierres_reportados').insert({
-      activo_id: cierreDe.id, broker_id: userId, precio_cierre: precio,
-      fecha_cierre: formCierre.fecha, origen_comprador: formCierre.origen,
-    })
-    if (error) { setErrorCierre('No se pudo reportar. Intenta de nuevo.'); return }
-    await supabase.from('activos').update({ status: 'cerrado' }).eq('id', cierreDe.id)
+    // Por el servidor (app/api/cierres) para que Operación reciba el aviso; el reporte nace
+    // 'pendiente' y el activo queda cerrado. Operación lo verifica.
+    const r = await fetch('/api/cierres', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (await token()) },
+      body: JSON.stringify({ activoId: cierreDe.id, precio, fecha: formCierre.fecha, origen: formCierre.origen }),
+    }).then(res => res.json()).catch(() => ({ error: 'Error de red' }))
+    if (r.error) { setErrorCierre(r.error); return }
     setActivos(as => as.map(a => (a.id === cierreDe.id ? { ...a, status: 'cerrado' } : a)))
     setCierreDe(null)
     setMatches(null)

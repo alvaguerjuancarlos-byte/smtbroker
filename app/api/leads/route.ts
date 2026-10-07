@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
-import { calificarLead, RANGOS_PRESUPUESTO, PLAZOS, FORMAS_PAGO, type Plazo, type FormaPago } from '@/lib/calificacionLeads'
+import { calificarLead, RANGOS_PRESUPUESTO, PLAZOS, FORMAS_PAGO, ETIQUETA_CATEGORIA, type Plazo, type FormaPago } from '@/lib/calificacionLeads'
+import { avisarUsuario, avisarOperacion } from '@/lib/avisos'
 
 // "Me interesa" de la página pública (Documento Maestro V6.3, §14.2). Sin sesión: lo llena
 // cualquier persona interesada. Defensas:
@@ -40,8 +41,11 @@ export async function POST(req: NextRequest) {
     if (body.aceptaAviso !== true) return NextResponse.json({ error: 'Debes aceptar el aviso de privacidad' }, { status: 400 })
 
     const admin = getSupabaseAdmin()
-    const { data } = await admin.from('activos').select('precio_total, publicada_at, status').eq('id', activoId).maybeSingle()
-    const activo = data as { precio_total: number | null; publicada_at: string | null; status: string | null } | null
+    const { data } = await admin.from('activos').select('nombre, precio_total, publicada_at, status, usuario_id, broker_id, es_demo').eq('id', activoId).maybeSingle()
+    const activo = data as {
+      nombre: string; precio_total: number | null; publicada_at: string | null; status: string | null
+      usuario_id: string; broker_id: string | null; es_demo: boolean
+    } | null
     if (!activo?.publicada_at || activo.status === 'cerrado') return NextResponse.json({ error: 'Esta propiedad ya no está disponible' }, { status: 404 })
 
     const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'sin-ip'
@@ -56,6 +60,20 @@ export async function POST(req: NextRequest) {
       categoria, razones, consentimiento_at: new Date().toISOString(), ip_hash: ipHash,
     })
     if (error) return NextResponse.json({ error: 'No se pudo enviar. Intenta de nuevo.' }, { status: 500 })
+
+    // El lead le llega a quien representa la propiedad (el broker o, sin broker, el propietario);
+    // los Serios también a Operación (V6.3 §14.2). Sin datos de contacto del interesado en el
+    // correo: se ven en la pestaña Leads, con sesión.
+    const aviso = {
+      asunto: `${ETIQUETA_CATEGORIA[categoria]}: alguien se interesó en ${activo.nombre}`,
+      titulo: `Nuevo interesado · ${ETIQUETA_CATEGORIA[categoria]}`,
+      lineas: [`Propiedad: ${activo.nombre}.`, `Por qué: ${razones.join(' · ')}.`],
+      enlace: { texto: 'Ver el lead', ruta: `/activo/${activoId}/leads` },
+    }
+    after(async () => {
+      await avisarUsuario(admin, activo.broker_id ?? activo.usuario_id, aviso, { esDemo: activo.es_demo })
+      if (categoria === 'serio') await avisarOperacion(aviso, { esDemo: activo.es_demo })
+    })
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })

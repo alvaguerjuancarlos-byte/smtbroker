@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
+import { avisarOperacion } from '@/lib/avisos'
 import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching'
 import { mismoMundo } from '@/lib/mundo'
 
@@ -160,6 +161,17 @@ export async function POST(req: NextRequest) {
       activo_id: activoId, perfil_id: perfilId, solicitado_por: uid, score: r.score, razones: r.razones,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Paso 2 V6.3: Operación valida cada conexión a mano; sin aviso se quedaría días sin atender.
+    after(() => avisarOperacion({
+      asunto: `Nueva solicitud de conexión · ${activo.nombre}`,
+      titulo: 'Hay una solicitud de conexión por validar',
+      lineas: [
+        `Propiedad: ${activo.nombre} (${activo.municipio}).`,
+        `Coincidencia ${r.score}/100: ${r.razones.join(' · ')}.`,
+        `La pidió un ${rol === 'broker' ? 'broker' : 'comprador'}.`,
+      ],
+      enlace: { texto: 'Abrir la consola de Operación', ruta: '/panel' },
+    }, { esDemo }))
     return NextResponse.json({ ok: true, estado: 'solicitado' })
   } catch (e) {
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })

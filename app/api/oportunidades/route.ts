@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { perfilesBrokers } from '@/lib/nivelServidor'
 import { ORDEN_NIVEL } from '@/lib/nivelesBroker'
 import { municipioCanonico } from '@/lib/matching'
 import { documentosFaltantes } from '@/lib/expediente'
+import { avisarUsuario } from '@/lib/avisos'
 
 // Oportunidades: el propietario elige un broker certificado (Documento Maestro V6.3, §15;
 // migración 20261008000400_oportunidades.sql). Toda la escritura pasa por aquí.
@@ -70,8 +71,8 @@ export async function POST(req: NextRequest) {
     const { activoId, brokerId } = await req.json().catch(() => ({}))
     if (!activoId || !brokerId) return NextResponse.json({ error: 'Faltan activoId y brokerId' }, { status: 400 })
 
-    const { data } = await s.admin.from('activos').select('id, usuario_id, broker_id, municipio').eq('id', activoId).maybeSingle()
-    const activo = data as { usuario_id: string; broker_id: string | null; municipio: string | null } | null
+    const { data } = await s.admin.from('activos').select('id, nombre, tipo, usuario_id, broker_id, municipio').eq('id', activoId).maybeSingle()
+    const activo = data as { nombre: string; tipo: string; usuario_id: string; broker_id: string | null; municipio: string | null } | null
     if (!activo || activo.usuario_id !== s.uid) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
     if (activo.broker_id) return NextResponse.json({ error: 'Este activo ya tiene broker' }, { status: 409 })
 
@@ -88,6 +89,15 @@ export async function POST(req: NextRequest) {
       if (error.code === '23505') return NextResponse.json({ error: 'Ya estás esperando la respuesta de un broker' }, { status: 409 })
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+    after(() => avisarUsuario(s.admin, brokerId, {
+      asunto: `Nueva oportunidad: ${activo.nombre}`,
+      titulo: 'Un propietario te eligió para representar su propiedad',
+      lineas: [
+        `${activo.tipo} en ${activo.municipio}: ${activo.nombre}.`,
+        'Te eligió por tu nivel de Broker Certificado SMT. Acéptala o recházala desde tu portal.',
+      ],
+      enlace: { texto: 'Ver la oportunidad', ruta: '/portal-broker' },
+    }, { esDemo: s.esDemo }))
     return NextResponse.json({ ok: true, oportunidad: nueva })
   } catch (e) {
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })
