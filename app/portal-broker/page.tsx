@@ -92,6 +92,7 @@ export default function PortalBrokerPage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
   const [userName, setUserName] = useState('')
+  const [fundador, setFundador] = useState(false)
   const [pestana, setPestana] = useState<Pestana>('portafolio')
   const [activos, setActivos] = useState<ActivoPortafolio[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -145,8 +146,9 @@ export default function PortalBrokerPage() {
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      const { data: cuenta } = await supabase.from('usuarios').select('nombre').eq('id', user.id).single()
+      const { data: cuenta } = await supabase.from('usuarios').select('nombre, fundador').eq('id', user.id).single()
       setUserName((cuenta as { nombre: string } | null)?.nombre || user.email || 'Usuario')
+      setFundador(!!(cuenta as { fundador: boolean | null } | null)?.fundador)
 
       const { data: activosData } = await supabase
         .from('activos')
@@ -259,6 +261,7 @@ export default function PortalBrokerPage() {
     propiedades: activos.length,
     conDocumentacion: activos.filter(tieneDocumentacion).length,
     cierresVerificados,
+    fundador,
   })
   const nombreActivo = (id: string) => activos.find(a => a.id === id)?.nombre ?? 'Propiedad'
 
@@ -290,7 +293,7 @@ export default function PortalBrokerPage() {
             <div>
               <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
               <p className="text-[14px] text-slate mt-1.5">
-                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}</span>
+                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}{fundador ? ' · ★ Fundador' : ''}</span>
               </p>
             </div>
             <button
@@ -574,6 +577,9 @@ export default function PortalBrokerPage() {
               <div className="bg-navy-800 border border-gold-500/30 p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Certificado SMT</p>
                 <p className="font-fraunces text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
+                {fundador && (
+                  <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Fundador · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
+                )}
                 {nivel.siguiente ? (
                   <p className="text-[13px] text-paper-dim mt-1.5">Siguiente nivel, <b className="text-paper">{nivel.siguiente.nombre}</b>: {nivel.siguiente.requisito}.</p>
                 ) : (

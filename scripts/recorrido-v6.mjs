@@ -47,7 +47,7 @@ const clic = async (page, t) => { const el = await page.waitForSelector(`::-p-te
   await clic(page, 'Cancelar')
   await clic(page, 'Mi desempeño')
   await shot(page, '04-diego-desempeno')
-  console.log('Diego ve su nivel:', /Nivel (Aliado|Certificado|Plata|Oro)/i.test(await texto(page)))
+  console.log('Diego ve su nivel:', /Nivel (Aliado|Plata|Oro|Platino)/i.test(await texto(page)))
   await clic(page, 'Matches')
   await page.waitForFunction(() => !/Buscando coincidencias/i.test(document.body.innerText), { timeout: 30000 })
   await sleep(800)

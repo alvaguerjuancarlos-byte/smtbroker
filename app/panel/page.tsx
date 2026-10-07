@@ -37,6 +37,7 @@ interface UsuarioMin {
   nombre: string
   rol: string | null
   es_demo: boolean
+  fundador: boolean
 }
 
 interface PerfilIntencion {
@@ -175,7 +176,7 @@ export default function PanelPage() {
       const [{ data: solicitudesData }, { data: activosData }, { data: usuariosData }, { data: perfilesData }] = await Promise.all([
         supabase.from('solicitudes').select('*').order('created_at', { ascending: false }),
         supabase.from('activos').select('id, usuario_id, broker_id, nombre, tipo, municipio, precio_total, status, created_at'),
-        supabase.from('usuarios').select('id, nombre, rol, es_demo'),
+        supabase.from('usuarios').select('id, nombre, rol, es_demo, fundador'),
         supabase.from('perfiles_intencion').select('usuario_id, presupuesto, tipo_activo_interes'),
       ])
       // Mundos (lib/mundo.ts, migración 20261008000000): la cuenta demo de Operación (la del
@@ -225,6 +226,18 @@ export default function PanelPage() {
     }
   }
 
+  // Marca "Fundador" de los brokers del piloto (Plan Piloto V1): garantiza nivel Plata como mínimo
+  // (lib/nivelesBroker.ts). La activa el servidor -- el broker no puede ponérsela él mismo.
+  const cambiarFundador = async (brokerId: string, fundador: boolean) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/operacion/fundador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ brokerId, fundador }),
+    })
+    if (res.ok) setUsuarios(prev => prev.map(u => (u.id === brokerId ? { ...u, fundador } : u)))
+  }
+
   const compartirEnlace = () => {
     const url = `${window.location.origin}/bienvenida`
     navigator.clipboard.writeText(url).then(() => {
@@ -268,6 +281,7 @@ export default function PanelPage() {
       id: b.id,
       nombre: b.nombre,
       esDemo: b.es_demo,
+      fundador: b.fundador,
       activos: propios.length,
       cerrados: propios.filter(a => a.status === 'cerrado').length,
       volumen: propios.reduce((s, a) => s + (a.precio_total || 0), 0),
@@ -566,6 +580,14 @@ export default function PanelPage() {
                       </div>
                       <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
                       {b.esDemo && <EjemploBadge />}
+                      <button
+                        onClick={() => cambiarFundador(b.id, !b.fundador)}
+                        className={`ml-auto font-plex-mono text-[10.5px] px-2.5 py-1 border transition-colors ${b.fundador
+                          ? 'border-gold-500/50 text-gold-400 hover:border-gold-500'
+                          : 'border-white/15 text-slate hover:text-paper'}`}
+                        title={b.fundador ? 'Quitar la marca Fundador' : 'Marcar como broker Fundador del piloto'}>
+                        {b.fundador ? '★ Fundador' : 'Marcar Fundador'}
+                      </button>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {[
