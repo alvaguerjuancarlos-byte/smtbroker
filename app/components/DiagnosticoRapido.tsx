@@ -199,7 +199,7 @@ export function DiagnosticoRapido({
               {solicitando ? 'Enviando…' : 'Solicitar certificación legal'}
             </button>
             <p className="text-[11.5px] text-slate mt-2">
-              {datos.listoParaCertificar ? `Gratis · hasta ${LIMITE_CERTIFICACIONES_MES} certificaciones al mes.` : 'Completa el expediente para poder solicitarla. Es gratis.'}
+              {datos.listoParaCertificar ? `Hasta ${LIMITE_CERTIFICACIONES_MES} certificaciones al mes.` : 'Completa el expediente para poder solicitarla.'}
             </p>
           </>
         )}

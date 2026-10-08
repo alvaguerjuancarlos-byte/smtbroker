@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       const { count } = await s.admin.from('certificaciones').select('id', { count: 'exact', head: true })
         .eq('solicitado_por', s.uid).gte('created_at', inicioMes.toISOString())
       if ((count ?? 0) >= LIMITE_CERTIFICACIONES_MES) {
-        return NextResponse.json({ error: `Llegaste al límite de ${LIMITE_CERTIFICACIONES_MES} certificaciones gratis de este mes` }, { status: 429 })
+        return NextResponse.json({ error: `Llegaste al límite de ${LIMITE_CERTIFICACIONES_MES} certificaciones de este mes` }, { status: 429 })
       }
     }
 
