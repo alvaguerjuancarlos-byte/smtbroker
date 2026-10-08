@@ -14,6 +14,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  // "¿Olvidaste tu contraseña?" (2026-10-07, antes del piloto): sin esto, cada olvido de un broker
+  // terminaba en Operación enviando la recuperación a mano desde el dashboard de Supabase.
+  const [modo, setModo]         = useState<'login' | 'recuperar' | 'enviado'>('login')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +34,24 @@ export default function LoginPage() {
     }
 
     router.push('/dashboard')
+  }
+
+  // Supabase manda el correo con la plantilla "Reset password", cuyo enlace usa {{ .RedirectTo }}:
+  // aquí se fija en /establecer-password (que exige un clic manual, por el escaneo de Gmail). Se
+  // muestra el mismo mensaje exista o no la cuenta, para no revelar qué correos están registrados.
+  const handleRecuperar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const { error: recError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/establecer-password`,
+    })
+    setLoading(false)
+    if (recError && /rate|seconds|too many/i.test(recError.message)) {
+      setError('Ya enviamos un correo hace poco. Espera un minuto antes de pedir otro.')
+      return
+    }
+    setModo('enviado')
   }
 
   return (
@@ -90,6 +111,40 @@ export default function LoginPage() {
         <div className="relative flex items-center justify-center px-6 py-16 lg:py-0 bg-navy-900/60 lg:border-l lg:border-white/10">
           <div className="relative w-full max-w-[380px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">
             <div className="bg-navy-800 border border-white/10 p-8 sm:p-10">
+              {modo === 'enviado' ? (
+                <div className="flex flex-col gap-4">
+                  <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Recuperar contraseña</span>
+                  <h2 className="font-fraunces text-[24px] font-medium">Revisa tu correo</h2>
+                  <p className="text-[13.5px] text-paper-dim leading-relaxed">
+                    Si <b className="text-paper">{email.trim()}</b> tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.
+                  </p>
+                  <button type="button" onClick={() => { setModo('login'); setError('') }}
+                    className="font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 text-left">← Volver a iniciar sesión</button>
+                </div>
+              ) : modo === 'recuperar' ? (
+                <form onSubmit={handleRecuperar} className="flex flex-col gap-5">
+                  <div>
+                    <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Recuperar contraseña</span>
+                    <h2 className="font-fraunces text-[24px] font-medium mt-1.5">¿Olvidaste tu contraseña?</h2>
+                    <p className="text-[13px] text-paper-dim mt-2">Escribe tu correo y te enviamos un enlace para crear una nueva.</p>
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    required
+                    className="w-full px-4 py-3 bg-navy-950/60 border border-white/15 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
+                  />
+                  {error && <p className="text-[12px] text-[#f3a3a3]">{error}</p>}
+                  <button type="submit" disabled={loading}
+                    className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.04em] font-medium hover:bg-gold-400 transition-all disabled:opacity-60">
+                    {loading ? 'Enviando…' : 'Enviar enlace'}
+                  </button>
+                  <button type="button" onClick={() => { setModo('login'); setError('') }}
+                    className="font-plex-mono text-[12px] text-slate hover:text-paper text-left">← Volver a iniciar sesión</button>
+                </form>
+              ) : (<>
               <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Iniciar sesión</span>
               <h2 className="font-fraunces text-[24px] font-medium mt-1.5 mb-7">Entra a tu cuenta</h2>
 
@@ -139,7 +194,12 @@ export default function LoginPage() {
                 >
                   {loading ? 'Ingresando…' : 'Iniciar sesión →'}
                 </button>
+                <button type="button" onClick={() => { setModo('recuperar'); setError('') }}
+                  className="font-plex-mono text-[12px] text-slate hover:text-gold-400 transition-colors -mt-1">
+                  ¿Olvidaste tu contraseña?
+                </button>
               </form>
+              </>)}
             </div>
 
             <p className="text-center text-[13px] text-slate mt-7">
