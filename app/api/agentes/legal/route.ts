@@ -25,7 +25,7 @@ import { MODELO_DICTAMEN, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
 // Diagnóstico en dos niveles (Documento Maestro V6.3, §13; paso 4 del plan, 2026-10-07): este
 // dictamen completo YA NO corre al abrir un activo -- con el expediente vacío solo decía "no
 // apto". Ahora es el núcleo de la CERTIFICACIÓN legal (de pago): solo Operación lo genera, y solo
-// para un activo con una certificación en estado "pagada". El dueño y el broker leen el dictamen
+// para un activo con una certificación "en_revision" (gratis desde 2026-10-07). El dueño y el broker leen el dictamen
 // guardado. El diagnóstico gratis es app/api/diagnostico-rapido + el Agente de Mercado.
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -86,12 +86,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Generar un dictamen nuevo cuesta (Claude + búsquedas) y es lo que se cobra: solo Operación, y
-  // solo con una certificación pagada.
-  const { data: pagada } = await supabaseAdmin.from('certificaciones').select('id')
-    .eq('activo_id', activoId).eq('estado', 'pagada').maybeSingle()
-  if (!sesion.esOperacion || !pagada) {
+  // solo con una certificación en revisión.
+  const { data: enRevision } = await supabaseAdmin.from('certificaciones').select('id')
+    .eq('activo_id', activoId).eq('estado', 'en_revision').maybeSingle()
+  if (!sesion.esOperacion || !enRevision) {
     return NextResponse.json(
-      { error: 'El dictamen legal se genera dentro de una certificación pagada', sinDictamen: true },
+      { error: 'El dictamen legal se genera dentro de una certificación en revisión', sinDictamen: true },
       { status: 403 },
     )
   }

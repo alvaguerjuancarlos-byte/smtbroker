@@ -75,14 +75,14 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' })
   check('expediente completo', await esperarTexto(page, 'Expediente completo'))
   await (await page.waitForSelector('::-p-text(Solicitar certificación legal)')).click()
-  check('certificación solicitada', await esperarTexto(page, 'Certificación solicitada', 15000))
+  check('certificación en revisión', await esperarTexto(page, 'Certificación en revisión', 15000))
   await sleep(800)
   await page.screenshot({ path: `${OUT}/2-certificacion-solicitada.png`, fullPage: true })
 
   const { page: pop } = await sesion(OP.email)
   await pop.goto(`${BASE}/panel`, { waitUntil: 'domcontentloaded' })
-  check('Operación ve la certificación en /panel', await esperarTexto(pop, 'Confirmar pago', 30000) && (await texto(pop)).includes('Certificaciones legales'))
-  check('con botón "Confirmar pago"', (await texto(pop)).includes('Confirmar pago'))
+  check('Operación ve la certificación en /panel', await esperarTexto(pop, 'Correr dictamen', 30000) && (await texto(pop)).includes('Certificaciones legales'))
+  check('con botón "Correr dictamen" (sin paso de pago)', !(await texto(pop)).includes('Confirmar pago'))
   await pop.screenshot({ path: `${OUT}/3-panel-operacion.png`, fullPage: true })
 } catch (e) {
   fallas++; console.error('ERROR', e.message)

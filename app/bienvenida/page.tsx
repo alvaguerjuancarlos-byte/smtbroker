@@ -79,7 +79,6 @@ export default function BienvenidaPage() {
     nombre:    '',
     email:     '',
     telefono:  '',
-    password:  '',
     empresa:   '',
     tipoActivo: '',
     municipio:  '',
@@ -138,12 +137,12 @@ export default function BienvenidaPage() {
           <div>
             <h1 className="font-fraunces text-[26px] font-medium text-paper">¡Solicitud recibida!</h1>
             <p className="text-[14px] text-slate mt-2 leading-relaxed">
-              Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. Nuestro equipo revisará tu solicitud y te contactará en menos de 24 horas.
+              Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. Nuestro equipo la revisará y, al aprobarla, te llegará un correo de invitación para crear tu contraseña y entrar. Revisa también la carpeta de spam.
             </p>
           </div>
           <button onClick={() => router.push('/login')}
             className="font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 transition-colors">
-            Ir al inicio de sesión →
+            ¿Ya tienes cuenta? Inicia sesión →
           </button>
         </div>
       </div>
@@ -220,7 +219,7 @@ export default function BienvenidaPage() {
                     <span className="font-plex-mono text-[11px] font-medium">{rolActivo.titulo}</span>
                   </div>
                   <h2 className="font-fraunces text-[19px] md:text-[21px] font-medium text-paper">Completa tu registro</h2>
-                  <p className="text-[13px] text-slate mt-1">Nuestro equipo revisará tu solicitud y te dará acceso.</p>
+                  <p className="text-[13px] text-slate mt-1">Nuestro equipo revisará tu solicitud y te enviará una invitación por correo para crear tu contraseña.</p>
                 </div>
 
                 {/* Campos comunes */}
@@ -240,10 +239,9 @@ export default function BienvenidaPage() {
                     <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
                       placeholder="correo@ejemplo.com" required className={inputCls(false, 'oscuro')} />
                   </Field>
-                  <Field label="Contraseña" required tema="oscuro">
-                    <input type="password" value={form.password} onChange={e => set('password', e.target.value)}
-                      placeholder="Mínimo 8 caracteres" required minLength={8} className={inputCls(false, 'oscuro')} />
-                  </Field>
+                  {/* Sin contraseña aquí (2026-10-07): la solicitud no crea la cuenta; la contraseña se crea
+                      al aceptar la invitación que llega cuando Operación aprueba. Antes se pedía y nunca se
+                      usaba, y confundía. */}
                 </div>
 
                 {/* Campos por rol */}

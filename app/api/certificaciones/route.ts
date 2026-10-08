@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { puedeAccederActivo } from '@/lib/accesoActivo'
-import { documentosFaltantes, type ActivoExpediente } from '@/lib/expediente'
+import { documentosFaltantes, LIMITE_CERTIFICACIONES_MES, type ActivoExpediente } from '@/lib/expediente'
 import { avisarOperacion } from '@/lib/avisos'
 
 // Solicitar la CERTIFICACIÓN legal de un activo (Documento Maestro V6.3, §13; migración
 // 20261008000200_certificaciones.sql). La pide el dueño o el broker que lo representa, y solo con
 // el expediente completo -- sin folio, escritura, clave catastral, gravámenes y uso de suelo no
-// hay nada que dictaminar. Después Operación confirma el pago, corre el dictamen y certifica
-// (app/panel/ValidacionOperacion.tsx).
+// hay nada que dictaminar. Es GRATIS con límite de LIMITE_CERTIFICACIONES_MES al mes por persona (los
+// Pioneros sin límite; decisión de JC 2026-10-07). Entra directo 'en_revision': Operación corre el
+// dictamen y certifica o rechaza (app/panel/CertificacionesOperacion.tsx).
 
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
 
@@ -34,8 +35,18 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: abierta } = await s.admin.from('certificaciones').select('id, estado')
-      .eq('activo_id', activoId).in('estado', ['solicitada', 'pagada']).maybeSingle()
+      .eq('activo_id', activoId).eq('estado', 'en_revision').maybeSingle()
     if (abierta) return NextResponse.json({ ok: true, certificacion: abierta, yaExistia: true })
+
+    const { data: yo } = await s.admin.from('usuarios').select('pionero').eq('id', s.uid).maybeSingle()
+    if (!(yo as { pionero: boolean | null } | null)?.pionero) {
+      const inicioMes = new Date(); inicioMes.setUTCDate(1); inicioMes.setUTCHours(0, 0, 0, 0)
+      const { count } = await s.admin.from('certificaciones').select('id', { count: 'exact', head: true })
+        .eq('solicitado_por', s.uid).gte('created_at', inicioMes.toISOString())
+      if ((count ?? 0) >= LIMITE_CERTIFICACIONES_MES) {
+        return NextResponse.json({ error: `Llegaste al límite de ${LIMITE_CERTIFICACIONES_MES} certificaciones gratis de este mes` }, { status: 429 })
+      }
+    }
 
     const { data: nueva, error } = await s.admin.from('certificaciones')
       .insert({ activo_id: activoId, solicitado_por: s.uid })
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
       titulo: 'Solicitaron una certificación legal',
       lineas: [
         `Propiedad: ${activo.nombre} (${activo.municipio}). El expediente está completo.`,
-        'Siguiente paso: confirmar el pago (o cortesía Pionero) y correr el dictamen.',
+        'Siguiente paso: correr el dictamen, revisarlo y certificar o rechazar.',
       ],
       enlace: { texto: 'Abrir certificaciones en /panel', ruta: '/panel' },
     }, { esDemo: s.esDemo }))

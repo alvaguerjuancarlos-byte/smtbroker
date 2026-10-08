@@ -61,11 +61,14 @@ export const tieneDocumentacion = (a: ActivoExpediente) => !vacio(a.folio_real) 
 /** Con el expediente completo se puede pedir la certificación legal. */
 export const listoParaCertificar = (a: ActivoExpediente) => documentosFaltantes(a).length === 0
 
-export type EstadoCertificacion = 'solicitada' | 'pagada' | 'certificada' | 'rechazada'
+// Certificación GRATIS con límite (decisión de JC, 2026-10-07; migración 20261008000600).
+export type EstadoCertificacion = 'en_revision' | 'certificada' | 'rechazada'
+
+/** Certificaciones gratis por persona al mes (los Pioneros no tienen límite). */
+export const LIMITE_CERTIFICACIONES_MES = 3
 
 export const ETIQUETA_CERTIFICACION: Record<EstadoCertificacion, string> = {
-  solicitada: 'Certificación solicitada · pendiente de pago',
-  pagada: 'Certificación en revisión',
+  en_revision: 'Certificación en revisión',
   certificada: 'Inventario certificado',
   rechazada: 'Certificación no aprobada',
 }

@@ -227,7 +227,7 @@ export default function ActivoPage() {
       ? { badge: 'Diagnóstico en curso', cta: 'Diagnóstico en curso…', ctaDesc: 'Revisando mercado, uso de suelo y expediente.', tono: 'warn' }
       : cert === 'certificada'
         ? { badge: '★ Inventario certificado', cta: 'Diagnóstico completo · Inventario certificado', ctaDesc: 'Con el sello de certificación, la ficha de venta da más confianza al comprador.', tono: 'ok' }
-        : cert === 'solicitada' || cert === 'pagada'
+        : cert === 'en_revision'
           ? { badge: 'Certificación en proceso', cta: 'Diagnóstico rápido listo · Certificación en proceso', ctaDesc: 'Puedes avanzar a marketing mientras Operación MindBridge revisa el dictamen legal.', tono: 'warn' }
           : faltan.length
             ? { badge: 'Diagnóstico rápido listo', cta: 'Diagnóstico rápido listo · Para certificar te falta: ' + faltan.join(', '), ctaDesc: 'Puedes avanzar a marketing ya; la certificación legal suma confianza para el comprador.', tono: 'warn' }

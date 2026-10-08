@@ -1,6 +1,8 @@
 // Verifica contra la base REAL el paso 4 del plan V6.3: diagnóstico en dos niveles y certificación
 // legal (migración 20261008000200_certificaciones.sql, app/api/diagnostico-rapido,
-// app/api/certificaciones, app/api/agentes/legal restringido a Operación + certificación pagada).
+// app/api/certificaciones, app/api/agentes/legal restringido a Operación + certificación en revisión).
+// Desde 2026-10-07 la certificación es GRATIS con límite de 3 al mes (migración 20261008000600):
+// solicitud → en_revision → Operación corre el dictamen y cierra por app/api/operacion/certificacion.
 //
 // Hace UNA llamada real al Agente Legal y UNA al de Mercado (Claude + Serper) para comprobar los
 // modelos nuevos (lib/modelos.ts). Crea cuentas y un activo temporales y los borra al final.
@@ -73,7 +75,7 @@ async function main() {
   console.log(`      (uso de suelo GIS: ${r1.json.usoSuelo ? `${r1.json.usoSuelo.uso} — ${r1.json.usoSuelo.descripcion}` : 'sin dato'})`)
   check('rápido: un broker ajeno no lo ve', (await api(X, '/api/diagnostico-rapido', { activoId })).status === 404)
 
-  // ── Dictamen legal: ya no corre fuera de una certificación pagada ────────────────────────
+  // ── Dictamen legal: ya no corre fuera de una certificación en revisión ────────────────────────
   check('legal: el dueño no puede generar dictamen', (await api(P, '/api/agentes/legal', { activoId, regenerar: true })).status === 403)
   check('legal: sin dictamen guardado, tampoco corre al abrir', (await api(P, '/api/agentes/legal', { activoId })).status === 403)
 
@@ -91,7 +93,7 @@ async function main() {
 
   check('un broker ajeno no puede pedir la certificación', (await api(X, '/api/certificaciones', { activoId })).status === 404)
   const c1 = await api(P, '/api/certificaciones', { activoId })
-  check('propietario solicita la certificación', c1.status === 200 && c1.json.certificacion?.estado === 'solicitada')
+  check('propietario solicita la certificación', c1.status === 200 && c1.json.certificacion?.estado === 'en_revision')
   const c2 = await api(P, '/api/certificaciones', { activoId })
   check('una segunda solicitud no duplica', c2.json.yaExistia === true && c2.json.certificacion?.id === c1.json.certificacion?.id)
   const certId = c1.json.certificacion.id
@@ -100,17 +102,11 @@ async function main() {
   check('el dueño no puede insertar certificaciones directo (BD)', !!eIns2, eIns2?.message)
   await P.cli.from('certificaciones').update({ estado: 'certificada' }).eq('id', certId)
   const { data: tras } = await admin.from('certificaciones').select('estado').eq('id', certId).single()
-  check('el dueño no puede autocertificarse (BD)', tras.estado === 'solicitada')
+  check('el dueño no puede autocertificarse (BD)', tras.estado === 'en_revision')
 
   // ── Operación ────────────────────────────────────────────────────────────────────────────
-  check('legal: Operación tampoco genera sin pago', (await api(OP, '/api/agentes/legal', { activoId, regenerar: true })).status === 403)
-  const { error: ePag } = await OP.cli.from('certificaciones')
-    .update({ estado: 'pagada', pago_referencia: 'PRUEBA', revisado_por: OP.id }).eq('id', certId)
-  const { data: pag } = await admin.from('certificaciones').select('estado').eq('id', certId).single()
-  check('Operación confirma el pago', !ePag && pag.estado === 'pagada', ePag?.message)
-
   check('Operación demo no ve un activo real', (await api(OPD, '/api/agentes/legal', { activoId, regenerar: true })).status === 404)
-  check('el dueño sigue sin poder generar, aun pagada', (await api(P, '/api/agentes/legal', { activoId, regenerar: true })).status === 403)
+  check('el dueño no puede generar el dictamen, aun en revisión', (await api(P, '/api/agentes/legal', { activoId, regenerar: true })).status === 403)
 
   console.log('      (corriendo el Agente Legal real, ~1 min…)')
   const dict = await api(OP, '/api/agentes/legal', { activoId, regenerar: true })
@@ -119,11 +115,30 @@ async function main() {
   const { data: guardado } = await admin.from('diagnosticos').select('modelo').eq('id', dict.json._guardado?.id ?? randomUUID()).maybeSingle()
   check('el dictamen guardado registra el modelo', guardado?.modelo === 'claude-opus-5-5', guardado?.modelo)
 
-  await OP.cli.from('certificaciones').update({ estado: 'certificada', dictamen_id: dict.json._guardado?.id, revisado_por: OP.id }).eq('id', certId)
+  check('el dueño no puede cerrar la certificación', (await api(P, '/api/operacion/certificacion', { certificacionId: certId, estado: 'certificada', dictamenId: dict.json._guardado?.id })).status === 403)
+  check('certificar sin dictamen → 400', (await api(OP, '/api/operacion/certificacion', { certificacionId: certId, estado: 'certificada' })).status === 400)
+  const cierre = await api(OP, '/api/operacion/certificacion', { certificacionId: certId, estado: 'certificada', dictamenId: dict.json._guardado?.id })
+  check('Operación certifica', cierre.status === 200, cierre.json.error)
+  check('no se puede cerrar dos veces', (await api(OP, '/api/operacion/certificacion', { certificacionId: certId, estado: 'rechazada' })).status === 409)
   const r3 = await api(P, '/api/diagnostico-rapido', { activoId })
   check('el dueño ve su propiedad certificada', r3.json.certificacion?.estado === 'certificada')
   const lect = await api(P, '/api/agentes/legal', { activoId })
   check('el dueño lee el dictamen guardado', lect.status === 200 && lect.json._guardado?.id === dict.json._guardado?.id)
+
+  // ── Límite: 3 gratis al mes (Pioneros sin límite) ─────────────────────────────────────────
+  // Ya pidió 1 este mes. Se siembran 2 más (otras propiedades suyas) y la 4.ª debe rechazarse.
+  const completo = { folio_real: 'FR', escritura_publica: 'si', clave_catastral: 'CC', gravamenes_conocidos: 'ninguno', uso_suelo_declarado: 'habitacional' }
+  const extra = []
+  for (let k = 0; k < 3; k++) {
+    const { data: a } = await admin.from('activos').insert({ usuario_id: P.id, nombre: `Extra ${k} ${sufijo}`, tipo: 'Casa', municipio: 'Monterrey', estado: 'Nuevo León', status: 'ingresado', ...completo }).select('id').single()
+    extra.push(a.id)
+  }
+  check('2.ª certificación del mes', (await api(P, '/api/certificaciones', { activoId: extra[0] })).status === 200)
+  check('3.ª certificación del mes', (await api(P, '/api/certificaciones', { activoId: extra[1] })).status === 200)
+  const cuarta = await api(P, '/api/certificaciones', { activoId: extra[2] })
+  check('4.ª del mes → límite (429)', cuarta.status === 429, cuarta.json.error)
+  await admin.from('usuarios').update({ pionero: true }).eq('id', P.id)
+  check('un Pionero no tiene límite', (await api(P, '/api/certificaciones', { activoId: extra[2] })).status === 200)
 
   // ── Agente de Mercado con los modelos nuevos ─────────────────────────────────────────────
   console.log('      (corriendo el Agente de Mercado real…)')

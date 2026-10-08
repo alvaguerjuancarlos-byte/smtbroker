@@ -10,7 +10,7 @@
 // El dictamen completo (DiagnosticoLegal) se muestra solo cuando la propiedad ya está certificada.
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ETIQUETA_CERTIFICACION, type DocumentoFaltante, type EstadoCertificacion } from '@/lib/expediente'
+import { ETIQUETA_CERTIFICACION, LIMITE_CERTIFICACIONES_MES, type DocumentoFaltante, type EstadoCertificacion } from '@/lib/expediente'
 import { CatastroLegalSection, type CatastroLegalValue } from './CatastroLegalSection'
 
 export interface DiagnosticoRapidoData {
@@ -78,7 +78,7 @@ export function DiagnosticoRapido({
 
   const cert = datos.certificacion
   // Con una certificación abierta o ya otorgada, el expediente no se toca: es lo que se dictaminó.
-  const expedienteBloqueado = cert?.estado === 'solicitada' || cert?.estado === 'pagada' || cert?.estado === 'certificada'
+  const expedienteBloqueado = cert?.estado === 'en_revision' || cert?.estado === 'certificada'
 
   const guardarExpediente = async () => {
     setGuardando(true); setAviso('')
@@ -184,8 +184,7 @@ export function DiagnosticoRapido({
           <>
             <p className="text-[15px] font-medium text-paper">{cert.estado === 'certificada' ? '★ ' : ''}{ETIQUETA_CERTIFICACION[cert.estado]}</p>
             <p className="text-[12.5px] text-paper-dim mt-1">
-              {cert.estado === 'solicitada' && 'Operación MindBridge te contactará para confirmar el pago. Después un abogado revisa el dictamen.'}
-              {cert.estado === 'pagada' && 'El dictamen legal completo está en revisión por Operación MindBridge.'}
+              {cert.estado === 'en_revision' && 'Operación MindBridge está revisando el dictamen legal completo. Te avisamos al terminar.'}
               {cert.estado === 'certificada' && 'El dictamen legal está abajo y en el reporte descargable. Las propiedades certificadas dan confianza al comprador y suben el nivel del broker.'}
             </p>
           </>
@@ -199,7 +198,9 @@ export function DiagnosticoRapido({
               className={`${boton} mt-3 bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 disabled:cursor-not-allowed`}>
               {solicitando ? 'Enviando…' : 'Solicitar certificación legal'}
             </button>
-            {!datos.listoParaCertificar && <p className="text-[11.5px] text-slate mt-2">Completa el expediente para poder solicitarla.</p>}
+            <p className="text-[11.5px] text-slate mt-2">
+              {datos.listoParaCertificar ? `Gratis · hasta ${LIMITE_CERTIFICACIONES_MES} certificaciones al mes.` : 'Completa el expediente para poder solicitarla. Es gratis.'}
+            </p>
           </>
         )}
         {aviso && <p className="text-[12px] text-[#f3a3a3] mt-2">{aviso}</p>}
