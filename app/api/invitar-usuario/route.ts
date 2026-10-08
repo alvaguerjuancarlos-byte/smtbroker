@@ -27,8 +27,10 @@ export async function POST(req: NextRequest) {
   // directo y crear una cuenta con rol "broker_maestro" (escalación de privilegios real,
   // hallazgo 2026-09-27). Se usa supabaseAdmin (bypassa RLS) porque este check corre server-side
   // antes de decidir si la petición procede, no depende de la sesión del propio caller.
-  const { data: callerProfile } = await supabaseAdmin.from('usuarios').select('rol').eq('id', caller.user.id).single()
-  if (callerProfile?.rol !== 'broker_maestro') {
+  // La cuenta demo de Operación no invita a nadie: las invitaciones son correos reales (migración
+  // 20261008000700, hallazgo del recorrido guiado del 2026-10-07).
+  const { data: callerProfile } = await supabaseAdmin.from('usuarios').select('rol, es_demo').eq('id', caller.user.id).single()
+  if (callerProfile?.rol !== 'broker_maestro' || callerProfile?.es_demo) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

@@ -58,7 +58,9 @@ export async function cargarFichaPublica(admin: SupabaseClient, id: string): Pro
     certificada: !!cert,
     fotos: (archivos || []).filter((f) => f.name && !f.name.startsWith('.'))
       .map((f) => admin.storage.from(BUCKET_FOTOS).getPublicUrl(`${id}/${f.name}`).data.publicUrl),
-    ficha: (ficha?.resultado as FichaPublica['ficha']) ?? null,
+    // Solo los campos públicos: notasBroker (advertencias internas del agente) nunca sale de aquí.
+    ficha: ficha ? (({ titular, narrativa, puntosFuertes, precioSugeridoMXN, argumentosComprador, mensajeWhatsApp }) =>
+      ({ titular, narrativa, puntosFuertes, precioSugeridoMXN, argumentosComprador, mensajeWhatsApp }))(ficha.resultado as NonNullable<FichaPublica['ficha']>) : null,
     mercado: m ? {
       comparables: (m.comparablesAnalizados as number | null) ?? null,
       plusvalia: (m.plusvalia3AniosTexto as string | null) ?? null,

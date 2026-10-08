@@ -9,14 +9,15 @@
 // Uso: BASE_URL=https://smtbroker.vercel.app node --env-file=.env.local scripts/recorrido-guiado.mjs <carpeta-salida>
 
 import puppeteer from 'puppeteer'
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE = process.env.BASE_URL ?? 'https://smtbroker.vercel.app'
 const OUT = process.argv[2] ?? 'scripts/capturas-recorrido'
 mkdirSync(OUT, { recursive: true })
-const PASS = readFileSync('scripts/seed-demo.mjs', 'utf8').match(/PASSWORD_DEMO = '([^']+)'/)[1]
+const PASS = process.env.DEMO_PASSWORD
+if (!PASS) throw new Error('Falta DEMO_PASSWORD en .env.local')
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 const INICIO = new Date().toISOString()
 const escenas = []

@@ -17,8 +17,9 @@ export async function POST(req: NextRequest) {
     const { data: caller, error } = await admin.auth.getUser(token)
     if (error || !caller?.user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    const { data: yo } = await admin.from('usuarios').select('rol').eq('id', caller.user.id).single()
-    if ((yo as { rol: string | null } | null)?.rol !== 'broker_maestro') {
+    const { data: yo } = await admin.from('usuarios').select('rol, es_demo').eq('id', caller.user.id).single()
+    const operador = yo as { rol: string | null; es_demo: boolean | null } | null
+    if (operador?.rol !== 'broker_maestro') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
@@ -27,8 +28,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan brokerId y pionero (true/false)' }, { status: 400 })
     }
 
-    const { data: broker } = await admin.from('usuarios').select('rol').eq('id', brokerId).maybeSingle()
-    if ((broker as { rol: string | null } | null)?.rol !== 'broker') {
+    const { data: broker } = await admin.from('usuarios').select('rol, es_demo').eq('id', brokerId).maybeSingle()
+    const b = broker as { rol: string | null; es_demo: boolean | null } | null
+    // La cuenta demo de Operación solo toca el mundo demo (migración 20261008000700).
+    if (b && !!b.es_demo !== !!operador.es_demo) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    if (b?.rol !== 'broker') {
       return NextResponse.json({ error: 'Solo un broker puede ser Pionero' }, { status: 422 })
     }
 

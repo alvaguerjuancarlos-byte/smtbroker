@@ -79,6 +79,8 @@ async function main() {
   check('muestra el titular de la ficha', pg.html.includes(f1.json.titular.replace(/&/g, '&amp;').slice(0, 20)) || pg.html.includes(f1.json.titular.slice(0, 20)))
   check('NO muestra folio real ni dirección', !pg.html.includes('FOLIO-SECRETO-99') && !pg.html.includes('Calle Secreta'))
   check('incluye el botón «Me interesa»', pg.html.includes('Me interesa'))
+  const notas = f1.json.notasBroker || []
+  check('las notas para el broker NO salen en la página pública', notas.every((n) => !pg.html.includes(n.slice(0, 40))), `${notas.length} notas`)
 
   check('registra una visita', (await api(null, '/api/publico/visita', { activoId })).status === 200)
   const { data: vP } = await P.cli.from('visitas_publicas').select('id').eq('activo_id', activoId)

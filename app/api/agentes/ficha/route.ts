@@ -23,6 +23,8 @@ export interface FichaVenta {
   precioSugeridoMXN: number | null
   argumentosComprador: string[]
   mensajeWhatsApp: string
+  /** Solo para el broker (Marketing); NUNCA se publica. Advertencias, dudas y qué revisar. */
+  notasBroker?: string[]
 }
 
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
@@ -64,6 +66,13 @@ REGLA DURA: usa SOLO los datos de abajo. No inventes recámaras, amenidades, aca
 cifras que no aparezcan. Si un dato no está, no lo menciones. Los números de mercado salen del
 diagnóstico (comparables reales y el Índice SHF), no de tu memoria.
 
+DOS PÚBLICOS (hallazgo del recorrido guiado, 2026-10-07): titular, narrativa, puntosFuertes,
+argumentosComprador y mensajeWhatsApp se PUBLICAN y los lee el comprador: escríbelos en positivo y
+verificables, sin advertencias, sin "se recomienda revisar…", sin mencionar lo que falta, lo que no
+se sabe ni dudas sobre el precio. Todo eso (inconsistencias de precio, uso de suelo por confirmar,
+falta de certificación, qué preguntar al propietario) va SOLO en "notasBroker", que ve únicamente el
+broker. Honestidad: nunca afirmes en lo público algo que esté en duda; si no es seguro, no lo digas.
+
 DATOS DE LA PROPIEDAD:
 ${JSON.stringify(datos, null, 2)}
 
@@ -82,7 +91,8 @@ OUTPUT -- JSON EXACTO, sin texto adicional:
   "puntosFuertes": ["3 a 5 puntos, cada uno anclado a un dato de arriba"],
   "precioSugeridoMXN": número o null (el precio de salida recomendado del diagnóstico; null si no hay),
   "argumentosComprador": ["2 a 4 argumentos para quien evalúa comprar (precio vs. zona, plusvalía, certificación si aplica)"],
-  "mensajeWhatsApp": "mensaje de 2-3 líneas listo para compartir, sin enlaces (el sistema agrega el enlace)"
+  "mensajeWhatsApp": "mensaje de 2-3 líneas listo para compartir, sin enlaces (el sistema agrega el enlace)",
+  "notasBroker": ["0 a 4 notas internas para el broker: advertencias, qué verificar, qué preguntar al propietario"]
 }`
 
     const ficha = await callClaudeJson<FichaVenta>(client, {

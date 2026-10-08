@@ -17,7 +17,7 @@ const ROLES = [
     id:     'propietario' as Rol,
     titulo: 'Soy propietario',
     sub:    'Quiero vender un activo',
-    desc:   'Valuación, marketing y cierre gestionados por IA. Tú solo esperas al comprador calificado.',
+    desc:   'Diagnóstico de mercado con IA, certificación legal y un broker certificado de tu zona que te representa.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.6" fill="none"/>
@@ -26,13 +26,14 @@ const ROLES = [
     ),
     accent: '#ddc06a',
     chip:   'border-gold-500/40 text-gold-400 bg-gold-500/10',
-    beneficios: ['Reporte de valoración gratuito', 'Campaña de marketing automatizada', 'Solo pagas al cerrar'],
+    // Sin menciones a pagos ni promesas que hoy son visión (hallazgo del recorrido guiado, 2026-10-07).
+    beneficios: ['Precio de salida con comparables reales', 'Certificación legal de tu propiedad', 'Eliges a un broker certificado'],
   },
   {
     id:     'inversionista' as Rol,
     titulo: 'Quiero comprar',
     sub:    'Busco una propiedad',
-    desc:   'Encuentra propiedades con diagnóstico legal y de mercado completo antes de comprometerte.',
+    desc:   'Describe una vez lo que buscas y recibe las propiedades que coinciden, con su diagnóstico de mercado.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -40,7 +41,7 @@ const ROLES = [
     ),
     accent: '#a5a1f5',
     chip:   'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10',
-    beneficios: ['Propiedades con diagnóstico y valuación', 'Revisión legal incluida', 'Describe una vez lo que buscas'],
+    beneficios: ['Coincidencias con puntaje y razones', 'Propiedades con diagnóstico de mercado', 'Inventario con certificación legal'],
   },
   {
     id:     'broker' as Rol,
@@ -56,7 +57,7 @@ const ROLES = [
     ),
     accent: '#e8b568',
     chip:   'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
-    beneficios: ['Registro sin costo', 'Tus clientes siguen siendo tuyos', 'Comisión compartida por cierre'],
+    beneficios: ['Oportunidades de propietarios de tu zona', 'Tus clientes siguen siendo tuyos', 'Niveles Plata, Oro y Platino'],
   },
 ]
 

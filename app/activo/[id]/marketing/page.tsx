@@ -25,6 +25,7 @@ interface Activo {
 interface Ficha {
   titular: string; narrativa: string; puntosFuertes: string[]; precioSugeridoMXN: number | null
   argumentosComprador: string[]; mensajeWhatsApp: string
+  notasBroker?: string[] // solo para el broker; la página pública nunca las muestra
 }
 interface Foto { nombre: string; url: string }
 
@@ -224,6 +225,12 @@ export default function MarketingPage() {
                   </div>
                 </div>
                 {ficha.precioSugeridoMXN && <p className="text-[13px] text-paper-dim">Precio sugerido por el diagnóstico: <b className="text-paper">{mxn(ficha.precioSugeridoMXN)}</b></p>}
+                {!!ficha.notasBroker?.length && (
+                  <div className="border border-dashed border-[#D97706]/40 bg-[#D97706]/[0.06] p-4">
+                    <p className="font-plex-mono text-[10.5px] text-[#e8b568] uppercase tracking-wide mb-2">Notas para ti · no se publican</p>
+                    <ul className="flex flex-col gap-1.5">{ficha.notasBroker.map(n => <li key={n} className="text-[13px] text-paper-dim flex gap-2"><span className="text-[#e8b568]">!</span>{n}</li>)}</ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-navy-900 border border-gold-500/20 p-5 md:p-6">

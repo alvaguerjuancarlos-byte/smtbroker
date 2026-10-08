@@ -11,7 +11,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-const PASSWORD_DEMO = 'DemoSMT2026!'
+// La contraseña de las cuentas demo vive en .env.local (DEMO_PASSWORD), no en el código: estuvo
+// escrita aquí hasta el 2026-10-07 (hallazgo de seguridad del recorrido guiado).
+const PASSWORD_DEMO = process.env.DEMO_PASSWORD
+if (!PASSWORD_DEMO) throw new Error('Falta DEMO_PASSWORD en .env.local')
 const DOMINIO_DEMO = 'demo.smtbroker.mx'
 
 const PROPIETARIOS = [
@@ -182,7 +185,7 @@ async function main() {
   console.log('Operación demo y nivel de Diego listos:', operacion.email, '\n')
 
   console.log('=== Credenciales de demo (misma contraseña para todas) ===')
-  console.log('Contraseña:', PASSWORD_DEMO, '\n')
+  console.log('Contraseña: la de DEMO_PASSWORD en .env.local\n')
   const todos = [...propietarios, ...inversionistas, ...brokers, operacion]
   for (const u of todos) console.log(' -', u.email.padEnd(32), u.nombre)
 }
