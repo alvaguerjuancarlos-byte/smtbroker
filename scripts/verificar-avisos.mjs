@@ -79,6 +79,15 @@ async function main() {
   check('→ aviso a Operación', c.length === 1 && c[0].to[0] === OPERACION && c[0].subject.startsWith('Certificación solicitada'), c.map((x) => x.subject).join(' | '))
   check('→ remitente y llave correctos', c[0]?.from?.includes('notificaciones@mail.mindbridge.com.mx') && c[0]?.auth === 'Bearer prueba')
 
+  // 1b. Operación certifica → quien la pidió (dictamen sembrado: aquí no se prueba el agente)
+  const OP = await cuenta('broker_maestro')
+  const { data: dic } = await admin.from('diagnosticos').insert({ activo_id: casaP.id, agente: 'legal', modelo: 'prueba', resultado: { verdictTitle: 'Prueba' } }).select('id').single()
+  const { data: certP } = await admin.from('certificaciones').select('id').eq('activo_id', casaP.id).eq('estado', 'en_revision').single()
+  i = correos.length
+  check('Operación certifica', (await api(OP, '/api/operacion/certificacion', { certificacionId: certP.id, estado: 'certificada', dictamenId: dic.id })).status === 200)
+  c = await nuevos(i)
+  check('→ aviso «Certificada» a quien la pidió', c.length === 1 && c[0].to[0] === P.email && c[0].subject.startsWith('Certificada'), c.map((x) => `${x.to} ${x.subject}`).join(' | '))
+
   // 2. Oportunidad → broker elegido
   i = correos.length
   check('oportunidad ofrecida', (await api(P, '/api/oportunidades', { activoId: casaP.id, brokerId: B.id })).status === 200)
