@@ -126,7 +126,28 @@ async function main() {
   c = await nuevos(i)
   check('→ solo al propietario (no a Operación)', c.length === 1 && c[0].to[0] === P.email, c.map((x) => x.to[0]).join(','))
 
-  // 6. Mundo demo: nunca envía
+  // 6. Solicitud de registro desde /bienvenida → Operación
+  const correoSolicitud = `solicitud-${sufijo}@prueba.smtbroker.mx`
+  const solicitud = (extra = {}) => api(null, '/api/solicitudes', {
+    nombre: 'Broker Interesado', email: correoSolicitud, telefono: '8112345678', rol: 'broker',
+    empresa: 'Inmobiliaria Prueba', datos: { experiencia: '5 años', zona: 'San Pedro' }, ...extra,
+  })
+  i = correos.length
+  check('solicitud de registro', (await solicitud()).status === 200)
+  c = await nuevos(i)
+  check('→ aviso a Operación', c.length === 1 && c[0].to[0] === OPERACION && c[0].subject.startsWith('Nueva solicitud de registro'), c.map((x) => x.subject).join(' | '))
+  const { data: guardada } = await admin.from('solicitudes').select('status, rol').eq('email', correoSolicitud)
+  check('→ la solicitud queda pendiente', guardada?.length === 1 && guardada[0].status === 'pendiente' && guardada[0].rol === 'broker')
+  i = correos.length
+  check('campo trampa: OK sin guardar', (await solicitud({ sitio_web: 'http://spam.example' })).status === 200)
+  c = await nuevos(i)
+  const { data: tras } = await admin.from('solicitudes').select('id').eq('email', correoSolicitud)
+  check('→ sin guardar ni avisar', tras?.length === 1 && c.length === 0)
+  check('rol inválido → 400', (await solicitud({ rol: 'broker_maestro' })).status === 400)
+  await solicitud(); await solicitud()
+  check('4.ª solicitud del mismo correo en una hora → 429', (await solicitud()).status === 429)
+
+  // 7. Mundo demo: nunca envía
   i = correos.length
   check('cierre de un broker demo', (await api(D, '/api/cierres', { activoId: casaD.id, precio: 9_000_000, fecha: '2026-10-01', origen: 'mi_cliente' })).status === 200)
   c = await nuevos(i)
@@ -134,6 +155,7 @@ async function main() {
 }
 
 async function limpiar() {
+  await admin.from('solicitudes').delete().like('email', `%-${sufijo}@prueba.smtbroker.mx`)
   for (const id of creados) {
     await admin.from('perfiles_intencion').delete().eq('broker_id', id)
     await admin.from('activos').delete().eq('usuario_id', id)

@@ -7,7 +7,6 @@
 // "paraguas" silencioso en vez de un letrero.
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
 import { AvisoSimplificado } from '../components/AvisoSimplificado'
 
@@ -74,6 +73,7 @@ export default function BienvenidaPage() {
   const [enviado,   setEnviado]   = useState(false)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
+  const [sitioWeb,  setSitioWeb]  = useState('') // campo trampa para bots (oculto)
 
   const [form, setForm] = useState({
     nombre:    '',
@@ -104,20 +104,18 @@ export default function BienvenidaPage() {
     if (rol === 'inversionista') { datos.presupuesto = form.presupuesto; datos.intereses = form.intereses }
     if (rol === 'broker')       { datos.experiencia = form.experiencia; datos.zona = form.zona }
 
-    const { error: err } = await supabase
-      .from('solicitudes')
-      .insert({
-        nombre:   form.nombre,
-        email:    form.email,
-        telefono: form.telefono,
-        rol,
-        empresa:  form.empresa,
-        datos,
-        status:   'pendiente',
-      })
+    // Por el servidor (app/api/solicitudes) para que Operación reciba el aviso de la solicitud.
+    const r = await fetch('/api/solicitudes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: form.nombre, email: form.email, telefono: form.telefono, rol, empresa: form.empresa, datos,
+        sitio_web: sitioWeb,
+      }),
+    }).then(res => res.json()).catch(() => ({ error: 'Error al enviar la solicitud. Intenta de nuevo.' }))
 
-    if (err) {
-      setError('Error al enviar la solicitud. Intenta de nuevo.')
+    if (r.error) {
+      setError(r.error)
       setLoading(false)
       return
     }
@@ -216,6 +214,7 @@ export default function BienvenidaPage() {
             {rol && rolActivo && (
               <div ref={formRef} className="relative before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">
               <form onSubmit={handleSubmit} className="bg-navy-800 border border-white/10 p-5 md:p-8 flex flex-col gap-5 md:gap-6">
+                <input className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" value={sitioWeb} onChange={e => setSitioWeb(e.target.value)} />
                 <div>
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 border mb-3 ${rolActivo.chip}`}>
                     <span className="font-plex-mono text-[11px] font-medium">{rolActivo.titulo}</span>
