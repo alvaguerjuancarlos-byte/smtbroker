@@ -704,7 +704,8 @@ export default function PortalBrokerPage() {
                           <div key={m.etiqueta}>
                             <div className="flex justify-between text-[12px] mb-1">
                               <span className={listo ? 'text-[#6bdb9a]' : 'text-paper-dim'}>{listo ? '✓ ' : ''}{m.etiqueta}</span>
-                              <span className="font-plex-mono text-paper">{Math.min(m.actual, m.meta)} / {m.meta}</span>
+                              {/* El número real (p. ej. «7 / 3»); solo la barra se topa al 100 %. */}
+                              <span className="font-plex-mono text-paper">{m.actual} / {m.meta}</span>
                             </div>
                             <div className="h-1.5 bg-white/10 overflow-hidden">
                               <div className={`h-full ${listo ? 'bg-[#3fbe72]' : 'bg-gold-500'}`} style={{ width: `${Math.min(100, (m.actual / m.meta) * 100)}%` }} />
