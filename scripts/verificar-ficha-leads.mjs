@@ -97,8 +97,12 @@ async function main() {
   check('lead válido', l1.status === 200, l1.json.error)
   const l2 = await lead({ nombre: 'Curioso Prueba', presupuesto: 'Menos de $5M', plazo: 'sin_definir', formaPago: 'no_se' })
   check('segundo lead', l2.status === 200)
-  const { data: lsP } = await P.cli.from('leads').select('nombre, categoria, razones').eq('activo_id', activoId)
-  check('el dueño ve 2 leads (el de la trampa no se guardó)', lsP?.length === 2, `filas=${lsP?.length}`)
+  // V7 (migración 20261031000000): el dueño SIN broker ya no lee los leads directo -- los ve sin
+  // contacto en app/api/leads (verificar-v7-broker-conectar.mjs). Aquí se revisan con service_role.
+  const { data: lsDueno } = await P.cli.from('leads').select('id').eq('activo_id', activoId)
+  check('el dueño sin broker no lee el contacto de los leads (V7)', (lsDueno || []).length === 0)
+  const { data: lsP } = await admin.from('leads').select('nombre, categoria, razones').eq('activo_id', activoId)
+  check('se guardaron 2 leads (el de la trampa no)', lsP?.length === 2, `filas=${lsP?.length}`)
   check('calificación: Serio', lsP?.find((x) => x.nombre === 'Interesado Prueba')?.categoria === 'serio')
   check('calificación: Curioso', lsP?.find((x) => x.nombre === 'Curioso Prueba')?.categoria === 'curioso')
   check('cada lead trae sus razones', (lsP || []).every((x) => Array.isArray(x.razones) && x.razones.length >= 3))

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
-import { avisarOperacion } from '@/lib/avisos'
+import { avisarOperacion, avisarUsuario } from '@/lib/avisos'
 import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching'
 import { mismoMundo } from '@/lib/mundo'
 
@@ -21,7 +21,7 @@ import { mismoMundo } from '@/lib/mundo'
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
 
 const COLS_ACTIVO = 'id, nombre, tipo, municipio, colonia, estado, superficie, precio_total, status, broker_id, usuario_id, created_at, es_demo'
-const COLS_PERFIL = 'id, usuario_id, broker_id, alias_cliente, presupuesto, zona, tipo_activo_interes, es_demo'
+const COLS_PERFIL = 'id, usuario_id, broker_id, representado_por, alias_cliente, presupuesto, zona, tipo_activo_interes, es_demo'
 
 interface Activo {
   id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; estado: string
@@ -29,7 +29,7 @@ interface Activo {
   broker_id: string | null; usuario_id: string; created_at: string; es_demo: boolean
 }
 interface Perfil {
-  id: string; usuario_id: string | null; broker_id: string | null; alias_cliente: string | null
+  id: string; usuario_id: string | null; broker_id: string | null; representado_por: string | null; alias_cliente: string | null
   presupuesto: string | null; zona: string | null; tipo_activo_interes: string | null; es_demo: boolean
 }
 
@@ -75,18 +75,26 @@ export async function GET(req: NextRequest) {
     const porScore = <T extends { score: number }>(xs: T[]) => xs.sort((x, y) => y.score - x.score)
 
     if (rol === 'broker') {
-      const misClientes = P.filter((p) => p.broker_id === uid && p.usuario_id === null)
+      // Sus clientes: los que registró él (alias) y los compradores directos que lo eligieron (V7).
+      const misClientes = P.filter((p) => (p.broker_id === uid && p.usuario_id === null) || p.representado_por === uid)
       const miPortafolio = A.filter((a) => a.broker_id === uid)
+      const representados = misClientes.flatMap((p) => (p.representado_por === uid && p.usuario_id ? [p.usuario_id] : []))
+      const { data: nombres } = representados.length
+        ? await admin.from('usuarios').select('id, nombre').in('id', representados)
+        : { data: [] }
+      const nombreDe = new Map(((nombres as { id: string; nombre: string | null }[]) || []).map((u) => [u.id, u.nombre || 'Comprador']))
+      const aliasDe = (p: Perfil) => p.alias_cliente ?? (p.usuario_id ? nombreDe.get(p.usuario_id) : null) ?? 'Cliente'
+      const esMio = (p: Perfil) => (p.broker_id === uid && p.usuario_id === null) || p.representado_por === uid
 
       const paraMisClientes = porScore(misClientes.flatMap((p) => A.flatMap((a) => {
         const r = valido(a, p)
         if (!r) return []
         const propio = a.broker_id === uid
         return [{
-          perfilId: p.id, activoId: a.id, cliente: p.alias_cliente, score: r.score, razones: r.razones,
+          perfilId: p.id, activoId: a.id, cliente: aliasDe(p), score: r.score, razones: r.razones,
           activo: activoPublico(a),
           representacion: propio ? 'Tu portafolio'
-            : a.broker_id ? 'Representada por otro broker de la red' : 'Directo con el propietario',
+            : a.broker_id ? 'Representada por otro broker de la red' : 'Del propietario, aún sin broker: le pediremos elegir uno',
           solicitud: solicitud(a, p),
         }]
       })))
@@ -94,8 +102,8 @@ export async function GET(req: NextRequest) {
       const paraMiPortafolio = porScore(miPortafolio.flatMap((a) => P.flatMap((p) => {
         const r = valido(a, p)
         if (!r) return []
-        const contraparte = p.broker_id === uid ? `Tu cliente: ${p.alias_cliente}`
-          : p.broker_id ? 'Cliente de otro broker' : 'Comprador directo'
+        const contraparte = esMio(p) ? `Tu cliente: ${aliasDe(p)}`
+          : p.broker_id || p.representado_por ? 'Cliente de otro broker' : 'Comprador directo, aún sin broker'
         return [{
           activoId: a.id, perfilId: p.id, activo: a.nombre, score: r.score, razones: r.razones,
           contraparte, criterios: criterios(p), solicitud: solicitud(a, p),
@@ -107,12 +115,14 @@ export async function GET(req: NextRequest) {
 
     if (rol === 'inversionista') {
       const miPerfil = P.find((p) => p.usuario_id === uid)
-      if (!miPerfil) return NextResponse.json({ rol, coincidencias: [] })
+      if (!miPerfil) return NextResponse.json({ rol, coincidencias: [], tieneBroker: false })
       const coincidencias = porScore(A.flatMap((a) => {
         const r = valido(a, miPerfil)
         return r ? [{ activoId: a.id, perfilId: miPerfil.id, score: r.score, razones: r.razones, activo: activoPublico(a), solicitud: solicitud(a, miPerfil) }] : []
       }))
-      return NextResponse.json({ rol, coincidencias })
+      // V7, "broker para conectar": el comprador ve sus coincidencias solo, pero para pedir la
+      // conexión necesita un broker que lo represente.
+      return NextResponse.json({ rol, coincidencias, perfilId: miPerfil.id, tieneBroker: !!miPerfil.representado_por })
     }
 
     return NextResponse.json({ error: 'Los matches son para brokers y compradores' }, { status: 403 })
@@ -146,9 +156,13 @@ export async function POST(req: NextRequest) {
 
     // Solo puede pedir la conexión quien es dueño de una de las dos partes.
     const esDueno =
-      (rol === 'broker' && (activo.broker_id === uid || (perfil.broker_id === uid && perfil.usuario_id === null))) ||
+      (rol === 'broker' && (activo.broker_id === uid || (perfil.broker_id === uid && perfil.usuario_id === null) || perfil.representado_por === uid)) ||
       (rol === 'inversionista' && perfil.usuario_id === uid)
     if (!esDueno) return NextResponse.json({ error: 'No autorizado para este match' }, { status: 403 })
+    // V7: libre para empezar, broker para conectar (Documento Maestro §15).
+    if (rol === 'inversionista' && !perfil.representado_por) {
+      return NextResponse.json({ error: 'Para conectarte, elige un broker que te represente', necesitaBroker: true }, { status: 409 })
+    }
 
     const r = puntuarMatch(activo, perfil)
     if (!esMatchValido(activo, r)) return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
@@ -161,6 +175,18 @@ export async function POST(req: NextRequest) {
       activo_id: activoId, perfil_id: perfilId, solicitado_por: uid, score: r.score, razones: r.razones,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // V7: si la propiedad no tiene broker, su dueño tiene que elegir uno para que se pueda conectar.
+    if (!activo.broker_id) {
+      after(() => avisarUsuario(admin, activo.usuario_id, {
+        asunto: `Un comprador se interesó en ${activo.nombre}`,
+        titulo: 'Hay un comprador interesado en tu propiedad',
+        lineas: [
+          `Coincide ${r.score}/100 con lo que busca: ${r.razones.join(' · ')}.`,
+          'Para ponerte en contacto, elige un broker certificado que te represente.',
+        ],
+        enlace: { texto: 'Elegir mi broker', ruta: `/activo/${activo.id}` },
+      }, { esDemo }))
+    }
     // Paso 2 V6.3: Operación valida cada conexión a mano; sin aviso se quedaría días sin atender.
     after(() => avisarOperacion({
       asunto: `Nueva solicitud de conexión · ${activo.nombre}`,

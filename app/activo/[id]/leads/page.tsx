@@ -7,7 +7,9 @@
 //   - los compradores que llegaron por el motor de matching (solicitudes de conexión visibles para
 //     quien las pidió; el detalle vive en Matches del portal del broker).
 // Al interesado Serio se le ofrece el Reporte de Transparencia si la propiedad está certificada.
-// La RLS deja ver los leads solo al dueño y al broker del activo (y a Operación).
+// La RLS deja ver los leads al broker del activo, a Operación y al dueño si la propiedad ya tiene
+// broker. V7 ("broker para conectar"): el dueño sin broker los ve sin nombre, contacto ni mensaje
+// (app/api/leads GET) y se le invita a elegir un broker.
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -16,10 +18,13 @@ import { useRolUsuario } from '@/lib/useRolUsuario'
 import { ETIQUETA_CATEGORIA, PLAZOS, FORMAS_PAGO, type CategoriaLead, type Plazo, type FormaPago } from '@/lib/calificacionLeads'
 import Topbar from '../../../components/Topbar'
 
-interface Activo { id: string; nombre: string; tipo: string; municipio: string; estado: string; publicada_at: string | null }
+interface Activo {
+  id: string; nombre: string; tipo: string; municipio: string; estado: string; publicada_at: string | null
+  usuario_id: string; broker_id: string | null
+}
 interface Lead {
-  id: string; nombre: string; contacto: string; presupuesto: string | null; plazo: Plazo; forma_pago: FormaPago
-  mensaje: string | null; categoria: CategoriaLead; razones: string[]; created_at: string
+  id: string; nombre?: string; contacto?: string; presupuesto: string | null; plazo: Plazo; forma_pago: FormaPago
+  mensaje?: string | null; categoria: CategoriaLead; razones: string[]; created_at: string
 }
 interface MatchMotor { id: string; score: number; razones: string[]; estado: string; created_at: string }
 
@@ -41,19 +46,27 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [motor, setMotor] = useState<MatchMotor[]>([])
   const [certificada, setCertificada] = useState(false)
+  const [sinContacto, setSinContacto] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      const { data } = await supabase.from('activos').select('id, nombre, tipo, municipio, estado, publicada_at')
+      const { data } = await supabase.from('activos').select('id, nombre, tipo, municipio, estado, publicada_at, usuario_id, broker_id')
         .eq('id', id).or(filtroAccesoActivo(user.id)).single()
       if (!data) { router.push('/dashboard'); return }
-      setActivo(data as Activo)
+      const a = data as Activo
+      setActivo(a)
+      const ocultos = a.usuario_id === user.id && !a.broker_id
+      setSinContacto(ocultos)
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
       const [{ data: l }, { data: m }, { data: c }] = await Promise.all([
-        supabase.from('leads').select('id, nombre, contacto, presupuesto, plazo, forma_pago, mensaje, categoria, razones, created_at')
-          .eq('activo_id', id).order('created_at', { ascending: false }),
+        ocultos
+          ? fetch(`/api/leads?activoId=${id}`, { headers: { Authorization: 'Bearer ' + token } })
+            .then(r => r.json()).then(j => ({ data: j.leads ?? [] })).catch(() => ({ data: [] }))
+          : supabase.from('leads').select('id, nombre, contacto, presupuesto, plazo, forma_pago, mensaje, categoria, razones, created_at')
+            .eq('activo_id', id).order('created_at', { ascending: false }),
         supabase.from('matches').select('id, score, razones, estado, created_at').eq('activo_id', id).order('created_at', { ascending: false }),
         supabase.from('certificaciones').select('id').eq('activo_id', id).eq('estado', 'certificada').limit(1).maybeSingle(),
       ])
@@ -117,6 +130,13 @@ export default function LeadsPage() {
 
           <div>
             <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-3">Interesados de la página pública</h2>
+            {sinContacto && leads.length > 0 && (
+              <div className="bg-gold-500/[0.06] border border-gold-500/30 p-4 mb-3">
+                <p className="text-[14px] text-paper">Para ver su contacto y conectar con ellos, elige un broker certificado.</p>
+                <p className="text-[12px] text-slate mt-1">Tu broker recibe el contacto de cada interesado y te representa en la negociación.</p>
+                <button onClick={() => router.push(`/activo/${id}`)} className="font-plex-mono text-[11px] text-gold-400 underline underline-offset-2 mt-2">Elegir mi broker</button>
+              </div>
+            )}
             {leads.length === 0 ? (
               <div className="bg-navy-800 border border-white/10 p-6">
                 <p className="text-[13px] text-slate">
@@ -132,8 +152,10 @@ export default function LeadsPage() {
                   <div key={l.id} className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <p className="text-[15px] font-medium text-paper">{l.nombre}</p>
-                        <a href={enlaceContacto(l.contacto)} target="_blank" rel="noopener noreferrer" className="text-[13px] text-gold-400 hover:text-gold-100">{l.contacto}</a>
+                        <p className="text-[15px] font-medium text-paper">{l.nombre ?? 'Interesado'}</p>
+                        {l.contacto
+                          ? <a href={enlaceContacto(l.contacto)} target="_blank" rel="noopener noreferrer" className="text-[13px] text-gold-400 hover:text-gold-100">{l.contacto}</a>
+                          : <p className="text-[12.5px] text-slate">Contacto disponible para tu broker</p>}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-slate">{fecha(l.created_at)}</span>

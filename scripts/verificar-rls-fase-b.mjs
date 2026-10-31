@@ -82,7 +82,7 @@ async function main() {
   const txtA = JSON.stringify(gA.json)
   check('broker A ve su cliente cruzado con la casa de B', gA.json.paraMisClientes?.some((m) => m.activoId === casaB.id && m.perfilId === cliA.id))
   check('la casa de B aparece como "otro broker"', gA.json.paraMisClientes?.find((m) => m.activoId === casaB.id)?.representacion === 'Representada por otro broker de la red')
-  check('broker A ve compradores para su casa', gA.json.paraMiPortafolio?.some((m) => m.activoId === casaA.id && m.contraparte === 'Comprador directo'))
+  check('broker A ve compradores para su casa', gA.json.paraMiPortafolio?.some((m) => m.activoId === casaA.id && m.contraparte?.startsWith('Comprador directo')))
   check('la API NO revela el alias del cliente de B', !txtA.includes(aliasSecretoB))
   check('la API NO revela el nombre del broker B', !txtA.includes(B.nombre))
   check('la API NO revela el nombre del comprador', !txtA.includes(C.nombre))

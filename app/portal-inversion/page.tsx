@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
 import { Field, inputCls } from '../components/FormField'
+import { ElegirBroker } from '../components/ElegirBroker'
 
 interface PerfilIntencion {
   presupuesto: string
@@ -61,21 +62,35 @@ export default function PortalInversionPage() {
   // Fase B: coincidencias con su perfil (app/api/matches, reglas de lib/matching.ts).
   const [coincidencias, setCoincidencias] = useState<Coincidencia[] | null>(null)
   const [solicitando, setSolicitando] = useState<string | null>(null)
+  // V7, "libre para empezar, broker para conectar": ve sus coincidencias solo; para pedir una
+  // conexión necesita un broker que lo represente (Documento Maestro §15).
+  const [perfilId, setPerfilId] = useState<string | null>(null)
+  const [tieneBroker, setTieneBroker] = useState(false)
+  const [pedirBroker, setPedirBroker] = useState(false)
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
   const cargarCoincidencias = async () => {
     const r = await fetch('/api/matches', { headers: { Authorization: 'Bearer ' + await token() } })
     const j = await r.json().catch(() => ({}))
     setCoincidencias(r.ok && Array.isArray(j.coincidencias) ? j.coincidencias : [])
+    setPerfilId(j.perfilId ?? null)
+    setTieneBroker(!!j.tieneBroker)
   }
   const meInteresa = async (c: Coincidencia) => {
+    if (!tieneBroker) {
+      setPedirBroker(true)
+      document.getElementById('tu-broker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     setSolicitando(c.activoId)
-    await fetch('/api/matches', {
+    const r = await fetch('/api/matches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
       body: JSON.stringify({ activoId: c.activoId, perfilId: c.perfilId }),
     })
+    const j = await r.json().catch(() => ({}))
     setSolicitando(null)
+    if (j.necesitaBroker) { setTieneBroker(false); setPedirBroker(true) }
     await cargarCoincidencias()
   }
 
@@ -241,11 +256,34 @@ export default function PortalInversionPage() {
             )}
           </div>
 
+          {/* Tu broker (V7): opcional hasta que quiera conectarse con una propiedad */}
+          {tienePerfil && perfilId && (
+            <div id="tu-broker">
+              {tieneBroker || pedirBroker ? (
+                <ElegirBroker perfilId={perfilId} onAsignado={() => { if (!tieneBroker) cargarCoincidencias() }}
+                  motivo={pedirBroker && !tieneBroker ? 'Para conectarte con una propiedad, elige primero un broker que te represente.' : undefined} />
+              ) : (
+                <div className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-[14px] text-paper">¿Quieres un broker certificado que te represente?</p>
+                    <p className="text-[12px] text-slate mt-0.5">Puedes ver tus coincidencias sin él. Lo necesitarás cuando quieras conectarte con una propiedad.</p>
+                  </div>
+                  <button onClick={() => setPedirBroker(true)}
+                    className="font-plex-mono text-[11px] border border-gold-500/50 text-gold-400 px-3 py-2 hover:bg-gold-500/10 transition-colors shrink-0">
+                    Elegir mi broker
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Coincidencias con lo que busca */}
           {tienePerfil && coincidencias && (
             <div>
               <h2 className="font-display text-[17px] font-medium text-paper mb-1">Coinciden con lo que buscas</h2>
-              <p className="text-[12px] text-slate mb-4">Por tipo de propiedad, zona y presupuesto. Si te interesa alguna, nuestro equipo te pone en contacto.</p>
+              <p className="text-[12px] text-slate mb-4">
+                Por tipo de propiedad, zona y presupuesto. Si te interesa alguna, tu broker se conecta con el broker que la representa.
+              </p>
               {coincidencias.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 px-8 py-8 text-center">
                   <p className="text-[13px] text-slate">Por ahora ninguna propiedad coincide con lo que buscas. Te mostraremos las nuevas aquí.</p>
@@ -264,7 +302,7 @@ export default function PortalInversionPage() {
                       </div>
                       {c.solicitud ? (
                         <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">
-                          {c.solicitud === 'solicitado' ? 'Solicitado · te contactaremos' : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
+                          {c.solicitud === 'solicitado' ? 'Solicitado · tu broker te avisa' : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
                         </span>
                       ) : (
                         <button disabled={solicitando === c.activoId} onClick={() => meInteresa(c)}

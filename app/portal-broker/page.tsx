@@ -76,13 +76,20 @@ const ORIGENES = [
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 type Pestana = 'portafolio' | 'oportunidades' | 'clientes' | 'matches' | 'desempeno'
 
-// Propiedad que un propietario le ofreció a este broker (V6.3 §15, app/api/oportunidades).
+// Cliente que eligió a este broker (V6.3 §15, app/api/oportunidades): un propietario con su
+// propiedad o, desde la V7, un comprador que llegó directo con lo que busca.
 interface Oportunidad {
   id: string
+  tipo: 'propiedad' | 'comprador'
   estado: 'ofrecida' | 'aceptada' | 'rechazada'
   created_at: string
-  activo: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null } | null
-  diagnostico: { precioSalidaRecomendadoMXN: number | null; comparables: number | null; documentosFaltantes: string[] } | null
+  activo?: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null } | null
+  diagnostico?: { precioSalidaRecomendadoMXN: number | null; comparables: number | null; documentosFaltantes: string[] } | null
+  comprador?: {
+    presupuesto: string | null; zona: string | null; tipo: string | null; queBusca: string | null
+    /** Solo cuando ya la aceptó (el comprador lo eligió para que lo represente). */
+    contacto: { nombre: string; correo: string | null } | null
+  } | null
 }
 
 function BotonConectar({ estado, ocupado, onClick }: { estado: string | null; ocupado: boolean; onClick: () => void }) {
@@ -460,6 +467,23 @@ export default function PortalBrokerPage() {
                 </p>
               </div>
 
+              {/* V7: compradores que llegaron directo a la plataforma y te eligieron */}
+              {oportunidades.some(o => o.tipo === 'comprador' && o.estado === 'aceptada') && (
+                <div className="flex flex-col gap-2">
+                  <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Compradores que te eligieron</p>
+                  {oportunidades.filter(o => o.tipo === 'comprador' && o.estado === 'aceptada').map(o => (
+                    <div key={o.id} className="bg-navy-800 border border-white/10 p-4 flex flex-col gap-1">
+                      <p className="text-[14px] font-medium text-paper">{o.comprador?.contacto?.nombre ?? 'Comprador'}</p>
+                      {o.comprador?.contacto?.correo && <p className="text-[12.5px] text-gold-400">{o.comprador.contacto.correo}</p>}
+                      <p className="text-[12px] text-slate">
+                        {[o.comprador?.tipo, o.comprador?.zona, o.comprador?.presupuesto].filter(Boolean).join(' · ') || 'Sin criterios'}
+                      </p>
+                    </div>
+                  ))}
+                  <p className="text-[11.5px] text-slate">Sus matches aparecen en la pestaña Matches, como los de tus clientes.</p>
+                </div>
+              )}
+
               {editandoId === null && (
                 <button onClick={() => abrirCliente(null)}
                   className="font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors w-fit">
@@ -619,18 +643,51 @@ export default function PortalBrokerPage() {
             </div>
           )}
 
-          {/* Oportunidades: propiedades que un propietario te eligió para representar (V6.3 §15) */}
+          {/* Oportunidades: propietarios y compradores que te eligieron para representarlos (V6.3 §15, V7) */}
           {pestana === 'oportunidades' && (
             <div className="flex flex-col gap-3">
               <p className="text-[13px] text-paper-dim">
-                Propietarios de tu zona que eligieron a un broker certificado. Tu nivel te hace visible: más nivel, más oportunidades.
+                Propietarios y compradores de tu zona que eligieron a un broker certificado. Tu nivel te hace visible: más nivel, más oportunidades.
               </p>
               {errorOportunidad && <p className="text-[12px] text-[#f3a3a3]">{errorOportunidad}</p>}
               {oportunidades.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
-                  <p className="text-[13px] text-slate">Todavía no recibes oportunidades. Los propietarios ven a los brokers Plata, Oro y Platino de su municipio.</p>
+                  <p className="text-[13px] text-slate">Todavía no recibes oportunidades. Propietarios y compradores ven a los brokers Plata, Oro y Platino de su municipio.</p>
                 </div>
-              ) : oportunidades.map(o => (
+              ) : oportunidades.map(o => o.tipo === 'comprador' ? (
+                <div key={o.id} className={`bg-navy-800 border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-white/10 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[14.5px] font-medium text-paper">{o.comprador?.contacto?.nombre ?? 'Un comprador te eligió'}</p>
+                      <p className="text-[12px] text-slate mt-0.5">
+                        Busca {o.comprador?.tipo || 'propiedad'} en {o.comprador?.zona || 'tu zona'}
+                        {o.comprador?.presupuesto ? ` · ${o.comprador.presupuesto}` : ''} · {formatDate(o.created_at)}
+                      </p>
+                    </div>
+                    <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2 py-1 shrink-0">
+                      {o.estado === 'ofrecida' ? 'Nuevo comprador' : o.estado === 'aceptada' ? 'Aceptado' : 'Rechazado'}
+                    </span>
+                  </div>
+                  {o.comprador?.queBusca && <p className="text-[12.5px] text-paper-dim">{o.comprador.queBusca}</p>}
+                  <p className="text-[12px] text-slate">
+                    {o.estado === 'aceptada'
+                      ? <>Lo representas. {o.comprador?.contacto?.correo && <>Contacto: <span className="text-gold-400">{o.comprador.contacto.correo}</span></>}</>
+                      : 'Llegó directo a la plataforma. Si lo aceptas, recibes su nombre y correo y lo representas en sus conexiones.'}
+                  </p>
+                  {o.estado === 'ofrecida' && (
+                    <div className="flex gap-2 mt-1">
+                      <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'aceptar')}
+                        className="font-plex-mono text-[12px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50">
+                        {respondiendo === o.id ? 'Enviando…' : 'Aceptar y representar'}
+                      </button>
+                      <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'rechazar')}
+                        className="font-plex-mono text-[12px] px-4 py-2 border border-white/15 text-slate hover:text-paper disabled:opacity-50">
+                        Rechazar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <div key={o.id} className={`bg-navy-800 border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-white/10 opacity-70'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
