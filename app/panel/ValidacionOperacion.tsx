@@ -116,7 +116,7 @@ export default function ValidacionOperacion() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="bg-navy-800 border border-white/10">
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-fraunces text-[17px] font-medium text-paper">Matches por validar</h2>
+          <h2 className="font-display text-[17px] font-medium text-paper">Matches por validar</h2>
           <span className="font-plex-mono text-[11px] text-slate">{pendientes.length}</span>
         </div>
         {pendientes.length === 0 ? (
@@ -129,7 +129,7 @@ export default function ValidacionOperacion() {
                 <p className="text-[13.5px] text-paper">
                   <b>{a?.nombre ?? 'Propiedad'}</b> ({a?.municipio}) ↔ {describirPerfil(m.perfil_id)}
                 </p>
-                <span className="font-fraunces text-[18px] text-gold-400 shrink-0">{m.score}</span>
+                <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
               </div>
               <p className="text-[11.5px] text-slate">
                 Broker de la propiedad: {nombre(a?.broker_id)}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esPionero(a?.broker_id) ? ' · ★ Pionero' : ''} · Solicitó: {nombre(m.solicitado_por)}
@@ -154,7 +154,7 @@ export default function ValidacionOperacion() {
 
       <div className="bg-navy-800 border border-white/10">
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-fraunces text-[17px] font-medium text-paper">Cierres por verificar</h2>
+          <h2 className="font-display text-[17px] font-medium text-paper">Cierres por verificar</h2>
           <span className="font-plex-mono text-[11px] text-slate">{cierresPendientes.length}</span>
         </div>
         {cierresPendientes.length === 0 ? (

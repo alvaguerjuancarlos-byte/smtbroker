@@ -48,7 +48,7 @@ export default async function PaginaPublica(props: PageProps<'/p/[id]'>) {
       )}
       <header className="border-b border-white/10 px-4 md:px-6 py-4">
         <div className="max-w-[920px] mx-auto flex items-center justify-between">
-          <span className="font-fraunces text-[18px] text-paper">SMT<span className="text-gold-400">BROKER</span></span>
+          <span className="font-display text-[18px] text-paper">SMT<span className="text-gold-400">BROKER</span></span>
           {f.certificada && (
             <span className="font-plex-mono text-[11px] text-gold-400 border border-gold-500/50 px-3 py-1.5">★ Inventario certificado</span>
           )}
@@ -57,7 +57,7 @@ export default async function PaginaPublica(props: PageProps<'/p/[id]'>) {
 
       <main className="max-w-[920px] mx-auto px-4 md:px-6 py-8 flex flex-col gap-8">
         <div>
-          <h1 className="font-fraunces text-[28px] md:text-[36px] font-medium leading-tight">{f.ficha?.titular ?? f.nombre}</h1>
+          <h1 className="font-display text-[28px] md:text-[36px] font-medium leading-tight">{f.ficha?.titular ?? f.nombre}</h1>
           <p className="text-[14px] text-slate mt-2">{f.tipo} · {[f.colonia, f.municipio].filter(Boolean).join(', ')}</p>
           {f.precio && <p className="font-plex-mono text-[24px] text-gold-400 mt-3">{mxn(f.precio)}</p>}
         </div>

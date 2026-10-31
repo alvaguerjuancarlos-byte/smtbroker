@@ -136,7 +136,7 @@ export default function BienvenidaPage() {
             </svg>
           </div>
           <div>
-            <h1 className="font-fraunces text-[26px] font-medium text-paper">¡Solicitud recibida!</h1>
+            <h1 className="font-display text-[26px] font-medium text-paper">¡Solicitud recibida!</h1>
             <p className="text-[14px] text-slate mt-2 leading-relaxed">
               Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. Nuestro equipo la revisará y, al aprobarla, te llegará un correo de invitación para crear tu contraseña y entrar. Revisa también la carpeta de spam.
             </p>
@@ -161,7 +161,7 @@ export default function BienvenidaPage() {
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <span className="font-fraunces font-semibold text-[16px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
+          <span className="font-display font-semibold text-[16px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
           <div className="ml-auto">
             <button onClick={() => router.push('/login')}
               className="font-plex-mono text-[11.5px] text-slate hover:text-gold-400 border border-white/15 hover:border-gold-500 px-3.5 py-2 transition-colors">
@@ -176,7 +176,7 @@ export default function BienvenidaPage() {
             {/* Hero */}
             <div className="max-w-[620px]">
               <span className="font-plex-mono text-[11px] tracking-[0.22em] uppercase text-gold-400">Plataforma IA de ventas inmobiliarias</span>
-              <h1 className="font-fraunces font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
+              <h1 className="font-display font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
                 Únete al ecosistema<br /><span className="italic font-normal text-gold-400">SMTBROKER.</span>
               </h1>
               <p className="text-[15px] text-paper-dim mt-5 max-w-[52ch] leading-relaxed">
@@ -219,7 +219,7 @@ export default function BienvenidaPage() {
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 border mb-3 ${rolActivo.chip}`}>
                     <span className="font-plex-mono text-[11px] font-medium">{rolActivo.titulo}</span>
                   </div>
-                  <h2 className="font-fraunces text-[19px] md:text-[21px] font-medium text-paper">Completa tu registro</h2>
+                  <h2 className="font-display text-[19px] md:text-[21px] font-medium text-paper">Completa tu registro</h2>
                   <p className="text-[13px] text-slate mt-1">Nuestro equipo revisará tu solicitud y te enviará una invitación por correo para crear tu contraseña.</p>
                 </div>
 

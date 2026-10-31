@@ -24,7 +24,7 @@ const GRID_BG = {
 function Seccion({ n, titulo, children }: { n: string; titulo: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="font-fraunces text-[18px] md:text-[20px] font-medium text-paper mb-2.5">
+      <h2 className="font-display text-[18px] md:text-[20px] font-medium text-paper mb-2.5">
         <span className="text-gold-400 font-plex-mono text-[13px] mr-2">{n}</span>{titulo}
       </h2>
       <div className="text-[13.5px] leading-[1.75] text-paper-dim space-y-3">{children}</div>
@@ -41,7 +41,7 @@ export default function AvisoPrivacidadPage() {
           <div className="w-full max-w-[720px] mx-auto">
 
             <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">SMTBROKER · Legal</span>
-            <h1 className="font-fraunces text-[28px] md:text-[36px] font-medium text-paper mt-2 mb-1">Aviso de Privacidad Integral</h1>
+            <h1 className="font-display text-[28px] md:text-[36px] font-medium text-paper mt-2 mb-1">Aviso de Privacidad Integral</h1>
             <p className="text-[12.5px] text-slate mb-10">Última actualización: {ULTIMA_ACTUALIZACION}</p>
 
             <p className="text-[13.5px] leading-[1.75] text-paper-dim mb-10">

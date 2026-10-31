@@ -101,7 +101,7 @@ export default function EstablecerPasswordPage() {
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <h1 className="font-fraunces font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></h1>
+          <h1 className="font-display font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></h1>
           <p className="font-plex-mono text-[10px] text-slate tracking-[0.14em] uppercase mt-0.5">Plataforma IA de ventas inmobiliarias</p>
         </div>
 
@@ -109,7 +109,7 @@ export default function EstablecerPasswordPage() {
           <div className="bg-navy-800 border border-white/10 p-8">
           {estado === 'invalido' && (
             <>
-              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Enlace inválido o expirado</h2>
+              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Enlace inválido o expirado</h2>
               <p className="text-[13px] text-slate mb-6">
                 Este enlace ya no es válido (los enlaces expiran después de un tiempo o de un solo uso). Pide que te envíen uno nuevo.
               </p>
@@ -121,7 +121,7 @@ export default function EstablecerPasswordPage() {
 
           {(estado === 'porConfirmar' || estado === 'confirmando') && (
             <>
-              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Confirma tu enlace</h2>
+              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Confirma tu enlace</h2>
               <p className="text-[13px] text-slate mb-6">
                 Por seguridad, confirma manualmente para continuar (esto evita que un escáner de correo lo abra por ti).
               </p>
@@ -137,7 +137,7 @@ export default function EstablecerPasswordPage() {
 
           {estado === 'listo' && (
             <>
-              <h2 className="font-fraunces text-[18px] font-medium text-paper mb-1">Crea tu contraseña</h2>
+              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Crea tu contraseña</h2>
               <p className="text-[13px] text-slate mb-6">Último paso para activar tu cuenta.</p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">

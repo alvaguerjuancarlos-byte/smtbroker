@@ -177,7 +177,7 @@ export default function MarketingPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="font-fraunces text-[24px] md:text-[28px] font-medium text-paper">Marketing</h1>
+                <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">Marketing</h1>
                 <p className="text-[14px] text-slate mt-1">Fase 02 · {activo.tipo} en {activo.municipio}, {activo.estado}</p>
               </div>
               <span className={`font-plex-mono text-[10.5px] px-3 py-1.5 border self-start shrink-0 ${activo.publicada_at ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate'}`}>
@@ -212,7 +212,7 @@ export default function MarketingPage() {
               </div>
             ) : ficha ? (
               <div className="bg-navy-800 border border-white/10 p-5 md:p-6 flex flex-col gap-4">
-                <h3 className="font-fraunces text-[21px] font-medium text-paper">{ficha.titular}</h3>
+                <h3 className="font-display text-[21px] font-medium text-paper">{ficha.titular}</h3>
                 {ficha.narrativa.split(/\n+/).map((p, i) => <p key={i} className="text-[14px] text-paper-dim leading-relaxed">{p}</p>)}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -303,11 +303,11 @@ export default function MarketingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="bg-navy-800 border border-white/10 p-5">
                 <p className="text-[11px] text-slate uppercase tracking-wide mb-2">Visitas a la página</p>
-                <p className="font-fraunces text-[28px] text-paper">{visitas.length}</p>
+                <p className="font-display text-[28px] text-paper">{visitas.length}</p>
               </div>
               <div className="bg-navy-800 border border-white/10 p-5">
                 <p className="text-[11px] text-slate uppercase tracking-wide mb-2">«Me interesa» (total)</p>
-                <p className="font-fraunces text-[28px] text-gold-400">{leads}</p>
+                <p className="font-display text-[28px] text-gold-400">{leads}</p>
               </div>
               <div className="bg-navy-800 border border-white/10 p-5">
                 <p className="text-[11px] text-slate uppercase tracking-wide mb-2">Visitas por día</p>

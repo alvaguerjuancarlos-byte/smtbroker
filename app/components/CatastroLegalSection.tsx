@@ -6,7 +6,7 @@
 // Agente Legal: tipo/superficie terreno viven en la sección de Características ya existente, no
 // se duplican aquí.
 //
-// Usa los tokens font-fraunces/font-plex-mono del rediseño navy/dorado (ver app/layout.tsx) —
+// Usa los tokens font-display/font-plex-mono del rediseño navy/dorado (ver app/layout.tsx) —
 // antes tenía su propia carga de fuente duplicada (legalFonts.ts, retirado) con las mismas
 // familias Fraunces/IBM Plex bajo otro nombre de variable.
 import { Field, inputCls } from './FormField'

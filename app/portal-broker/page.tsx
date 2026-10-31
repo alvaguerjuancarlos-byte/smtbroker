@@ -335,7 +335,7 @@ export default function PortalBrokerPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
+              <h1 className="font-display text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
               <p className="text-[14px] text-slate mt-1.5">
                 Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}{pionero ? ' · ★ Pionero' : ''}</span>
               </p>
@@ -567,7 +567,7 @@ export default function PortalBrokerPage() {
               {matches && (
                 <>
                   <div>
-                    <h2 className="font-fraunces text-[17px] font-medium text-paper mb-3">Para tus clientes</h2>
+                    <h2 className="font-display text-[17px] font-medium text-paper mb-3">Para tus clientes</h2>
                     {matches.paraMisClientes.length === 0 ? (
                       <p className="text-[13px] text-slate">Sin coincidencias por ahora para lo que buscan tus clientes.</p>
                     ) : (
@@ -575,7 +575,7 @@ export default function PortalBrokerPage() {
                         {matches.paraMisClientes.map((m, i) => (
                           <div key={m.perfilId + m.activoId}
                             className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMisClientes.length - 1 ? 'border-b border-white/10' : ''}`}>
-                            <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-[14px] text-paper"><b>{m.cliente}</b> → {m.activo.nombre}</p>
                               <p className="text-[11.5px] text-slate mt-0.5">
@@ -591,7 +591,7 @@ export default function PortalBrokerPage() {
                     )}
                   </div>
                   <div>
-                    <h2 className="font-fraunces text-[17px] font-medium text-paper mb-3">Para tu portafolio</h2>
+                    <h2 className="font-display text-[17px] font-medium text-paper mb-3">Para tu portafolio</h2>
                     {matches.paraMiPortafolio.length === 0 ? (
                       <p className="text-[13px] text-slate">Sin compradores registrados que coincidan con tus propiedades por ahora.</p>
                     ) : (
@@ -599,7 +599,7 @@ export default function PortalBrokerPage() {
                         {matches.paraMiPortafolio.map((m, i) => (
                           <div key={m.activoId + m.perfilId}
                             className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMiPortafolio.length - 1 ? 'border-b border-white/10' : ''}`}>
-                            <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-[14px] text-paper"><b>{m.activo}</b> ← {m.contraparte}</p>
                               <p className="text-[11.5px] text-slate mt-0.5">
@@ -676,7 +676,7 @@ export default function PortalBrokerPage() {
             <div className="flex flex-col gap-4">
               <div className="bg-navy-800 border border-gold-500/30 p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Certificado SMT</p>
-                <p className="font-fraunces text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
+                <p className="font-display text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
                 {pionero && (
                   <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
                 )}
@@ -728,7 +728,7 @@ export default function PortalBrokerPage() {
                 ].map(m => (
                   <div key={m.label} className="bg-navy-800 border border-white/10 p-5">
                     <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">{m.label}</p>
-                    <p className="font-fraunces text-[28px] font-medium text-paper mt-1">{m.value}</p>
+                    <p className="font-display text-[28px] font-medium text-paper mt-1">{m.value}</p>
                   </div>
                 ))}
               </div>

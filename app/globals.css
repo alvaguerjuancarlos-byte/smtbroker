@@ -20,7 +20,7 @@
 
   /* Rediseño navy/dorado (piloto: /login) — paleta y tipografía separadas de --color-smt-*
      para no alterar ninguna pantalla existente mientras se decide si se extiende. */
-  --font-fraunces: var(--font-fraunces);
+  --font-display: var(--font-display);
   --font-plex-sans: var(--font-plex-sans);
   --font-plex-mono: var(--font-plex-mono);
   --color-navy-950: #070f1c;

@@ -52,7 +52,7 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <span className="font-fraunces font-semibold text-[16px] text-paper tracking-tight group-hover:text-gold-400 transition-colors">
+          <span className="font-display font-semibold text-[16px] text-paper tracking-tight group-hover:text-gold-400 transition-colors">
             SMT<span className="text-gold-400 group-hover:text-paper transition-colors">BROKER</span>
           </span>
         </Link>

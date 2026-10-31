@@ -78,7 +78,7 @@ function ScoreGauge({ score }: { score: number }) {
             strokeDasharray={`${dash} ${circ}`} style={{ transition: 'stroke-dasharray 1s ease' }}/>
         </svg>
         <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-1">
-          <span className="font-fraunces text-[30px] font-medium leading-none" style={{ color }}>{score}</span>
+          <span className="font-display text-[30px] font-medium leading-none" style={{ color }}>{score}</span>
           <span className="text-[11px] text-slate">/ 100</span>
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function ActivoPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="font-fraunces text-[24px] md:text-[28px] font-medium text-paper">{activo.nombre}</h1>
+                <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">{activo.nombre}</h1>
                 <p className="text-[14px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
                 {(fechaDiagnostico || actualizando) && (
                   <p className="font-plex-mono text-[11px] text-slate mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -331,7 +331,7 @@ export default function ActivoPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-navy-950 animate-pulse" />
                 {agentesCorriendo ? 'Analizando' : 'Análisis Completado'}
               </span>
-              <h2 className="font-fraunces text-[18px] md:text-[22px] font-medium text-paper leading-tight">{activo.nombre}</h2>
+              <h2 className="font-display text-[18px] md:text-[22px] font-medium text-paper leading-tight">{activo.nombre}</h2>
               <p className="text-[13px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
             </div>
             <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-5 border-t border-white/10">
@@ -356,7 +356,7 @@ export default function ActivoPage() {
           {/* Estrategia recomendada */}
           <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 p-6">
             <p className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.1em] uppercase mb-1">Estrategia recomendada</p>
-            <h3 className="font-fraunces text-[18px] font-medium text-paper mb-2">
+            <h3 className="font-display text-[18px] font-medium text-paper mb-2">
               Venta directa a inversionista · Precio de salida {fmtOrDash(precioSalida)}
             </h3>
             {mercadoError ? (

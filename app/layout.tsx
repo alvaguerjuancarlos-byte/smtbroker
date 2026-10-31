@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { Geist, Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import { AppProvider } from './providers'
 
@@ -8,7 +8,9 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 // Tipografía del rediseño (navy/dorado, ver /login) — declaradas aquí para que Next las
 // optimice y precargue, aunque hoy solo las use esa pantalla. Variables aditivas: no cambian
 // la tipografía por default de ninguna página existente.
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], variable: '--font-fraunces' })
+// Títulos y cifras (clase font-display): Space Grotesk desde 2026-10-31, antes Fraunces (serif) — JC la
+// quería moderna, digital y minimalista.
+const display = Space_Grotesk({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-display' })
 const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-plex-sans' })
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono' })
 
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${geist.variable} ${fraunces.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
+    <html lang="es" className={`${geist.variable} ${display.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-gray-50">
         <AppProvider>
           {children}

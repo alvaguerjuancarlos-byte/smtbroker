@@ -83,7 +83,7 @@ export default function CertificacionesOperacion() {
   return (
     <div className="bg-navy-800 border border-white/10">
       <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-        <h2 className="font-fraunces text-[17px] font-medium text-paper">Certificaciones legales</h2>
+        <h2 className="font-display text-[17px] font-medium text-paper">Certificaciones legales</h2>
         <span className="font-plex-mono text-[11px] text-slate">{abiertas.length}</span>
       </div>
       {abiertas.length === 0 ? (

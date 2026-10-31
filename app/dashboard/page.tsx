@@ -88,7 +88,7 @@ export default function DashboardPage() {
           {/* Bienvenida */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">
+              <h1 className="font-display text-[26px] md:text-[30px] font-medium text-paper leading-tight">
                 Hola, {firstName}
               </h1>
               <p className="text-[14px] text-slate mt-1.5">Gestiona tus activos inmobiliarios</p>
@@ -116,7 +116,7 @@ export default function DashboardPage() {
             ].map(f => (
               <div key={f.fase} className="bg-navy-800 border border-white/10 p-5">
                 <span className={`font-plex-mono text-[10px] font-medium px-2 py-0.5 border ${f.chip}`}>Fase {f.fase}</span>
-                <p className="font-fraunces text-[16px] font-medium text-paper mt-3">{f.label}</p>
+                <p className="font-display text-[16px] font-medium text-paper mt-3">{f.label}</p>
                 <p className="text-[12px] text-slate mt-0.5">{f.desc}</p>
               </div>
             ))}
@@ -125,7 +125,7 @@ export default function DashboardPage() {
           {/* Lista de activos */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Mis activos</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper">Mis activos</h2>
               <span className="text-[12px] text-slate">{activos.length} {activos.length === 1 ? 'activo' : 'activos'}</span>
             </div>
 

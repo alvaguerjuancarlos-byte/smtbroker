@@ -76,7 +76,7 @@ export default function ReportePage() {
 
         <header className="border-b-2 border-gray-900 pb-4 mb-6">
           <p className="font-plex-mono text-[11px] uppercase tracking-[0.12em] text-gray-500">SMTBROKER · Reporte de Transparencia</p>
-          <h1 className="font-fraunces text-[28px] font-medium mt-1">{activo.nombre}</h1>
+          <h1 className="font-display text-[28px] font-medium mt-1">{activo.nombre}</h1>
           <p className="text-[14px] text-gray-600">{[activo.direccion, activo.colonia, activo.municipio, activo.estado].filter(Boolean).join(', ')}</p>
           <p className={`mt-3 inline-block font-plex-mono text-[12px] px-3 py-1 border ${certificada ? 'border-amber-600 text-amber-700' : 'border-gray-400 text-gray-600'}`}>
             {certificada ? `★ Inventario certificado${fecha ? ` · ${new Date(fecha).toLocaleDateString('es-MX')}` : ''}` : 'Sin certificación legal: solo diagnóstico rápido'}

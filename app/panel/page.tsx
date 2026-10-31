@@ -98,7 +98,7 @@ function PipelineBar({ activos }: { activos: Activo[] }) {
 
   return (
     <div className="bg-navy-800 border border-white/10 p-6">
-      <p className="font-fraunces text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
+      <p className="font-display text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
       <p className="text-[12px] text-slate mb-5">{total} activo{total !== 1 ? 's' : ''} en el ecosistema</p>
       {total === 0 ? (
         <p className="text-[12px] text-slate">Todavía no hay activos registrados.</p>
@@ -330,7 +330,7 @@ export default function PanelPage() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
-              <h1 className="font-fraunces text-[24px] md:text-[30px] font-medium text-paper mt-1">Panel del Ecosistema</h1>
+              <h1 className="font-display text-[24px] md:text-[30px] font-medium text-paper mt-1">Panel del Ecosistema</h1>
               <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Consola interna: activos, brokers, propietarios y compradores de la plataforma</p>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
@@ -366,7 +366,7 @@ export default function PanelPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="font-fraunces text-[17px] font-medium text-paper">Solicitudes de registro</h2>
+                  <h2 className="font-display text-[17px] font-medium text-paper">Solicitudes de registro</h2>
                   {pendientes.length > 0 && (
                     <span className="font-plex-mono text-[10.5px] font-medium px-2 py-0.5 border border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10">
                       {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
@@ -455,7 +455,7 @@ export default function PanelPage() {
             ].map(m => (
               <div key={m.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
                 <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-2">{m.label}</p>
-                <p className={`font-fraunces text-[17px] md:text-[19px] font-medium leading-tight ${m.color}`}>{m.value}</p>
+                <p className={`font-display text-[17px] md:text-[19px] font-medium leading-tight ${m.color}`}>{m.value}</p>
                 <p className="text-[10px] text-slate mt-0.5">{m.sub}</p>
               </div>
             ))}
@@ -470,7 +470,7 @@ export default function PanelPage() {
 
             {/* Actividad reciente */}
             <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-1">
-              <p className="font-fraunces text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
+              <p className="font-display text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
               {actividad.length === 0 ? (
                 <p className="text-[11px] text-slate">Sin actividad todavía.</p>
               ) : (
@@ -497,7 +497,7 @@ export default function PanelPage() {
           {/* Activos del ecosistema */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Activos del ecosistema</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper">Activos del ecosistema</h2>
               <div className="flex items-center flex-wrap gap-1.5">
                 {['todos', 'valoracion', 'marketing', 'leads', 'cerrado'].map(f => (
                   <button key={f} onClick={() => setFiltroFase(f)}
@@ -569,7 +569,7 @@ export default function PanelPage() {
 
             {/* Brokers */}
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
               {brokersAliadosTodos.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
                   <p className="text-[13px] text-slate">Sin brokers registrados todavía.</p>
@@ -613,7 +613,7 @@ export default function PanelPage() {
 
             {/* Inversionistas */}
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-4">Compradores registrados</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper mb-4">Compradores registrados</h2>
               {inversionistasRegistradosTodos.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 p-6 text-center">
                   <p className="text-[13px] text-slate">Sin compradores registrados todavía.</p>

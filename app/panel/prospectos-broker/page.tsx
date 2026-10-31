@@ -328,7 +328,7 @@ export default function ProspectosBrokerPage() {
               Panel del ecosistema
             </button>
             <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
-            <h1 className="font-fraunces text-[24px] md:text-[30px] font-medium text-paper mt-1">Prospección de Brokers</h1>
+            <h1 className="font-display text-[24px] md:text-[30px] font-medium text-paper mt-1">Prospección de Brokers</h1>
             <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Cola de revisión manual — ingesta automatizada desde AMPI ya activa</p>
           </div>
 
@@ -408,7 +408,7 @@ export default function ProspectosBrokerPage() {
           {/* Cola de revisión */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Cola de revisión</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper">Cola de revisión</h2>
               <div className="flex items-center gap-1.5">
                 {(['cola', 'todos'] as const).map(f => (
                   <button key={f} onClick={() => setFiltro(f)}
@@ -493,7 +493,7 @@ export default function ProspectosBrokerPage() {
           <div className="relative w-full max-w-[440px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2 before:translate-y-2 before:-z-10">
             <div className="bg-navy-800 border border-white/10 p-6">
               <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-1">Antes de invitar</p>
-              <h3 className="font-fraunces text-[18px] font-medium text-paper mb-4">{confirmandoInvite.nombre}</h3>
+              <h3 className="font-display text-[18px] font-medium text-paper mb-4">{confirmandoInvite.nombre}</h3>
 
               <div className="bg-white/[0.04] border border-white/10 px-3.5 py-3 mb-4">
                 <AvisoSimplificado contexto="prospeccion" tema="oscuro" />
@@ -526,7 +526,7 @@ export default function ProspectosBrokerPage() {
           <div className="relative w-full max-w-[440px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2 before:translate-y-2 before:-z-10">
             <div className="bg-navy-800 border border-white/10 p-6">
               <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-1">Marcar como convertido</p>
-              <h3 className="font-fraunces text-[18px] font-medium text-paper mb-4">{convirtiendo.nombre}</h3>
+              <h3 className="font-display text-[18px] font-medium text-paper mb-4">{convirtiendo.nombre}</h3>
 
               <p className="text-[12.5px] text-paper-dim mb-2">¿Tiene cédula/licencia vigente? <span className="text-slate">(no bloquea la conversión, solo se registra para dar seguimiento)</span></p>
               <div className="flex gap-2 mb-4">

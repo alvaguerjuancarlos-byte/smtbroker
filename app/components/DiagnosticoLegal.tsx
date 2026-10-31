@@ -96,11 +96,11 @@ export function DiagnosticoLegal({
             <span className={`w-2 h-2 rounded-full ${verdictDotCls[t.verdictCls]}`} />
             {t.verdictBadge}
           </span>
-          <h3 className="font-fraunces text-[19px] font-medium text-paper mb-1.5">{t.verdictTitle}</h3>
+          <h3 className="font-display text-[19px] font-medium text-paper mb-1.5">{t.verdictTitle}</h3>
           <p className="text-[13px] text-slate max-w-[480px]">{t.verdictDesc}</p>
         </div>
         <div className="text-right">
-          <div className="font-fraunces text-[38px] leading-none text-gold-400">{t.score}</div>
+          <div className="font-display text-[38px] leading-none text-gold-400">{t.score}</div>
           <div className="font-plex-mono text-[10px] uppercase tracking-wide text-slate mt-1">Score legal</div>
         </div>
       </div>

@@ -85,7 +85,7 @@ export default function LoginPage() {
               <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
             </svg>
             <div>
-              <span className="font-fraunces font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
+              <span className="font-display font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
               <span className="block font-plex-mono text-[10px] text-slate tracking-[0.12em] -mt-0.5">BY MINDBRIDGE</span>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
           <span className="font-plex-mono text-[11px] tracking-[0.22em] uppercase text-gold-400">
             Acceso · Plataforma
           </span>
-          <h1 className="font-fraunces font-medium text-[clamp(32px,4.2vw,52px)] leading-[1.08] tracking-[-0.01em] mt-4 max-w-[13ch]">
+          <h1 className="font-display font-medium text-[clamp(32px,4.2vw,52px)] leading-[1.08] tracking-[-0.01em] mt-4 max-w-[13ch]">
             Bienvenido<br /><span className="italic font-normal text-gold-400">de vuelta.</span>
           </h1>
           <p className="text-[15px] text-paper-dim max-w-[42ch] mt-5 leading-relaxed">
@@ -114,7 +114,7 @@ export default function LoginPage() {
               {modo === 'enviado' ? (
                 <div className="flex flex-col gap-4">
                   <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Recuperar contraseña</span>
-                  <h2 className="font-fraunces text-[24px] font-medium">Revisa tu correo</h2>
+                  <h2 className="font-display text-[24px] font-medium">Revisa tu correo</h2>
                   <p className="text-[13.5px] text-paper-dim leading-relaxed">
                     Si <b className="text-paper">{email.trim()}</b> tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.
                   </p>
@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <form onSubmit={handleRecuperar} className="flex flex-col gap-5">
                   <div>
                     <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Recuperar contraseña</span>
-                    <h2 className="font-fraunces text-[24px] font-medium mt-1.5">¿Olvidaste tu contraseña?</h2>
+                    <h2 className="font-display text-[24px] font-medium mt-1.5">¿Olvidaste tu contraseña?</h2>
                     <p className="text-[13px] text-paper-dim mt-2">Escribe tu correo y te enviamos un enlace para crear una nueva.</p>
                   </div>
                   <input
@@ -146,7 +146,7 @@ export default function LoginPage() {
                 </form>
               ) : (<>
               <span className="font-plex-mono text-[10px] tracking-[0.16em] uppercase text-slate">Iniciar sesión</span>
-              <h2 className="font-fraunces text-[24px] font-medium mt-1.5 mb-7">Entra a tu cuenta</h2>
+              <h2 className="font-display text-[24px] font-medium mt-1.5 mb-7">Entra a tu cuenta</h2>
 
               <form onSubmit={handleLogin} className="flex flex-col gap-5">
                 <div className="flex flex-col gap-2">

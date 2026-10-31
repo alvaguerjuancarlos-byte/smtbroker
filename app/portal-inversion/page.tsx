@@ -168,7 +168,7 @@ export default function PortalInversionPage() {
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">
 
           <div>
-            <h1 className="font-fraunces text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
+            <h1 className="font-display text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
             <p className="text-[14px] text-slate mt-1.5">Lo que buscas y las propiedades disponibles</p>
           </div>
 
@@ -244,7 +244,7 @@ export default function PortalInversionPage() {
           {/* Coincidencias con lo que busca */}
           {tienePerfil && coincidencias && (
             <div>
-              <h2 className="font-fraunces text-[17px] font-medium text-paper mb-1">Coinciden con lo que buscas</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper mb-1">Coinciden con lo que buscas</h2>
               <p className="text-[12px] text-slate mb-4">Por tipo de propiedad, zona y presupuesto. Si te interesa alguna, nuestro equipo te pone en contacto.</p>
               {coincidencias.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 px-8 py-8 text-center">
@@ -254,7 +254,7 @@ export default function PortalInversionPage() {
                 <div className="bg-navy-800 border border-gold-500/30 overflow-hidden">
                   {coincidencias.map((c, i) => (
                     <div key={c.activoId} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== coincidencias.length - 1 ? 'border-b border-white/10' : ''}`}>
-                      <span className="font-fraunces text-[22px] font-medium text-gold-400 w-12 shrink-0">{c.score}</span>
+                      <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{c.score}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-medium text-paper">{c.activo.nombre}</p>
                         <p className="text-[11.5px] text-slate mt-0.5">
@@ -282,7 +282,7 @@ export default function PortalInversionPage() {
           {/* Activos disponibles */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-fraunces text-[17px] font-medium text-paper">Propiedades disponibles</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper">Propiedades disponibles</h2>
               <span className="text-[12px] text-slate">{activos.length}</span>
             </div>
             <p className="text-[12px] text-slate mb-4">Todas las propiedades de la plataforma.</p>

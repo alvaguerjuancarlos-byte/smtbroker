@@ -88,7 +88,7 @@ export default function LeadsPage() {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               {activo.nombre}
             </button>
-            <h1 className="font-fraunces text-[24px] md:text-[28px] font-medium text-paper">Leads</h1>
+            <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">Leads</h1>
             <p className="text-[14px] text-slate mt-1">Fase 03 · interesados calificados por reglas explicables</p>
           </div>
 
@@ -110,7 +110,7 @@ export default function LeadsPage() {
             {(['serio', 'calificado', 'interesado', 'curioso'] as CategoriaLead[]).map(c => (
               <div key={c} className="bg-navy-800 border border-white/10 p-4">
                 <span className={`font-plex-mono text-[10px] uppercase tracking-wide px-2 py-0.5 border ${ESTILO[c]}`}>{ETIQUETA_CATEGORIA[c]}</span>
-                <p className="font-fraunces text-[26px] text-paper mt-2">{conteo(c)}</p>
+                <p className="font-display text-[26px] text-paper mt-2">{conteo(c)}</p>
               </div>
             ))}
           </div>
@@ -165,7 +165,7 @@ export default function LeadsPage() {
                 {motor.map(m => (
                   <div key={m.id} className="bg-navy-800 border border-white/10 p-4 flex items-center justify-between gap-3">
                     <p className="text-[12.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
-                    <span className="font-fraunces text-[18px] text-gold-400 shrink-0">{m.score}</span>
+                    <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
                   </div>
                 ))}
               </div>
