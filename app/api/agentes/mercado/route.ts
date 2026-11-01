@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { callClaudeJson, serieSHFParaCiudad, calcularApreciacionSHF, resolverAbsorcionSNIIV } from '@smt/shared-realestate'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { filtroAccesoActivo } from '@/lib/accesoActivo'
 import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
 import { MODELO_DICTAMEN, MODELO_EXTRACCION, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
+import { avisarUsuario } from '@/lib/avisos'
 
 // Agente de Mercado real para REVENTA -- distinto del "Agente Mercado" de smt-developer (que
 // analiza oferta/demanda de un PROYECTO nuevo en preventa). Aquí la pregunta es "¿en qué rango
@@ -190,6 +191,18 @@ Retorna ÚNICAMENTE el JSON.`
     parsed.comparables = comparables
     parsed.fuentesConsultadas = fuentesConsultadas
     const g = await guardar(supabaseAdmin, { activoId, agente: 'mercado', resultado: parsed, modelo: MODELO_DICTAMEN, creadoPor: caller.user.id })
+    // V7.2 (panel /inicio): el primer precio realista de un propietario se le avisa por correo,
+    // por si dejó el panel mientras se calculaba. Las actualizaciones no avisan.
+    if (!regenerar && activo.usuario_id === caller.user.id && parsed.precioSalidaRecomendadoMXN) {
+      const precio = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(parsed.precioSalidaRecomendadoMXN))
+      after(() => avisarUsuario(supabaseAdmin, activo.usuario_id, {
+        asunto: `Tu precio realista está listo: ${activo.nombre}`,
+        titulo: 'Tu precio realista de mercado',
+        lineas: [`${activo.nombre}: ${precio}.`, 'Basado en el valor de mercado y la plusvalía de propiedades similares.',
+          'Siguiente paso: certifica tu propiedad. La plataforma se encarga por ti.'],
+        enlace: { texto: 'Ver mi panel', ruta: '/inicio' },
+      }, { esDemo: !!activo.es_demo }))
+    }
     return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
     console.error('Agente Mercado (SMTBROKER) error:', error)

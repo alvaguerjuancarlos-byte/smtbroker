@@ -87,6 +87,14 @@ async function main() {
   const C = await entrar(emailC, PASS)
   const { data: pC } = await admin.from('perfiles_intencion').select('id, zona, presupuesto, representado_por').eq('usuario_id', C.id).single()
   check('lo que busca queda registrado, sin broker', pC?.zona === SP && pC.presupuesto === '$5M – $15M' && !pC.representado_por)
+  // Panel /inicio (migración 20261101000300): el comprador afina su búsqueda; nadie más la toca.
+  const det = { recamaras: '3', banos: '2', m2Min: '120', zonas: 'Valle Oriente', imprescindibles: ['Terraza'] }
+  const { error: eDet } = await C.cli.from('perfiles_intencion').update({ detalles: det, tipo_activo_interes: 'Casa' }).eq('id', pC.id)
+  const { data: pDet } = await admin.from('perfiles_intencion').select('detalles').eq('id', pC.id).single()
+  check('el comprador guarda los detalles de su búsqueda', !eDet && pDet?.detalles?.recamaras === '3' && pDet.detalles.imprescindibles?.[0] === 'Terraza', eDet?.message)
+  await V.cli.from('perfiles_intencion').update({ detalles: { hackeado: true } }).eq('id', pC.id)
+  const { data: pDet2 } = await admin.from('perfiles_intencion').select('detalles').eq('id', pC.id).single()
+  check('otro cliente no puede cambiarlos (RLS)', !pDet2?.detalles?.hackeado)
   const { data: cX } = await C.cli.from('contactos_cliente').select('telefono').eq('usuario_id', V.id)
   check('un cliente no lee el WhatsApp de otro (RLS)', (cX || []).length === 0)
 

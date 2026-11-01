@@ -12,6 +12,7 @@ import { HOME_POR_ROL, type Rol } from '@/lib/roles'
 // ven lo suyo.
 const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   propietario: [
+    { href: '/inicio', label: 'Inicio' },
     { href: '/dashboard', label: 'Mis activos' },
     { href: '/activo/nuevo', label: 'Registrar activo' },
   ],
@@ -20,6 +21,7 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: '/activo/nuevo', label: 'Cargar propiedad' },
   ],
   inversionista: [
+    { href: '/inicio', label: 'Inicio' },
     { href: '/portal-inversion', label: 'Mi portal' },
   ],
   broker_maestro: [
