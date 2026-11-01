@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarOperacion, avisarUsuario } from '@/lib/avisos'
 import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching'
 import { mismoMundo } from '@/lib/mundo'
+import { atiendeComprador, atiendeVendedor, contactoDe, type Contacto } from '@/lib/contactoConexion'
 
 // Matches v0 (Documento Maestro V6.1, §4 y §6). Corre en el servidor con service_role porque
 // cruza datos que la RLS oculta a propósito entre brokers -- por eso esta ruta es la que
@@ -14,6 +15,10 @@ import { mismoMundo } from '@/lib/mundo'
 //        coincidencias con su perfil).
 // POST → {activoId, perfilId}: "me interesa conectar". Recalcula el score aquí (nunca confía en
 //        el que mande el navegador) y crea la solicitud que Operación valida a mano.
+//
+// V7.1 (dos caminos): un lado sin broker también se conecta. Cuando Operación pone un match en
+// contacto (app/api/matches/[id]), esta ruta le da a cada parte el contacto de quien atiende el
+// otro lado -- su broker o, si va por su cuenta, el cliente mismo (lib/contactoConexion.ts).
 //
 // Mundos (lib/mundo.ts, migración 20261008000000): una cuenta real solo cruza datos reales y una
 // cuenta demo solo datos demo -- los brokers del piloto nunca ven a los personajes del video.
@@ -73,6 +78,16 @@ export async function GET(req: NextRequest) {
       return esMatchValido(a, r) ? r : null
     }
     const porScore = <T extends { score: number }>(xs: T[]) => xs.sort((x, y) => y.score - x.score)
+    // Contacto de la otra parte, solo en los matches que Operación ya puso en contacto.
+    const cache = new Map<string, Promise<Contacto>>()
+    const contacto = (lado: { id: string; esBroker: boolean }) => {
+      if (!cache.has(lado.id)) cache.set(lado.id, contactoDe(admin, lado))
+      return cache.get(lado.id)!
+    }
+    const conContacto = async <T extends { solicitud: string | null }>(xs: T[], lado: (x: T) => { id: string; esBroker: boolean }) =>
+      Promise.all(xs.map(async (x) => (x.solicitud === 'en_contacto' ? { ...x, contacto: await contacto(lado(x)) } : x)))
+    const activoDe = new Map(A.map((a) => [a.id, a]))
+    const perfilDe = new Map(P.map((p) => [p.id, p]))
 
     if (rol === 'broker') {
       // Sus clientes: los que registró él (alias) y los compradores directos que lo eligieron (V7).
@@ -94,7 +109,7 @@ export async function GET(req: NextRequest) {
           perfilId: p.id, activoId: a.id, cliente: aliasDe(p), score: r.score, razones: r.razones,
           activo: activoPublico(a),
           representacion: propio ? 'Tu portafolio'
-            : a.broker_id ? 'Representada por otro broker de la red' : 'Del propietario, aún sin broker: le pediremos elegir uno',
+            : a.broker_id ? 'Representada por otro broker de la red' : 'Del propietario, por su cuenta',
           solicitud: solicitud(a, p),
         }]
       })))
@@ -103,14 +118,18 @@ export async function GET(req: NextRequest) {
         const r = valido(a, p)
         if (!r) return []
         const contraparte = esMio(p) ? `Tu cliente: ${aliasDe(p)}`
-          : p.broker_id || p.representado_por ? 'Cliente de otro broker' : 'Comprador directo, aún sin broker'
+          : p.broker_id || p.representado_por ? 'Cliente de otro broker' : 'Comprador por su cuenta'
         return [{
           activoId: a.id, perfilId: p.id, activo: a.nombre, score: r.score, razones: r.razones,
           contraparte, criterios: criterios(p), solicitud: solicitud(a, p),
         }]
       })))
 
-      return NextResponse.json({ rol, paraMisClientes, paraMiPortafolio })
+      return NextResponse.json({
+        rol,
+        paraMisClientes: await conContacto(paraMisClientes, (x) => atiendeVendedor(activoDe.get(x.activoId)!)),
+        paraMiPortafolio: await conContacto(paraMiPortafolio, (x) => atiendeComprador(perfilDe.get(x.perfilId)!)),
+      })
     }
 
     if (rol === 'inversionista') {
@@ -120,9 +139,27 @@ export async function GET(req: NextRequest) {
         const r = valido(a, miPerfil)
         return r ? [{ activoId: a.id, perfilId: miPerfil.id, score: r.score, razones: r.razones, activo: activoPublico(a), solicitud: solicitud(a, miPerfil) }] : []
       }))
-      // V7, "broker para conectar": el comprador ve sus coincidencias solo, pero para pedir la
-      // conexión necesita un broker que lo represente.
-      return NextResponse.json({ rol, coincidencias, perfilId: miPerfil.id, tieneBroker: !!miPerfil.representado_por })
+      // V7.1: puede conectarse por su cuenta o con el broker que eligió (opcional). Si tiene broker,
+      // el contacto del otro lado lo recibe su broker, no él (§17: todo pasa por su broker).
+      const tieneBroker = !!miPerfil.representado_por
+      return NextResponse.json({
+        rol, perfilId: miPerfil.id, tieneBroker,
+        coincidencias: tieneBroker ? coincidencias : await conContacto(coincidencias, (x) => atiendeVendedor(activoDe.get(x.activoId)!)),
+      })
+    }
+
+    // V7.1: el propietario que vende por su cuenta ve los compradores que el motor le conectó. Si su
+    // propiedad tiene broker, las conexiones las atiende el broker (no se le da contacto a él).
+    if (rol === 'propietario') {
+      const mios = A.filter((a) => a.usuario_id === uid && !a.broker_id)
+      const conexiones = mios.flatMap((a) => P.flatMap((p) => {
+        const est = solicitud(a, p)
+        if (!est) return []
+        const r = puntuarMatch(a, p)
+        return [{ activoId: a.id, perfilId: p.id, score: r.score, razones: r.razones, solicitud: est,
+          contraparte: atiendeComprador(p).esBroker ? 'Comprador con broker' : 'Comprador por su cuenta' }]
+      }))
+      return NextResponse.json({ rol, conexiones: await conContacto(porScore(conexiones), (x) => atiendeComprador(perfilDe.get(x.perfilId)!)) })
     }
 
     return NextResponse.json({ error: 'Los matches son para brokers y compradores' }, { status: 403 })
@@ -159,10 +196,6 @@ export async function POST(req: NextRequest) {
       (rol === 'broker' && (activo.broker_id === uid || (perfil.broker_id === uid && perfil.usuario_id === null) || perfil.representado_por === uid)) ||
       (rol === 'inversionista' && perfil.usuario_id === uid)
     if (!esDueno) return NextResponse.json({ error: 'No autorizado para este match' }, { status: 403 })
-    // V7: libre para empezar, broker para conectar (Documento Maestro §15).
-    if (rol === 'inversionista' && !perfil.representado_por) {
-      return NextResponse.json({ error: 'Para conectarte, elige un broker que te represente', necesitaBroker: true }, { status: 409 })
-    }
 
     const r = puntuarMatch(activo, perfil)
     if (!esMatchValido(activo, r)) return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
@@ -175,16 +208,17 @@ export async function POST(req: NextRequest) {
       activo_id: activoId, perfil_id: perfilId, solicitado_por: uid, score: r.score, razones: r.razones,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    // V7: si la propiedad no tiene broker, su dueño tiene que elegir uno para que se pueda conectar.
+    // V7.1: si el propietario vende por su cuenta, se le avisa; el contacto le llega cuando
+    // Operación valide la conexión.
     if (!activo.broker_id) {
       after(() => avisarUsuario(admin, activo.usuario_id, {
         asunto: `Un comprador se interesó en ${activo.nombre}`,
         titulo: 'Hay un comprador interesado en tu propiedad',
         lineas: [
           `Coincide ${r.score}/100 con lo que busca: ${r.razones.join(' · ')}.`,
-          'Para ponerte en contacto, elige un broker certificado que te represente.',
+          'Nuestro equipo revisa la conexión y, si procede, te pasa su contacto.',
         ],
-        enlace: { texto: 'Elegir mi broker', ruta: `/activo/${activo.id}` },
+        enlace: { texto: 'Ver mis interesados', ruta: `/activo/${activo.id}/leads` },
       }, { esDemo }))
     }
     // Paso 2 V6.3: Operación valida cada conexión a mano; sin aviso se quedaría días sin atender.

@@ -7,9 +7,10 @@
 //   - los compradores que llegaron por el motor de matching (solicitudes de conexión visibles para
 //     quien las pidió; el detalle vive en Matches del portal del broker).
 // Al interesado Serio se le ofrece el Reporte de Transparencia si la propiedad está certificada.
-// La RLS deja ver los leads al broker del activo, a Operación y al dueño si la propiedad ya tiene
-// broker. V7 ("broker para conectar"): el dueño sin broker los ve sin nombre, contacto ni mensaje
-// (app/api/leads GET) y se le invita a elegir un broker.
+// La RLS deja ver los leads solo al dueño y al broker del activo (y a Operación).
+// V7.1 (dos caminos): el dueño que vende por su cuenta ve sus interesados completos y, de los
+// compradores del motor que Operación ya puso en contacto, el contacto de quien los atiende
+// (app/api/matches, rol propietario). Se le sugiere un broker, sin imponerlo.
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -26,7 +27,11 @@ interface Lead {
   id: string; nombre?: string; contacto?: string; presupuesto: string | null; plazo: Plazo; forma_pago: FormaPago
   mensaje?: string | null; categoria: CategoriaLead; razones: string[]; created_at: string
 }
-interface MatchMotor { id: string; score: number; razones: string[]; estado: string; created_at: string }
+interface MatchMotor {
+  id: string; score: number; razones: string[]; estado: string
+  /** V7.1, propietario por su cuenta: quién atiende al comprador y su contacto si ya está en contacto. */
+  contraparte?: string; contacto?: { nombre: string; correo: string | null; esBroker: boolean }
+}
 
 const ORDEN: Record<CategoriaLead, number> = { serio: 0, calificado: 1, interesado: 2, curioso: 3 }
 const ESTILO: Record<CategoriaLead, string> = {
@@ -46,7 +51,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [motor, setMotor] = useState<MatchMotor[]>([])
   const [certificada, setCertificada] = useState(false)
-  const [sinContacto, setSinContacto] = useState(false)
+  const [porSuCuenta, setPorSuCuenta] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -58,16 +63,19 @@ export default function LeadsPage() {
       if (!data) { router.push('/dashboard'); return }
       const a = data as Activo
       setActivo(a)
-      const ocultos = a.usuario_id === user.id && !a.broker_id
-      setSinContacto(ocultos)
+      const solo = a.usuario_id === user.id && !a.broker_id
+      setPorSuCuenta(solo)
       const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      type Conexion = { perfilId: string; activoId: string; score: number; razones: string[]; solicitud: string; contraparte: string; contacto?: MatchMotor['contacto'] }
       const [{ data: l }, { data: m }, { data: c }] = await Promise.all([
-        ocultos
-          ? fetch(`/api/leads?activoId=${id}`, { headers: { Authorization: 'Bearer ' + token } })
-            .then(r => r.json()).then(j => ({ data: j.leads ?? [] })).catch(() => ({ data: [] }))
-          : supabase.from('leads').select('id, nombre, contacto, presupuesto, plazo, forma_pago, mensaje, categoria, razones, created_at')
-            .eq('activo_id', id).order('created_at', { ascending: false }),
-        supabase.from('matches').select('id, score, razones, estado, created_at').eq('activo_id', id).order('created_at', { ascending: false }),
+        supabase.from('leads').select('id, nombre, contacto, presupuesto, plazo, forma_pago, mensaje, categoria, razones, created_at')
+          .eq('activo_id', id).order('created_at', { ascending: false }),
+        solo
+          ? fetch('/api/matches', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json())
+            .then(j => ({ data: ((j.conexiones ?? []) as Conexion[]).filter(x => x.activoId === id).map(x => ({
+              id: x.perfilId, score: x.score, razones: x.razones, estado: x.solicitud, contraparte: x.contraparte, contacto: x.contacto,
+            })) })).catch(() => ({ data: [] }))
+          : supabase.from('matches').select('id, score, razones, estado').eq('activo_id', id).order('created_at', { ascending: false }),
         supabase.from('certificaciones').select('id').eq('activo_id', id).eq('estado', 'certificada').limit(1).maybeSingle(),
       ])
       setLeads(((l as Lead[]) || []).sort((a, b) => ORDEN[a.categoria] - ORDEN[b.categoria] || b.created_at.localeCompare(a.created_at)))
@@ -130,11 +138,11 @@ export default function LeadsPage() {
 
           <div>
             <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-3">Interesados de la página pública</h2>
-            {sinContacto && leads.length > 0 && (
-              <div className="bg-gold-500/[0.06] border border-gold-500/30 p-4 mb-3">
-                <p className="text-[14px] text-paper">Para ver su contacto y conectar con ellos, elige un broker certificado.</p>
-                <p className="text-[12px] text-slate mt-1">Tu broker recibe el contacto de cada interesado y te representa en la negociación.</p>
-                <button onClick={() => router.push(`/activo/${id}`)} className="font-plex-mono text-[11px] text-gold-400 underline underline-offset-2 mt-2">Elegir mi broker</button>
+            {porSuCuenta && (leads.length > 0 || motor.length > 0) && (
+              <div className="bg-navy-800 border border-white/10 p-4 mb-3">
+                <p className="text-[14px] text-paper">Vendes por tu cuenta: tú atiendes a tus interesados.</p>
+                <p className="text-[12px] text-slate mt-1">Si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un broker de tu zona.</p>
+                <button onClick={() => router.push(`/activo/${id}`)} className="font-plex-mono text-[11px] text-gold-400 underline underline-offset-2 mt-2">Elegir un broker</button>
               </div>
             )}
             {leads.length === 0 ? (
@@ -155,7 +163,7 @@ export default function LeadsPage() {
                         <p className="text-[15px] font-medium text-paper">{l.nombre ?? 'Interesado'}</p>
                         {l.contacto
                           ? <a href={enlaceContacto(l.contacto)} target="_blank" rel="noopener noreferrer" className="text-[13px] text-gold-400 hover:text-gold-100">{l.contacto}</a>
-                          : <p className="text-[12.5px] text-slate">Contacto disponible para tu broker</p>}
+                          : null}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-slate">{fecha(l.created_at)}</span>
@@ -185,13 +193,29 @@ export default function LeadsPage() {
               <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-3">Compradores del motor de matching</h2>
               <div className="flex flex-col gap-2">
                 {motor.map(m => (
-                  <div key={m.id} className="bg-navy-800 border border-white/10 p-4 flex items-center justify-between gap-3">
-                    <p className="text-[12.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
+                  <div key={m.id} className="bg-navy-800 border border-white/10 p-4 flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[12.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
+                      {m.contraparte && (
+                        <p className="text-[11.5px] text-slate">
+                          {m.contraparte} · {m.estado === 'en_contacto' ? 'En contacto' : m.estado === 'solicitado' ? 'Operación revisa la conexión' : m.estado === 'cerrado' ? 'Cerrado' : 'No disponible'}
+                        </p>
+                      )}
+                      {m.contacto && (
+                        <p className="text-[13px] text-paper">
+                          {m.contacto.nombre}{m.contacto.esBroker ? ' (su broker)' : ''}
+                          {m.contacto.correo && <> · <a href={`mailto:${m.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{m.contacto.correo}</a></>}
+                        </p>
+                      )}
+                    </div>
                     <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-[11.5px] text-slate mt-2">Las conexiones del motor las valida Operación MindBridge; el detalle está en Matches de tu portal.</p>
+              <p className="text-[11.5px] text-slate mt-2">
+                {porSuCuenta ? 'Las conexiones del motor las valida Operación MindBridge; al validarlas te llega el contacto aquí y por correo.'
+                  : 'Las conexiones del motor las valida Operación MindBridge; el detalle está en Matches de tu portal.'}
+              </p>
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
-// Verifica contra la base REAL el Documento Maestro V7 (2026-10-31): "libre para empezar, broker
-// para conectar" y un broker por lado (migración 20261031000000_v7_broker_para_conectar.sql,
+// Verifica contra la base REAL el Documento Maestro V7 (2026-10-31): el comprador elige broker
+// (V7.1: "broker para conectar" se reemplazó por dos caminos; lo de conectar sin broker se prueba en
+// verificar-v71-dos-caminos.mjs). Antes: "libre para empezar, broker para conectar" y un broker por lado (migración 20261031000000_v7_broker_para_conectar.sql,
 // app/api/brokers-zona, app/api/oportunidades, app/api/matches, app/api/leads).
 //
 // Escenario (mundo real): un comprador directo C que busca casa en San Pedro, un propietario P con
@@ -85,9 +86,7 @@ async function main() {
   check('el comprador ve sus coincidencias sin broker', m0.status === 200 && coincide, JSON.stringify(m0.json).slice(0, 160))
   check('…y la app sabe que aún no tiene broker', m0.json.tieneBroker === false && m0.json.perfilId === perfilId)
 
-  // ── 2. Broker para conectar ─────────────────────────────────────────────────────────────
-  const s0 = await api(C, '/api/matches', { activoId, perfilId })
-  check('sin broker, pedir la conexión responde 409 "elige un broker"', s0.status === 409 && s0.json.necesitaBroker === true, JSON.stringify(s0.json))
+  // ── 2. El comprador elige broker (opcional desde la V7.1) ───────────────────────────────
 
   const z = await api(C, '/api/brokers-zona', { perfilId })
   const ids = (z.json.brokers || []).map((b) => b.id)
@@ -126,22 +125,11 @@ async function main() {
   const deMiCliente = (mb.json.paraMisClientes || []).find((x) => x.perfilId === perfilId && x.activoId === activoId)
   check('B1 ve el match entre sus clientes, con el nombre del comprador', !!deMiCliente && deMiCliente.cliente?.startsWith('Compradora'), JSON.stringify(deMiCliente).slice(0, 160))
 
-  // ── 3. Un broker por lado: Operación no conecta si falta el del vendedor ─────────────────
   const { data: match } = await admin.from('matches').select('id').eq('activo_id', activoId).eq('perfil_id', perfilId).single()
-  const { error: eSinVend } = await OP.cli.from('matches').update({ estado: 'en_contacto' }).eq('id', match.id)
-  check('Operación NO puede poner en contacto sin broker del vendedor', !!eSinVend && /vendedor/.test(eSinVend.message), eSinVend?.message)
-
-  // ── 4. Interesados de la página pública sin broker: sin contacto ─────────────────────────
   await admin.from('leads').insert({
     activo_id: activoId, nombre: 'Interesado prueba', contacto: 'interesado@ejemplo.com', plazo: 'menos_3m',
     forma_pago: 'contado', categoria: 'serio', razones: ['prueba'], consentimiento_at: new Date().toISOString(),
   })
-  const { data: leadsDirecto } = await P.cli.from('leads').select('id, contacto').eq('activo_id', activoId)
-  check('el dueño sin broker NO lee los leads directo (RLS)', (leadsDirecto || []).length === 0)
-  const lg = await api(P, `/api/leads?activoId=${activoId}`, null, 'GET')
-  const lead = (lg.json.leads || [])[0]
-  check('…pero los ve por la API, sin nombre ni contacto', lg.status === 200 && lead && !('contacto' in lead) && !('nombre' in lead) && lead.categoria === 'serio', JSON.stringify(lg.json).slice(0, 160))
-  check('otro usuario no consulta esos leads', (await api(C, `/api/leads?activoId=${activoId}`, null, 'GET')).status === 404)
 
   // ── 5. El propietario elige broker: se completa un broker por lado ───────────────────────
   const o2 = await api(P, '/api/oportunidades', { activoId, brokerId: B2.id })
@@ -151,8 +139,8 @@ async function main() {
   check('con broker, el dueño ya lee el contacto (RLS)', leadsDespues?.[0]?.contacto === 'interesado@ejemplo.com')
   const { data: leadsB2 } = await B2.cli.from('leads').select('id, contacto').eq('activo_id', activoId)
   check('su broker también', leadsB2?.[0]?.contacto === 'interesado@ejemplo.com')
-  const { error: eConecta } = await OP.cli.from('matches').update({ estado: 'en_contacto' }).eq('id', match.id)
-  check('con un broker por lado, Operación ya los pone en contacto', !eConecta, eConecta?.message)
+  const conecta = await api(OP, `/api/matches/${match.id}`, { estado: 'en_contacto' })
+  check('con un broker por lado, Operación los pone en contacto', conecta.status === 200, JSON.stringify(conecta.json))
 }
 
 async function limpiar() {

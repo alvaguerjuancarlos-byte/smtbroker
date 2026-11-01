@@ -95,7 +95,7 @@ export default function ValidacionOperacion() {
     if (!p) return '—'
     return p.usuario_id ? `${nombre(p.usuario_id)} (comprador directo)` : `${p.alias_cliente} (cliente de ${nombre(p.broker_id)})`
   }
-  // V7, un broker por lado: el del comprador es el que lo registró o el que eligió.
+  // El broker del comprador es el que lo registró o el que eligió (V7); si no tiene, va por su cuenta (V7.1).
   const brokerComprador = (perfilId: string) => {
     const p = perfiles.find(x => x.id === perfilId)
     return p?.broker_id ?? p?.representado_por ?? null
@@ -104,9 +104,14 @@ export default function ValidacionOperacion() {
   const [errorMatch, setErrorMatch] = useState<{ id: string; texto: string } | null>(null)
   const actualizarMatch = async (id: string, estado: string) => {
     setErrorMatch(null)
-    // La base de datos rechaza "en contacto" si a algún lado le falta broker (migración 20261031000000).
-    const { error } = await supabase.from('matches').update({ estado, actualizado_at: new Date().toISOString() }).eq('id', id)
-    if (error) { setErrorMatch({ id, texto: error.message }); return }
+    // V7.1: por el servidor, que al poner en contacto le manda a cada lado el contacto del otro
+    // (app/api/matches/[id]). Un lado sin broker se conecta directo.
+    const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+    const r = await fetch(`/api/matches/${id}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ estado }),
+    })
+    if (!r.ok) { setErrorMatch({ id, texto: (await r.json().catch(() => ({}))).error ?? 'No se pudo actualizar' }); return }
     setMatches(ms => ms.map(m => (m.id === id ? { ...m, estado } : m)))
   }
 
@@ -137,7 +142,7 @@ export default function ValidacionOperacion() {
         ) : pendientes.map(({ m, nivel }) => {
           const a = activo(m.activo_id)
           const bComprador = brokerComprador(m.perfil_id)
-          const falta = [!a?.broker_id && 'del vendedor', !bComprador && 'del comprador'].filter(Boolean).join(' y ')
+          const porSuCuenta = [!a?.broker_id && 'el vendedor', !bComprador && 'el comprador'].filter(Boolean).join(' y ')
           return (
             <div key={m.id} className="px-5 py-4 border-b border-white/10 last:border-b-0 flex flex-col gap-2">
               <div className="flex items-start justify-between gap-3">
@@ -147,17 +152,17 @@ export default function ValidacionOperacion() {
                 <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
               </div>
               <p className="text-[11.5px] text-slate">
-                Broker del vendedor: {a?.broker_id ? nombre(a.broker_id) : 'sin broker'}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esPionero(a?.broker_id) ? ' · ★ Pionero' : ''}
-                {' '}· Broker del comprador: {bComprador ? nombre(bComprador) : 'sin broker'} · Solicitó: {nombre(m.solicitado_por)}
+                Broker del vendedor: {a?.broker_id ? nombre(a.broker_id) : 'por su cuenta'}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esPionero(a?.broker_id) ? ' · ★ Pionero' : ''}
+                {' '}· Broker del comprador: {bComprador ? nombre(bComprador) : 'por su cuenta'} · Solicitó: {nombre(m.solicitado_por)}
               </p>
               <p className="text-[11.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
-              {m.estado === 'solicitado' && falta && (
-                <p className="text-[11.5px] text-[#e8b568]">Falta el broker {falta}: ya se le pidió elegirlo. Se podrá poner en contacto cuando lo tenga.</p>
+              {m.estado === 'solicitado' && porSuCuenta && (
+                <p className="text-[11.5px] text-paper-dim">Va por su cuenta {porSuCuenta}: al poner en contacto recibe directo el contacto del otro lado y la sugerencia de elegir broker.</p>
               )}
               {errorMatch?.id === m.id && <p className="text-[11.5px] text-[#f3a3a3]">{errorMatch.texto}</p>}
               <div className="flex flex-wrap gap-2">
                 {m.estado === 'solicitado' && (
-                  <button onClick={() => actualizarMatch(m.id, 'en_contacto')} disabled={!!falta}
+                  <button onClick={() => actualizarMatch(m.id, 'en_contacto')}
                     className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40`}>Poner en contacto</button>
                 )}
                 {m.estado === 'en_contacto' && (

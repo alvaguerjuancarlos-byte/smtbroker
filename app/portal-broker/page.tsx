@@ -54,12 +54,27 @@ interface MatchCliente {
   perfilId: string; activoId: string; cliente: string; score: number; razones: string[]
   activo: { id: string; nombre: string; tipo: string; municipio: string; precio_total: number | null }
   representacion: string; solicitud: string | null
+  /** V7.1: al ponerse en contacto, quién atiende el otro lado (su broker o el cliente por su cuenta). */
+  contacto?: ContactoConexion
+}
+
+interface ContactoConexion { nombre: string; correo: string | null; esBroker: boolean }
+
+function LineaContacto({ c }: { c?: ContactoConexion }) {
+  if (!c) return null
+  return (
+    <p className="text-[12.5px] text-paper mt-1.5">
+      Contacto: {c.nombre}{c.esBroker ? ' (broker)' : ' (va por su cuenta)'}
+      {c.correo && <> · <a href={`mailto:${c.correo}`} className="text-gold-400 hover:text-gold-100">{c.correo}</a></>}
+    </p>
+  )
 }
 
 interface MatchPortafolio {
   activoId: string; perfilId: string; activo: string; score: number; razones: string[]
   contraparte: string; criterios: { presupuesto: string | null; zona: string | null; tipo: string | null }
   solicitud: string | null
+  contacto?: ContactoConexion
 }
 
 const PRESUPUESTOS = ['Menos de $2M', '$2M – $5M', '$5M – $15M', '$15M – $50M', 'Más de $50M']
@@ -606,6 +621,7 @@ export default function PortalBrokerPage() {
                                 {m.activo.tipo} · {m.activo.municipio}{m.activo.precio_total ? ` · ${mxn(m.activo.precio_total)}` : ''} · {m.representacion}
                               </p>
                               <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                              <LineaContacto c={m.contacto} />
                             </div>
                             <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
                               onClick={() => solicitarMatch(m.activoId, m.perfilId)} />
@@ -630,6 +646,7 @@ export default function PortalBrokerPage() {
                                 Busca: {[m.criterios.tipo, m.criterios.zona, m.criterios.presupuesto].filter(Boolean).join(' · ')}
                               </p>
                               <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                              <LineaContacto c={m.contacto} />
                             </div>
                             <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
                               onClick={() => solicitarMatch(m.activoId, m.perfilId)} />

@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { calificarLead, RANGOS_PRESUPUESTO, PLAZOS, FORMAS_PAGO, ETIQUETA_CATEGORIA, type Plazo, type FormaPago } from '@/lib/calificacionLeads'
 import { avisarUsuario, avisarOperacion } from '@/lib/avisos'
-import { sesionServidor } from '@/lib/sesionServidor'
 
 // "Me interesa" de la página pública (Documento Maestro V6.3, §14.2). Sin sesión: lo llena
 // cualquier persona interesada. Defensas:
@@ -12,34 +11,11 @@ import { sesionServidor } from '@/lib/sesionServidor'
 //   - campo trampa (`sitio_web`, oculto): si viene lleno es un bot -> se responde OK sin guardar;
 //   - máximo 5 envíos por IP por hora (la IP se guarda solo como hash, nunca en claro).
 // La calificación (Serio/Calificado/Interesado/Curioso) se calcula AQUÍ con reglas explicables
-// (lib/calificacionLeads.ts), nunca se acepta del navegador. El lead lo ven el broker del activo y
-// el dueño si la propiedad ya tiene broker (RLS) en /activo/[id]/leads; sin broker, el dueño lo
-// ve sin contacto (GET de abajo).
+// (lib/calificacionLeads.ts), nunca se acepta del navegador. El lead lo ven el dueño y el broker
+// del activo (RLS) en /activo/[id]/leads. V7.1: el dueño sin broker también lo ve completo (vende
+// por su cuenta; migración 20261101000000).
 
 const LIMITE_POR_HORA = 5
-
-// V7 (decisión (a) de JC, 2026-10-31): el dueño de una propiedad SIN broker ve que tiene
-// interesados -- categoría, presupuesto, plazo, forma de pago y por qué -- pero no su nombre, su
-// contacto ni su mensaje: esos los recibe su broker cuando elija uno ("broker para conectar").
-// La RLS ya no le deja leer `leads` directo (migración 20261031000000); esta ruta le da la vista
-// sin contacto. GET ?activoId=…
-export async function GET(req: NextRequest) {
-  try {
-    const s = await sesionServidor(req)
-    if (!s) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    const activoId = req.nextUrl.searchParams.get('activoId') || ''
-    const { data } = await s.admin.from('activos').select('usuario_id, broker_id').eq('id', activoId).maybeSingle()
-    const activo = data as { usuario_id: string; broker_id: string | null } | null
-    if (!activo || activo.usuario_id !== s.uid) return NextResponse.json({ error: 'Activo no encontrado' }, { status: 404 })
-    if (activo.broker_id) return NextResponse.json({ error: 'Tu propiedad ya tiene broker: los interesados se leen completos' }, { status: 409 })
-    const { data: leads } = await s.admin.from('leads')
-      .select('id, presupuesto, plazo, forma_pago, categoria, razones, created_at')
-      .eq('activo_id', activoId).order('created_at', { ascending: false })
-    return NextResponse.json({ leads: leads ?? [] })
-  } catch (e) {
-    return NextResponse.json({ error: mensajeError(e) }, { status: 500 })
-  }
-}
 
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
 const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -94,7 +70,6 @@ export async function POST(req: NextRequest) {
       titulo: `Nuevo interesado · ${ETIQUETA_CATEGORIA[categoria]}`,
       lineas: [
         `Propiedad: ${activo.nombre}.`, `Por qué: ${razones.join(' · ')}.`,
-        ...(activo.broker_id ? [] : ['Para ver su contacto y conectar con él, elige un broker certificado que te represente.']),
       ],
       enlace: { texto: 'Ver el lead', ruta: `/activo/${activoId}/leads` },
     }
