@@ -10,6 +10,9 @@ import { avisarOperacion } from '@/lib/avisos'
 //   - su propiedad (vender) o lo que busca (comprar).
 // Los brokers NO se registran aquí: siguen pasando por /bienvenida y la aprobación de Operación.
 //
+// Mundo demo (lib/mundo.ts): un correo @demo.smtbroker.mx se registra en el mundo demo -- así se
+// graba el recorrido para el video sin crear cuentas reales (el grabador las borra al terminar).
+//
 // Defensas: campo trampa `sitio_web`; máximo 5 registros por IP por hora (la IP se guarda solo
 // como hash); correo ya registrado → 409 (que inicie sesión). El Agente de Mercado reusa el
 // diagnóstico guardado, así que una cuenta no lo dispara más de una vez por propiedad.
@@ -54,6 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta qué buscas, la zona o el presupuesto' }, { status: 400 })
     }
 
+    const esDemo = email.endsWith('@demo.smtbroker.mx')
     const ipHash = createHash('sha256').update(ipDe(req)).digest('hex').slice(0, 32)
     const { count } = await admin.from('contactos_cliente').select('usuario_id', { count: 'exact', head: true })
       .eq('registro_ip_hash', ipHash).gte('created_at', new Date(Date.now() - 3600 * 1000).toISOString())
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
     const deshacer = async () => { await admin.auth.admin.deleteUser(uid) }
 
     const rol = quiere === 'vender' ? 'propietario' : 'inversionista'
-    const { error: eU } = await admin.from('usuarios').upsert({ id: uid, nombre, rol, es_demo: false })
+    const { error: eU } = await admin.from('usuarios').upsert({ id: uid, nombre, rol, es_demo: esDemo })
     if (eU) { await deshacer(); return NextResponse.json({ error: eU.message }, { status: 500 }) }
     await admin.from('contactos_cliente').insert({ usuario_id: uid, telefono, registro_ip_hash: ipHash })
 
@@ -79,14 +83,14 @@ export async function POST(req: NextRequest) {
       const { data, error } = await admin.from('activos').insert({
         usuario_id: uid, cargado_por: 'propietario', nombre: `${propiedad.tipo} en ${lugar}`, tipo: propiedad.tipo,
         superficie: propiedad.superficie, municipio: propiedad.municipio, colonia: propiedad.colonia || null,
-        estado: 'Nuevo León', precio_total: propiedad.precio, status: 'ingresado', es_demo: false,
+        estado: 'Nuevo León', precio_total: propiedad.precio, status: 'ingresado', es_demo: esDemo,
       }).select('id').single()
       if (error) { await deshacer(); return NextResponse.json({ error: error.message }, { status: 500 }) }
       activoId = (data as { id: string }).id
     } else {
       const { error } = await admin.from('perfiles_intencion').insert({
         usuario_id: uid, tipo_activo_interes: busqueda.busca, zona: busqueda.zona, presupuesto: busqueda.presupuesto,
-        fuente_captura: 'registro_directo', es_demo: false,
+        fuente_captura: 'registro_directo', es_demo: esDemo,
       })
       if (error) { await deshacer(); return NextResponse.json({ error: error.message }, { status: 500 }) }
     }
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
         ? `${propiedad.tipo} en ${propiedad.colonia ? `${propiedad.colonia}, ` : ''}${propiedad.municipio}.`
         : `Busca ${busqueda.busca} en ${busqueda.zona} · ${busqueda.presupuesto}.`],
       enlace: { texto: 'Abrir la consola', ruta: '/panel' },
-    }, { esDemo: false }))
+    }, { esDemo }))
     return NextResponse.json({ ok: true, activoId })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
