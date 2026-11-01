@@ -306,7 +306,7 @@ export default function PortalInversionPage() {
                         <p className="text-[11.5px] text-paper-dim mt-1">{c.razones.join(' · ')}</p>
                         {c.contacto && (
                           <p className="text-[12.5px] text-paper mt-1.5">
-                            Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (broker de la propiedad)' : ' (propietario)'}
+                            Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (broker de la propiedad)' : ' (vende por su cuenta)'}
                             {c.contacto.correo && <> · <a href={`mailto:${c.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{c.contacto.correo}</a></>}
 {c.contacto.telefono && <> · <a href={`https://wa.me/52${c.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {c.contacto.telefono}</a></>}
                           </p>
