@@ -82,7 +82,8 @@ async function main() {
   const txtA = JSON.stringify(gA.json)
   check('broker A ve su cliente cruzado con la casa de B', gA.json.paraMisClientes?.some((m) => m.activoId === casaB.id && m.perfilId === cliA.id))
   check('la casa de B aparece como "otro broker"', gA.json.paraMisClientes?.find((m) => m.activoId === casaB.id)?.representacion === 'Representada por otro broker de la red')
-  check('broker A ve compradores para su casa', gA.json.paraMiPortafolio?.some((m) => m.activoId === casaA.id && m.contraparte === 'Comprador por su cuenta'))
+  // V7.2: el comprador por su cuenta solo ve el Radar; los brokers no lo ven en su portafolio.
+  check('V7.2: broker A NO ve al comprador por su cuenta para su casa', !gA.json.paraMiPortafolio?.some((m) => m.activoId === casaA.id && m.perfilId === perfC?.id))
   check('la API NO revela el alias del cliente de B', !txtA.includes(aliasSecretoB))
   check('la API NO revela el nombre del broker B', !txtA.includes(B.nombre))
   check('la API NO revela el nombre del comprador', !txtA.includes(C.nombre))
@@ -90,7 +91,7 @@ async function main() {
   check('el cliente de B aparece solo como "Cliente de otro broker"', gA.json.paraMiPortafolio?.some((m) => m.perfilId === cliB.id && m.contraparte === 'Cliente de otro broker'))
 
   const gC = await api(C)
-  check('comprador ve coincidencias', gC.status === 200 && gC.json.coincidencias?.some((m) => m.activoId === casaA.id))
+  check('V7.2: el comprador por su cuenta no ve casas de brokers', gC.status === 200 && !gC.json.coincidencias?.some((m) => m.activoId === casaA.id || m.activoId === casaB.id))
   const txtC = JSON.stringify(gC.json)
   check('al comprador NO se le revelan brokers', !txtC.includes(A.nombre) && !txtC.includes(B.nombre) && !txtC.includes(A.id))
 

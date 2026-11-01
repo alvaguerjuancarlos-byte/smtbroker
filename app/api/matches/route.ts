@@ -20,6 +20,10 @@ import { atiendeComprador, atiendeVendedor, contactoDe, type Contacto } from '@/
 // contacto (app/api/matches/[id]), esta ruta le da a cada parte el contacto de quien atiende el
 // otro lado -- su broker o, si va por su cuenta, el cliente mismo (lib/contactoConexion.ts).
 //
+// V7.2 (por tu cuenta solo ves el Radar): el comprador sin broker solo cruza con propiedades de
+// particulares (sin broker); las de los brokers se ven con broker. Por lo mismo, un broker no ve
+// ni pide conexión con compradores que van por su cuenta.
+//
 // Mundos (lib/mundo.ts, migración 20261008000000): una cuenta real solo cruza datos reales y una
 // cuenta demo solo datos demo -- los brokers del piloto nunca ven a los personajes del video.
 
@@ -87,6 +91,7 @@ export async function GET(req: NextRequest) {
     const conContacto = async <T extends { solicitud: string | null }>(xs: T[], lado: (x: T) => { id: string; esBroker: boolean }) =>
       Promise.all(xs.map(async (x) => (x.solicitud === 'en_contacto' ? { ...x, contacto: await contacto(lado(x)) } : x)))
     const activoDe = new Map(A.map((a) => [a.id, a]))
+    const porSuCuenta = (p: Perfil) => !!p.usuario_id && !p.representado_por
     const perfilDe = new Map(P.map((p) => [p.id, p]))
 
     if (rol === 'broker') {
@@ -115,6 +120,7 @@ export async function GET(req: NextRequest) {
       })))
 
       const paraMiPortafolio = porScore(miPortafolio.flatMap((a) => P.flatMap((p) => {
+        if (porSuCuenta(p)) return [] // V7.2: el comprador por su cuenta no ve propiedades de brokers
         const r = valido(a, p)
         if (!r) return []
         const contraparte = esMio(p) ? `Tu cliente: ${aliasDe(p)}`
@@ -135,7 +141,8 @@ export async function GET(req: NextRequest) {
     if (rol === 'inversionista') {
       const miPerfil = P.find((p) => p.usuario_id === uid)
       if (!miPerfil) return NextResponse.json({ rol, coincidencias: [], tieneBroker: false })
-      const coincidencias = porScore(A.flatMap((a) => {
+      const visibles = porSuCuenta(miPerfil) ? A.filter((a) => !a.broker_id) : A // V7.2: por su cuenta, solo particulares
+      const coincidencias = porScore(visibles.flatMap((a) => {
         const r = valido(a, miPerfil)
         return r ? [{ activoId: a.id, perfilId: miPerfil.id, score: r.score, razones: r.razones, activo: activoPublico(a), solicitud: solicitud(a, miPerfil) }] : []
       }))
@@ -196,6 +203,10 @@ export async function POST(req: NextRequest) {
       (rol === 'broker' && (activo.broker_id === uid || (perfil.broker_id === uid && perfil.usuario_id === null) || perfil.representado_por === uid)) ||
       (rol === 'inversionista' && perfil.usuario_id === uid)
     if (!esDueno) return NextResponse.json({ error: 'No autorizado para este match' }, { status: 403 })
+    // V7.2: quien va por su cuenta solo se conecta con particulares; las propiedades de brokers, con broker.
+    if (perfil.usuario_id && !perfil.representado_por && activo.broker_id) {
+      return NextResponse.json({ error: 'Las propiedades que traen los brokers se ven con un broker', necesitaBroker: true }, { status: 403 })
+    }
 
     const r = puntuarMatch(activo, perfil)
     if (!esMatchValido(activo, r)) return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })

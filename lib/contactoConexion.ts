@@ -9,7 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export interface LadoActivo { broker_id: string | null; usuario_id: string }
 export interface LadoPerfil { broker_id: string | null; usuario_id: string | null; representado_por: string | null }
 
-export interface Contacto { nombre: string; correo: string | null; esBroker: boolean }
+export interface Contacto { nombre: string; correo: string | null; esBroker: boolean; /** V7.2: WhatsApp del cliente que va por su cuenta (contactos_cliente). */ telefono?: string | null }
 
 /** Quién atiende el lado del vendedor: su broker o el propietario por su cuenta. */
 export const atiendeVendedor = (a: LadoActivo) => ({ id: a.broker_id ?? a.usuario_id, esBroker: !!a.broker_id })
@@ -21,10 +21,12 @@ export function atiendeComprador(p: LadoPerfil) {
 }
 
 export async function contactoDe(admin: SupabaseClient, lado: { id: string; esBroker: boolean }): Promise<Contacto> {
-  const [{ data: u }, { data: auth }] = await Promise.all([
+  const [{ data: u }, { data: auth }, { data: c }] = await Promise.all([
     admin.from('usuarios').select('nombre').eq('id', lado.id).maybeSingle(),
     admin.auth.admin.getUserById(lado.id),
+    lado.esBroker ? Promise.resolve({ data: null }) : admin.from('contactos_cliente').select('telefono').eq('usuario_id', lado.id).maybeSingle(),
   ])
   const nombre = (u as { nombre: string | null } | null)?.nombre || (lado.esBroker ? 'Broker' : 'Cliente')
-  return { nombre, correo: auth?.user?.email ?? null, esBroker: lado.esBroker }
+  const telefono = (c as { telefono: string | null } | null)?.telefono ?? null
+  return { nombre, correo: auth?.user?.email ?? null, esBroker: lado.esBroker, ...(telefono ? { telefono } : {}) }
 }

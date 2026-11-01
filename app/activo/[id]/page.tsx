@@ -156,6 +156,14 @@ export default function ActivoPage() {
     }
   }
 
+  // Desde el recorrido guiado (/empezar): #elegir-broker o #expediente, cuando ya cargó la página.
+  const cargado = !!activo
+  useEffect(() => {
+    if (!cargado || !window.location.hash) return
+    const t = setTimeout(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
+    return () => clearTimeout(t)
+  }, [cargado])
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -378,7 +386,7 @@ export default function ActivoPage() {
 
           {/* Diagnóstico rápido (gratis) + certificación legal (de pago) — V6.3 §13. Ver
               app/api/diagnostico-rapido y app/api/certificaciones. */}
-          <div>
+          <div id="expediente" className="scroll-mt-6">
             <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
               <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase">Uso de suelo y expediente legal</h2>
               {cert === 'certificada' && (
@@ -416,7 +424,9 @@ export default function ActivoPage() {
 
           {/* Propietario sin broker: elige un broker verificado de su zona (V6.3 §15, paso 3B). */}
           {activo.usuario_id === uid && !activo.broker_id && rol === 'propietario' && (
-            <ElegirBroker activoId={activo.id} onAsignado={refrescarExpediente} />
+            <div id="elegir-broker" className="scroll-mt-6">
+              <ElegirBroker activoId={activo.id} onAsignado={refrescarExpediente} />
+            </div>
           )}
 
           {/* Análisis de Mercado — Agente de Mercado real (comparables de reventa vía búsqueda

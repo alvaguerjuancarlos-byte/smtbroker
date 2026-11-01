@@ -5,7 +5,7 @@
 //
 // Escenarios (mundo real, San Pedro):
 //   A. Los dos por su cuenta: comprador C y propietario P sin broker.
-//   B. Mixto: C por su cuenta y una casa representada por el broker B2.
+//   B. Mixto: C por su cuenta y una casa representada por el broker B2 (V7.2: ya no se ven ni conectan).
 //   C. Con broker los dos: comprador C2 representado por B1 y la casa de B2.
 // En cada uno, Operación pone en contacto y cada lado ve SOLO el contacto de quien atiende el otro
 // lado (su broker o el cliente por su cuenta), nunca el de un cliente que tiene broker.
@@ -110,14 +110,11 @@ async function main() {
   const { data: leadsX } = await C.cli.from('leads').select('id').eq('activo_id', casaP)
   check('A. otro usuario no los lee', (leadsX || []).length === 0)
 
-  // ── B. Comprador por su cuenta y casa con broker ────────────────────────────────────────
-  await api(C, '/api/matches', { activoId: casaB2, perfilId: perfilC })
-  const vB = await api(OP, `/api/matches/${await matchId(casaB2, perfilC)}`, { estado: 'en_contacto' })
-  check('B. Operación conecta al comprador por su cuenta con la casa de B2', vB.status === 200, JSON.stringify(vB.json))
-  const cB = buscar((await api(C, '/api/matches', null, 'GET')).json.coincidencias, casaB2, perfilC)
-  check('B. el comprador recibe el contacto del broker B2', cB?.contacto?.correo === B2.email && cB.contacto.esBroker === true, JSON.stringify(cB?.contacto))
-  const bB = buscar((await api(B2, '/api/matches', null, 'GET')).json.paraMiPortafolio, casaB2, perfilC)
-  check('B. B2 recibe el contacto del comprador, que sigue siendo "por su cuenta"', bB?.contacto?.correo === C.email && bB.contraparte === 'Comprador por su cuenta', JSON.stringify(bB))
+  // ── B. Comprador por su cuenta y casa con broker (V7.2: ya no se conectan) ──────────────
+  const sB = await api(C, '/api/matches', { activoId: casaB2, perfilId: perfilC })
+  check('B. V7.2: el comprador por su cuenta NO pide conexión con la casa de B2', sB.status === 403 && sB.json.necesitaBroker === true, JSON.stringify(sB.json))
+  check('B. …ni la ve en sus coincidencias', !buscar((await api(C, '/api/matches', null, 'GET')).json.coincidencias, casaB2, perfilC))
+  check('B. …y B2 no lo ve en su portafolio', !buscar((await api(B2, '/api/matches', null, 'GET')).json.paraMiPortafolio, casaB2, perfilC))
 
   // ── C. Con broker los dos ────────────────────────────────────────────────────────────────
   const sC = await api(B1, '/api/matches', { activoId: casaB2, perfilId: perfilC2 })

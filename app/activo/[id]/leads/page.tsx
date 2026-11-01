@@ -30,7 +30,7 @@ interface Lead {
 interface MatchMotor {
   id: string; score: number; razones: string[]; estado: string
   /** V7.1, propietario por su cuenta: quién atiende al comprador y su contacto si ya está en contacto. */
-  contraparte?: string; contacto?: { nombre: string; correo: string | null; esBroker: boolean }
+  contraparte?: string; contacto?: { nombre: string; correo: string | null; esBroker: boolean; telefono?: string | null }
 }
 
 const ORDEN: Record<CategoriaLead, number> = { serio: 0, calificado: 1, interesado: 2, curioso: 3 }
@@ -205,6 +205,7 @@ export default function LeadsPage() {
                         <p className="text-[13px] text-paper">
                           {m.contacto.nombre}{m.contacto.esBroker ? ' (su broker)' : ''}
                           {m.contacto.correo && <> · <a href={`mailto:${m.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{m.contacto.correo}</a></>}
+{m.contacto.telefono && <> · <a href={`https://wa.me/52${m.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {m.contacto.telefono}</a></>}
                         </p>
                       )}
                     </div>

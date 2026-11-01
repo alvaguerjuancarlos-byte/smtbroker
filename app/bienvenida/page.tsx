@@ -191,7 +191,12 @@ export default function BienvenidaPage() {
                 {ROLES.map(r => {
                   const sel = rol === r.id
                   return (
-                    <button key={r.id} onClick={() => { setRol(r.id); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
+                    <button key={r.id} onClick={() => {
+                      // V7.2: vendedores y compradores entran al recorrido guiado con registro
+                      // inmediato (/empezar); solo los brokers dejan solicitud para aprobación.
+                      if (r.id === 'propietario' || r.id === 'inversionista') { router.push(`/empezar?quiere=${r.id === 'propietario' ? 'vender' : 'comprar'}`); return }
+                      setRol(r.id); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+                    }}
                       className={`p-5 border text-left transition-all bg-navy-800 ${sel ? 'border-gold-500' : 'border-white/10 hover:border-white/25'}`}>
                       <div className="w-11 h-11 border flex items-center justify-center mb-4" style={{ borderColor: r.accent, color: r.accent }}>
                         {r.icono}

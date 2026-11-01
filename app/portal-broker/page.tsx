@@ -58,7 +58,7 @@ interface MatchCliente {
   contacto?: ContactoConexion
 }
 
-interface ContactoConexion { nombre: string; correo: string | null; esBroker: boolean }
+interface ContactoConexion { nombre: string; correo: string | null; esBroker: boolean; telefono?: string | null }
 
 function LineaContacto({ c }: { c?: ContactoConexion }) {
   if (!c) return null
@@ -66,6 +66,7 @@ function LineaContacto({ c }: { c?: ContactoConexion }) {
     <p className="text-[12.5px] text-paper mt-1.5">
       Contacto: {c.nombre}{c.esBroker ? ' (broker)' : ' (va por su cuenta)'}
       {c.correo && <> · <a href={`mailto:${c.correo}`} className="text-gold-400 hover:text-gold-100">{c.correo}</a></>}
+{c.telefono && <> · <a href={`https://wa.me/52${c.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {c.telefono}</a></>}
     </p>
   )
 }

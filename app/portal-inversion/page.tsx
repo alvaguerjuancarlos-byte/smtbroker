@@ -38,7 +38,7 @@ interface Activo {
 interface Coincidencia {
   activoId: string; perfilId: string; score: number; razones: string[]; solicitud: string | null
   /** V7.1: cuando Operación la pone en contacto, quién atiende al vendedor (su broker o él mismo). */
-  contacto?: { nombre: string; correo: string | null; esBroker: boolean }
+  contacto?: { nombre: string; correo: string | null; esBroker: boolean; telefono?: string | null }
   activo: { id: string; nombre: string; tipo: string; municipio: string; estado: string; superficie: number | null; precio_total: number | null }
 }
 
@@ -69,6 +69,15 @@ export default function PortalInversionPage() {
   const [perfilId, setPerfilId] = useState<string | null>(null)
   const [tieneBroker, setTieneBroker] = useState(false)
   const [pedirBroker, setPedirBroker] = useState(false)
+  // Desde el recorrido guiado (/empezar): "Ver brokers de mi zona" llega con ?broker=1.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('broker') !== '1') return
+    const t = setTimeout(() => {
+      setPedirBroker(true)
+      document.getElementById('tu-broker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 600)
+    return () => clearTimeout(t)
+  }, [])
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
   const cargarCoincidencias = async () => {
@@ -274,11 +283,11 @@ export default function PortalInversionPage() {
           {/* Coincidencias con lo que busca */}
           {tienePerfil && coincidencias && (
             <div>
-              <h2 className="font-display text-[17px] font-medium text-paper mb-1">Coinciden con lo que buscas</h2>
+              <h2 className="font-display text-[17px] font-medium text-paper mb-1">{tieneBroker ? 'Coinciden con lo que buscas' : 'Propiedades de particulares que coinciden'}</h2>
               <p className="text-[12px] text-slate mb-4">
                 Por tipo de propiedad, zona y presupuesto. {tieneBroker
                   ? 'Si te interesa alguna, tu broker se conecta con quien la vende.'
-                  : 'Si te interesa alguna, nuestro equipo valida la conexión y te pasa el contacto de quien la vende.'}
+                  : 'Si te interesa alguna, nuestro equipo valida la conexión y te pasa el contacto de quien la vende. Las propiedades que traen los brokers se ven con un broker.'}
               </p>
               {coincidencias.length === 0 ? (
                 <div className="bg-navy-800 border border-white/10 px-8 py-8 text-center">
@@ -299,6 +308,7 @@ export default function PortalInversionPage() {
                           <p className="text-[12.5px] text-paper mt-1.5">
                             Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (broker de la propiedad)' : ' (propietario)'}
                             {c.contacto.correo && <> · <a href={`mailto:${c.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{c.contacto.correo}</a></>}
+{c.contacto.telefono && <> · <a href={`https://wa.me/52${c.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {c.contacto.telefono}</a></>}
                           </p>
                         )}
                       </div>
