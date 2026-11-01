@@ -8,7 +8,7 @@
 //     broker_id y alias. Sin teléfono ni correo del cliente: el contacto sigue siendo del broker.
 //   - Matches: coincidencias de app/api/matches (reglas explicables de lib/matching.ts). Operación
 //     valida cada conexión a mano; nunca se revela quién es el cliente o el broker ajeno.
-//   - Mi desempeño: conteos reales y nivel de Broker Certificado SMT (lib/nivelesBroker.ts,
+//   - Mi desempeño: conteos reales y nivel de Broker Verificado SMT (lib/nivelesBroker.ts,
 //     umbrales provisionales, V6.1 §6.3 y §7).
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -458,7 +458,7 @@ export default function PortalBrokerPage() {
                   </select>
                 </Field>
               </div>
-              <p className="text-[12px] text-slate">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Certificado SMT.</p>
+              <p className="text-[12px] text-slate">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Verificado SMT.</p>
               {errorCierre && <p className="text-[12px] text-[#f3a3a3]">{errorCierre}</p>}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setCierreDe(null)}
@@ -664,7 +664,7 @@ export default function PortalBrokerPage() {
           {pestana === 'oportunidades' && (
             <div className="flex flex-col gap-3">
               <p className="text-[13px] text-paper-dim">
-                Propietarios y compradores de tu zona que eligieron a un broker certificado. Tu nivel te hace visible: más nivel, más oportunidades.
+                Propietarios y compradores de tu zona que eligieron a un broker verificado. Tu nivel te hace visible: más nivel, más oportunidades.
               </p>
               {errorOportunidad && <p className="text-[12px] text-[#f3a3a3]">{errorOportunidad}</p>}
               {oportunidades.length === 0 ? (
@@ -749,7 +749,7 @@ export default function PortalBrokerPage() {
           {pestana === 'desempeno' && (
             <div className="flex flex-col gap-4">
               <div className="bg-navy-800 border border-gold-500/30 p-5">
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Certificado SMT</p>
+                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Verificado SMT</p>
                 <p className="font-display text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
                 {pionero && (
                   <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>

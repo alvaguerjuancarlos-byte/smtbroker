@@ -1,4 +1,4 @@
-// Nivel de Broker Certificado SMT calculado en el SERVIDOR (solo con supabaseAdmin). El portal del
+// Nivel de Broker Verificado SMT calculado en el SERVIDOR (solo con supabaseAdmin). El portal del
 // broker y la consola de Operación lo calculan en el navegador con sus propios datos; aquí hace
 // falta para mostrarle a un PROPIETARIO el nivel de brokers ajenos (Documento Maestro V6.3, §15)
 // sin abrirle por RLS los portafolios ni los cierres de nadie. Misma regla: lib/nivelesBroker.ts.

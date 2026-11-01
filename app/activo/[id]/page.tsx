@@ -414,7 +414,7 @@ export default function ActivoPage() {
           </div>
           )}
 
-          {/* Propietario sin broker: elige un broker certificado de su zona (V6.3 §15, paso 3B). */}
+          {/* Propietario sin broker: elige un broker verificado de su zona (V6.3 §15, paso 3B). */}
           {activo.usuario_id === uid && !activo.broker_id && rol === 'propietario' && (
             <ElegirBroker activoId={activo.id} onAsignado={refrescarExpediente} />
           )}

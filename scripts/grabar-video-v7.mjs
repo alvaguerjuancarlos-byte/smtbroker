@@ -159,7 +159,7 @@ try {
     await irA(page, 'Expediente para certificar', 90, 10); await sleep(600)
     marca('07'); await sleep(1500)
     await clic(page, 'Solicitar certificación legal'); await esperar(page, 'Certificación en revisión'); await sleep(3000)
-    marca('08'); await irA(page, 'Elige un broker certificado', 90, 1600); await esperar(page, 'Diego Salinas'); await sleep(3500)
+    marca('08'); await irA(page, 'Elige un broker verificado', 90, 1600); await esperar(page, 'Diego Salinas'); await sleep(3500)
     await clic(page, 'Elegir', 'Diego Salinas'); await esperar(page, 'Esperando respuesta de'); await sleep(3000)
   })
 
@@ -168,7 +168,7 @@ try {
     await esperar(page, 'Hola, Diego')
     marca('09'); await sleep(5000)
     marca('10'); await clic(page, 'Mi desempeño'); await esperar(page, 'Para subir a'); await sleep(800)
-    await irA(page, 'Broker Certificado SMT', 70, 1000); await acercar(page, 'Para subir a'); await sleep(5500)
+    await irA(page, 'Broker Verificado SMT', 70, 1000); await acercar(page, 'Para subir a'); await sleep(5500)
     marca('11'); await page.evaluate(() => window.scrollTo(0, 0)); await clic(page, 'Oportunidades'); await esperar(page, 'Terreno Valle Poniente'); await sleep(3000)
     await clic(page, 'Aceptar y representar'); await esperar(page, 'Aceptada'); await sleep(2500)
     marca('12'); await clic(page, 'Mis clientes'); await sleep(3500)
@@ -236,7 +236,7 @@ try {
   await toma('r9-diego-oro', 'diego', '/portal-broker', async (page, marca) => {
     await esperar(page, 'Hola, Diego')
     await clic(page, 'Mi desempeño'); await esperar(page, 'Nivel Oro'); await sleep(600)
-    await irA(page, 'Broker Certificado SMT', 70, 10)
+    await irA(page, 'Broker Verificado SMT', 70, 10)
     marca('19b'); await sleep(1500); await acercar(page, 'Para subir a', 1.15, 3000); await sleep(4500)
   })
 

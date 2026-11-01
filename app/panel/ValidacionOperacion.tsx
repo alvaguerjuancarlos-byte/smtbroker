@@ -4,7 +4,7 @@
 //   - Matches por validar: solicitudes "Me interesa conectar" (tabla matches). Operación ve las
 //     identidades completas de ambos lados -- los brokers no (ver app/api/matches) -- y decide si
 //     los pone en contacto. Es la validación manual de la Fase 2 del roadmap (2–3 por semana
-//     antes de automatizar). Ordenados por nivel de Broker Certificado SMT: la primera forma de
+//     antes de automatizar). Ordenados por nivel de Broker Verificado SMT: la primera forma de
 //     "prioridad de match" (V6.1 §6.3).
 //   - Cierres por verificar: reportes de cierres_reportados; los verificados suben el nivel.
 // La RLS ya permite a Operación leer y actualizar todo esto (es_operacion(), migraciones

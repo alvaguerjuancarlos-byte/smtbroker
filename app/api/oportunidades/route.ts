@@ -6,7 +6,7 @@ import { municipioCanonico } from '@/lib/matching'
 import { documentosFaltantes } from '@/lib/expediente'
 import { avisarUsuario } from '@/lib/avisos'
 
-// Oportunidades: el cliente elige un broker certificado (Documento Maestro V6.3 §15; V7: por
+// Oportunidades: el cliente elige un broker verificado (Documento Maestro V6.3 §15; V7: por
 // ambos lados; migraciones 20261008000400 y 20261031000000). Toda la escritura pasa por aquí.
 // Una oportunidad es de un ACTIVO (el propietario elige quién lo representa) o de un PERFIL de
 // búsqueda (el comprador que llegó directo elige quién lo representa).
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un propietario te eligió para representar su propiedad',
         lineas: [
           `${activo.tipo} en ${activo.municipio}: ${activo.nombre}.`,
-          'Te eligió por tu nivel de Broker Certificado SMT. Acéptala o recházala desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado SMT. Acéptala o recházala desde tu portal.',
         ],
       }
     } else {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un comprador te eligió para representarlo',
         lineas: [
           `Busca ${perfil.tipo_activo_interes || 'propiedad'} en ${perfil.zona || 'tu zona'}${perfil.presupuesto ? `, presupuesto ${perfil.presupuesto}` : ''}.`,
-          'Te eligió por tu nivel de Broker Certificado SMT. Acéptalo o recházalo desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado SMT. Acéptalo o recházalo desde tu portal.',
         ],
       }
     }

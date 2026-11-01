@@ -1,5 +1,5 @@
 // Recorrido visual del paso 3B (el propietario elige broker) con Puppeteer: un propietario ve
-// "Elige un broker certificado de tu zona", elige a un broker Pionero; el broker ve la oportunidad
+// "Elige un broker verificado de tu zona", elige a un broker Pionero; el broker ve la oportunidad
 // en su pestaña "Oportunidades" y la acepta. Capturas en scripts/capturas-oportunidades/. Crea y
 // borra sus cuentas y activos. Los textos se comparan sin mayúsculas: innerText aplica text-transform. El mapa de Google da RefererNotAllowedMapError en localhost (se ignora).
 //
@@ -60,7 +60,7 @@ try {
 
   const pp = await sesion(P.email)
   await pp.goto(`${BASE}/activo/${act.id}`, { waitUntil: 'domcontentloaded' })
-  check('el propietario ve "Elige un broker certificado"', await esperar(pp, 'Elige un broker certificado de tu zona'))
+  check('el propietario ve "Elige un broker verificado"', await esperar(pp, 'Elige un broker verificado de tu zona'))
   check('aparece el broker Pionero con nivel Plata', await esperar(pp, `Broker Pionero ${sufijo}`) && (await pp.evaluate(() => document.body.innerText)).toLowerCase().includes('nivel plata'))
   await pp.screenshot({ path: `${OUT}/1-propietario-elige.png`, fullPage: true })
   await (await pp.waitForSelector('::-p-text(Elegir)')).click()

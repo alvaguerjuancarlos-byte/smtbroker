@@ -17,7 +17,7 @@ const ROLES = [
     id:     'propietario' as Rol,
     titulo: 'Soy propietario',
     sub:    'Quiero vender un activo',
-    desc:   'Diagnóstico de mercado con IA, certificación legal y un broker certificado de tu zona que te representa.',
+    desc:   'Diagnóstico de mercado con IA, certificación legal y un broker verificado de tu zona que te representa.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.6" fill="none"/>
@@ -27,7 +27,7 @@ const ROLES = [
     accent: '#ddc06a',
     chip:   'border-gold-500/40 text-gold-400 bg-gold-500/10',
     // Sin menciones a pagos ni promesas que hoy son visión (hallazgo del recorrido guiado, 2026-10-07).
-    beneficios: ['Precio de salida con comparables reales', 'Certificación legal de tu propiedad', 'Eliges a un broker certificado'],
+    beneficios: ['Precio de salida con comparables reales', 'Certificación legal de tu propiedad', 'Eliges a un broker verificado'],
   },
   {
     id:     'inversionista' as Rol,

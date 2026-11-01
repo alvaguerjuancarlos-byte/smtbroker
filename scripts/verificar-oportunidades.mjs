@@ -1,4 +1,4 @@
-// Verifica contra la base REAL el paso 3B del plan V6.3: el propietario elige un broker certificado
+// Verifica contra la base REAL el paso 3B del plan V6.3: el propietario elige un broker verificado
 // (migración 20261008000400_oportunidades.sql, app/api/brokers-zona, app/api/oportunidades).
 //
 // Escenario (mundo real salvo BD): un propietario con una casa en San Pedro sin broker y cinco

@@ -1,6 +1,6 @@
 'use client'
 
-// "Elige un broker certificado de tu zona" (Documento Maestro V6.3, §15; paso 3B del plan; V7: por
+// "Elige un broker verificado de tu zona" (Documento Maestro V6.3, §15; paso 3B del plan; V7: por
 // ambos lados). Lo ve el propietario de un activo sin broker (activoId) y el comprador que llegó
 // directo y aún no tiene broker (perfilId): los brokers de su municipio con nivel Plata o más,
 // ordenados por nivel, con su desempeño público (nunca su contacto). Al elegir, el broker recibe al
@@ -100,12 +100,12 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
 
   return (
     <div className="bg-navy-800 border border-gold-500/30 p-4 md:p-6">
-      <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-[0.1em] mb-1">Elige un broker certificado de tu zona</p>
+      <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-[0.1em] mb-1">Elige un broker verificado de tu zona</p>
       {motivo && <p className="text-[14px] text-paper mb-2">{motivo}</p>}
       <p className="text-[13px] text-paper-dim mb-4">
         {esComprador
-          ? 'Un broker certificado te representa: busca contigo, se conecta con el broker de cada propiedad y te acompaña hasta el cierre.'
-          : 'Un broker certificado representa tu propiedad, la presenta a sus compradores y a los de toda la red.'}
+          ? 'Un broker verificado te representa: busca contigo, se conecta con el broker de cada propiedad y te acompaña hasta el cierre.'
+          : 'Un broker verificado representa tu propiedad, la presenta a sus compradores y a los de toda la red.'}
         {' '}Estos trabajan en {zona || 'tu municipio'}; el nivel refleja su desempeño verificado.
       </p>
 
@@ -115,7 +115,7 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
           <p className="text-[12px] text-slate mt-1">{esComprador ? 'Le enviamos lo que buscas' : 'Le enviamos tu propiedad'} como oportunidad. Si la acepta, pasará a representarte.</p>
         </div>
       ) : brokers.length === 0 ? (
-        <p className="text-[13px] text-slate">Todavía no hay brokers certificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
+        <p className="text-[13px] text-slate">Todavía no hay brokers verificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {brokers.map(b => (

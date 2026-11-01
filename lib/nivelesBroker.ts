@@ -1,4 +1,4 @@
-// Programa Broker Certificado SMT (Documento Maestro V6.3, §6.3 y §15): niveles por desempeño,
+// Programa Broker Verificado SMT (Documento Maestro V6.3, §6.3 y §15): niveles por desempeño,
 // inspirados en Uber Pro y el Superhost de Airbnb. Subir de nivel requiere REPORTAR cierres (que
 // Operación verifica) -- así reportar le conviene al broker y se ataca la fuga de transacciones.
 //

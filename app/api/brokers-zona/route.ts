@@ -4,7 +4,7 @@ import { perfilesBrokers } from '@/lib/nivelServidor'
 import { ORDEN_NIVEL } from '@/lib/nivelesBroker'
 import { municipioCanonico } from '@/lib/matching'
 
-// Brokers certificados de la zona de un cliente sin broker (Documento Maestro V6.3 §15; V7: por
+// Brokers verificados de la zona de un cliente sin broker (Documento Maestro V6.3 §15; V7: por
 // ambos lados). Body: {activoId} para el DUEÑO de un activo sin broker, o {perfilId} para el
 // COMPRADOR que llegó directo (su perfil de búsqueda) y aún no tiene broker. Devuelve solo
 // desempeño público -- nombre, nivel, propiedades certificadas y cierres verificados --, nunca
