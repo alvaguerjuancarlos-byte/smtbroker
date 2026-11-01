@@ -88,7 +88,9 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
         body: JSON.stringify({ activoId: j.activoId }),
       })
       const d = await m.json().catch(() => ({}))
-      setPrecio(m.ok ? { salida: d.precioSalidaRecomendadoMXN ?? null, texto: d.interpretacion ?? null } : null)
+      // Solo la primera frase: el razonamiento completo (un párrafo largo) queda en su propiedad.
+      const primera = typeof d.interpretacion === 'string' ? d.interpretacion.split(/(?<=[.!?])\s+/)[0] : null
+      setPrecio(m.ok ? { salida: d.precioSalidaRecomendadoMXN ?? null, texto: primera } : null)
     } catch { setPrecio(null) }
     setPaso('certificar')
   }
