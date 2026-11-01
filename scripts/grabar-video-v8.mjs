@@ -184,14 +184,15 @@ try {
     await escribir(2, '1020'); await escribir(3, 'Valle Poniente'); await escribir(4, 'San Pedro Garza García')
     await escribir(5, '24,000,000'); await escribir(6, RECORRIDO.ricardo); await escribir(7, process.env.DEMO_PASSWORD)
     await sleep(600)
-    await clic(page, 'Ver mi precio realista')
-    await esperar(page, 'Comparando tu propiedad'); marca('calculando')
-    await esperar(page, '¿Certificamos tu propiedad?', 180000)
+    await clic(page, 'Continuar'); await esperar(page, '¿Cómo quieres vender?')
+    marca('camino'); await sleep(4000)
+    // Su panel (/inicio, desde el 1-nov): analizando → precio realista → invitación a certificar.
+    await clic(page, 'Continuar por mi cuenta'); await esperar(page, 'Esto es lo que preparamos para ti')
+    marca('panel'); await sleep(1500)
+    await esperar(page, 'Ver análisis completo', 180000)
     marca('precio'); await sleep(4500)
-    await irA(page, '¿Certificamos tu propiedad?', 80, 1200)
-    marca('certificar'); await sleep(4000)
-    await clic(page, 'Sí, certificar mi propiedad'); await esperar(page, '¿Cómo quieres vender?')
-    marca('camino'); await sleep(5000)
+    await irA(page, 'Certifica tu propiedad', 80, 1400)
+    marca('certificar'); await sleep(4500)
   }, CEL)
 
   // R0b · Recorrido guiado de Patricia (comprar), en celular
@@ -207,7 +208,18 @@ try {
     await escribir(4, RECORRIDO.patricia); await escribir(5, process.env.DEMO_PASSWORD)
     await sleep(600)
     await clic(page, 'Continuar'); await esperar(page, '¿Cómo quieres buscar?')
-    marca('camino'); await sleep(6000)
+    marca('camino'); await sleep(4000)
+    // Su panel (/inicio): afina su búsqueda y guarda.
+    await clic(page, 'Buscar por mi cuenta'); await esperar(page, 'Cuéntanos más de lo que buscas')
+    marca('panel'); await sleep(1500)
+    await clic(page, 'Departamento'); await sleep(500)
+    const det = await page.$$('main input')
+    const poner = async (i, t) => { await det[i].click(); await page.keyboard.type(t, { delay: 60 }) }
+    await poner(0, '3'); await poner(1, '2'); await poner(2, '120'); await poner(3, 'Valle Oriente')
+    await clic(page, 'Terraza'); await sleep(400); await clic(page, 'Amenidades'); await sleep(600)
+    await clic(page, 'Guardar y afinar mi búsqueda'); await esperar(page, 'Guardado')
+    marca('guardado'); await sleep(1200)
+    await irA(page, 'Lo que coincide contigo', 120, 1400); await sleep(3500)
   }, CEL)
 
   // R2 · Ricardo por su cuenta: expediente y certificación (escena 6), su ficha y su página (escena 7)
