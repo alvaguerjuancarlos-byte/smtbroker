@@ -193,6 +193,12 @@ try {
     marca('precio'); await sleep(4500)
     await irA(page, 'Certifica tu propiedad', 80, 1400)
     marca('certificar'); await sleep(4500)
+    // La plataforma le prepara su ficha y su página; él solo publica (1-nov, commit 9b38252).
+    await esperar(page, 'Tu página de venta está lista', 240000)
+    await irA(page, 'Tu página de venta', 80, 1400)
+    marca('lista'); await sleep(4000)
+    await clic(page, 'Publicar'); await esperar(page, 'Tu página está publicada')
+    marca('publicada'); await sleep(4000)
   }, CEL)
 
   // R0b · Recorrido guiado de Patricia (comprar), en celular
