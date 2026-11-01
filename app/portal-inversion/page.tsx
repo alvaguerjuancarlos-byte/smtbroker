@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
 import { Field, inputCls } from '../components/FormField'
 import { ElegirBroker } from '../components/ElegirBroker'
+import { RadarMercado } from './RadarMercado'
 
 interface PerfilIntencion {
   presupuesto: string
@@ -317,6 +318,9 @@ export default function PortalInversionPage() {
               )}
             </div>
           )}
+
+          {/* Radar de mercado (V7.1 §18): solo para quien busca por su cuenta; con broker, su broker busca */}
+          {tienePerfil && coincidencias && !tieneBroker && <RadarMercado />}
 
           {/* Activos disponibles */}
           <div>

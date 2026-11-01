@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
 import ValidacionOperacion from './ValidacionOperacion'
+import RadarOperacion from './RadarOperacion'
 import CertificacionesOperacion from './CertificacionesOperacion'
 import { etiquetaRol, HOME_POR_ROL } from '@/lib/roles'
 import { EjemploBadge } from '../components/EjemploBadge'
@@ -438,6 +439,9 @@ export default function PanelPage() {
 
           {/* Fase B: matches por validar y cierres por verificar (ver ValidacionOperacion.tsx) */}
           <ValidacionOperacion />
+
+          {/* V7.1 §18: Radar de mercado, invitaciones a certificar (ver RadarOperacion.tsx) */}
+          <RadarOperacion />
 
           {/* Paso 4 V6.3: certificaciones legales (ver CertificacionesOperacion.tsx) */}
           <CertificacionesOperacion />
