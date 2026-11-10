@@ -1,7 +1,7 @@
 // Graba las tomas del video demo v7 (guion: Documents/SMTBROKER/demo-v2/guion-demo-v7.docx, aprobado por
 // JC el 2026-10-31) contra producción, en el MUNDO DEMO (no manda correos ni toca datos reales). Es el
-// grabador del v6 con un cambio: la toma de Patricia empieza arriba, en "Tu broker" (Documento Maestro
-// V7: Patricia tiene su propio broker). Las marcas conservan los nombres del v6; el montaje
+// grabador del v6 con un cambio en la toma de Patricia. V7.1 (2026-11-01, JC): Patricia compra POR SU
+// CUENTA (sin broker en el mundo demo) y la toma termina en su Radar de mercado (marca "16b"). Las marcas conservan los nombres del v6; el montaje
 // (demo-v2/armar_v7.py) decide qué tramo va en cada escena del v7.
 //
 // Prepara el mundo demo (Diego Pionero con su cierre por verificar, para que suba de Plata a Oro en
@@ -204,13 +204,13 @@ try {
     marca('15'); await sleep(3000); await irA(page, 'Interesados de la página pública', 90, 1500); await sleep(4000)
   })
 
-  // R6 · Patricia: escena 16
-  // v7: la toma empieza arriba para que se vea "Tu broker" (Patricia representada por Diego).
+  // R6 · Patricia por su cuenta (V7.1): lo que busca, coincidencias y su Radar de mercado
   await toma('r6-patricia', 'patricia', '/portal-inversion', async (page, marca) => {
-    await esperar(page, 'Coinciden con lo que buscas'); await esperar(page, 'Tu broker')
-    marca('13'); await sleep(2500); await irA(page, 'Tu broker', 120, 1400); await sleep(3000)
+    await esperar(page, 'Coinciden con lo que buscas'); await esperar(page, 'Radar de mercado')
+    marca('13'); await sleep(2500); await irA(page, '¿Quieres un broker que te represente?', 160, 1400); await sleep(3000)
     marca('16'); await irA(page, 'Coinciden con lo que buscas', 90, 1600); await sleep(3500)
     await clic(page, 'Me interesa'); await esperar(page, 'Solicitado'); await sleep(3000)
+    marca('16b'); await irA(page, 'Radar de mercado', 90, 1600); await sleep(6000)
   })
 
   // R7 · Operación: escenas 17 a 19 (validar, dictamen y certificar, verificar el cierre)
