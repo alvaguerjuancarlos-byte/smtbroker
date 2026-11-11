@@ -10,6 +10,7 @@ import ListaConexiones from '../components/ListaConexiones'
 interface Activo {
   id: string; nombre: string; colonia: string | null; municipio: string | null
   broker_id: string | null; publicada_at: string | null
+  operacion?: 'venta' | 'renta' | 'ambas' | null
 }
 // V9 (§22.3): en renta, la renta realista al mes; en venta y renta, las dos cifras.
 type Precio = { salida: number | null; renta: number | null; operacion: 'venta' | 'renta' | 'ambas'; frase: string | null } | 'calculando' | 'error'
@@ -29,7 +30,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.from('activos').select('id, nombre, colonia, municipio, broker_id, publicada_at')
+      const { data } = await supabase.from('activos').select('id, nombre, colonia, municipio, broker_id, publicada_at, operacion')
         .eq('usuario_id', uid).order('created_at', { ascending: false })
       const lista = (data as Activo[]) || []
       setActivos(lista)
@@ -100,10 +101,11 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
   }
 
   const lugar = activo.colonia || activo.municipio
+  const soloRenta = activo.operacion === 'renta'
   const tarjetaBroker = !activo.broker_id && (
     <div className={`${tarjeta} ${conBroker ? 'border-gold-500' : 'border-linea'}`}>
       <span className={`${etiqueta} ${conBroker ? 'text-acento' : 'text-tenue'}`}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres llegar a toda la red?'}</span>
-      <p className="text-[17px]">Un broker verificado presenta tu propiedad a los compradores de todos los brokers y te acompaña hasta el cierre.</p>
+      <p className="text-[17px]">Un broker verificado presenta tu propiedad a {soloRenta ? 'quienes buscan rentar en' : 'los compradores de'} todos los brokers y te acompaña hasta {soloRenta ? 'la firma del contrato' : 'el cierre'}.</p>
       <a href={`/activo/${activo.id}#elegir-broker`} className={conBroker ? `${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg` : 'font-sans text-[15px] text-acento'}>
         {conBroker ? 'Ver brokers de mi zona' : 'Ver brokers de mi zona →'}
       </a>
@@ -158,8 +160,8 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
           <p className="text-[17px]">Tu certificación está en revisión. Te avisamos al terminar.</p>
         ) : (
           <>
-            <p className="text-[17px]">Las propiedades certificadas generan más confianza y se venden más rápido. <span className="text-tinta-2">La plataforma se encarga de la certificación por ti.</span></p>
-            <p className="text-[15px] text-tenue">Te pediremos escritura, folio real y predial.</p>
+            <p className="text-[17px]">Las propiedades certificadas generan más confianza y {soloRenta ? 'se rentan' : 'se venden'} más rápido. <span className="text-tinta-2">La plataforma se encarga de la certificación por ti.</span></p>
+            <p className="text-[15px] text-tenue">{soloRenta ? 'Te pediremos escritura y predial (la certificación de renta es más ligera).' : 'Te pediremos escritura, folio real y predial.'}</p>
             <a href={`/activo/${activo.id}#expediente`} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Certificar mi propiedad</a>
           </>
         )}
@@ -180,7 +182,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
           </>
         ) : ficha === 'preparando' || (ficha === null && precio === 'calculando') ? (
           <>
-            <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
+            <span className={`${etiqueta} text-tenue`}>Tu página de {soloRenta ? 'renta' : 'venta'}</span>
             <div className="flex items-center gap-3 py-1">
               <span className="w-2.5 h-2.5 rounded-full bg-gold-500 animate-pulse shrink-0" />
               <p className="text-[17px] text-tinta-2">{ficha === 'preparando' ? 'Escribiendo tu ficha y armando tu página…' : 'Tu ficha y tu página se preparan en cuanto esté tu precio.'}</p>
@@ -189,7 +191,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
         ) : typeof ficha === 'object' && ficha ? (
           <>
             <div className="flex items-center justify-between gap-2">
-              <span className={`${etiqueta} text-acento`}>Tu página de venta está lista</span>
+              <span className={`${etiqueta} text-acento`}>Tu página de {soloRenta ? 'renta' : 'venta'} está lista</span>
               <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-1.5 py-0.5 rounded-lg">LISTA</span>
             </div>
             <div className="border border-linea bg-fondo/50 p-3 flex flex-col gap-1.5">
@@ -204,7 +206,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
           </>
         ) : (
           <>
-            <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
+            <span className={`${etiqueta} text-tenue`}>Tu página de {soloRenta ? 'renta' : 'venta'}</span>
             <p className="text-[17px]">Escribimos tu ficha y armamos tu página para que la publiques.</p>
             <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Preparar mi página</a>
           </>
