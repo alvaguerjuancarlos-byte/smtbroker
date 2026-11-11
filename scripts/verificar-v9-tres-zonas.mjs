@@ -76,6 +76,7 @@ try {
   const texto = async () => (await p.evaluate(() => document.body.innerText)).toLowerCase()
   await p.goto(BASE + '/empezar', { waitUntil: 'networkidle2' })
   await clic('Quiero comprar')
+  await clic('Comprar')   // V9 §22: primer paso de la ficha
   await clic('Casa')
   await (await p.$$('input'))[3].type('200')   // construcción mínima
   await clic('Continuar')

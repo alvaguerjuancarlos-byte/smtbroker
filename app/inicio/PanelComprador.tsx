@@ -18,11 +18,11 @@ import { EncabezadoPantalla } from '../components/Banda'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { millones, MAX_NECESIDADES_ACTIVAS, MEJORES_POR_ZONA } from '@/lib/necesidad'
+import { dinero, MAX_NECESIDADES_ACTIVAS, MEJORES_POR_ZONA } from '@/lib/necesidad'
 import ListaConexiones from '../components/ListaConexiones'
 
 interface Busqueda {
-  id: string; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
+  id: string; operacion: 'compra' | 'renta'; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
   busqueda_directa: boolean; publicada_brokers: boolean; propuestas: number
   zonas: { nombre: string; municipio: string; precioM2: number | null; comparables: number; rinde: { m2: number; faltaPct: number | null } | null }[]
 }
@@ -31,7 +31,7 @@ interface Opcion {
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
   broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
-  zona?: number; puntaje?: number; razones?: string[]
+  zona?: number; puntaje?: number; razones?: string[]; operacion?: 'compra' | 'renta'; detalleRenta?: string[]
 }
 interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
@@ -173,7 +173,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
         ? <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-[17px] underline underline-offset-2 decoration-linea-fuerte">{o.titulo}</a>
         : <span className="text-[17px]">{o.titulo}</span>}
       <span className="text-[15px] text-tenue">
-        {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
+        {[o.precio ? dinero(o.precio, o.operacion) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
       </span>
       {o.puntaje != null && o.origen !== 'portal' && (
         <span className="text-[14px] text-tinta-2"><b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>{o.razones?.length ? ` · ${o.razones.join(' · ')}` : ''}</span>
@@ -277,11 +277,11 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
                     <div className="flex flex-col gap-0.5">
                       <span className="font-display text-[20px] font-medium">{z.nombre}</span>
                       <span className="text-[15px] text-tenue">
-                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m² (${z.comparables} comparables)` : ''}
+                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m²${n.operacion === 'renta' ? ' al mes' : ''} (${z.comparables} comparables)` : ''}
                       </span>
                       {z.rinde && (
                         <span className="text-[15px] text-tinta-2">
-                          Con tu presupuesto, ~{z.rinde.m2.toLocaleString('es-MX')} m²
+                          {n.operacion === 'renta' ? 'Con tu renta' : 'Con tu presupuesto'}, ~{z.rinde.m2.toLocaleString('es-MX')} m²
                           {z.rinde.faltaPct != null && z.rinde.faltaPct > 0 && <span className="text-aviso"> · {z.rinde.faltaPct} % abajo de lo que pides aquí</span>}
                         </span>
                       )}

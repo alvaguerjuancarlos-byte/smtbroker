@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarOperacion } from '@/lib/avisos'
-import { validarNecesidad, resumenNecesidad } from '@/lib/necesidad'
+import { validarNecesidad, resumenNecesidad, validarOperacionActivo } from '@/lib/necesidad'
 import { guardarNecesidad } from '@/lib/necesidadServidor'
 
 // Registro inmediato de un cliente desde el recorrido guiado /empezar (Documento Maestro V7.2,
@@ -52,9 +52,12 @@ export async function POST(req: NextRequest) {
       colonia: texto(p.colonia, 80), precio: numero(p.precio),
     }
     const busqueda = { busca: texto(s.busca, 120), zona: texto(s.zona, 120), presupuesto: texto(s.presupuesto, 40) }
-    if (quiere === 'vender' && (!propiedad.tipo || !propiedad.municipio || !propiedad.precio)) {
-      return NextResponse.json({ error: 'Faltan el tipo, el municipio o el precio de tu propiedad' }, { status: 400 })
+    // V9 (§22.3): la propiedad está en venta, en renta o en las dos, con su precio y/o su renta.
+    const op = validarOperacionActivo(p)
+    if (quiere === 'vender' && (!propiedad.tipo || !propiedad.municipio)) {
+      return NextResponse.json({ error: 'Faltan el tipo o el municipio de tu propiedad' }, { status: 400 })
     }
+    if (quiere === 'vender' && 'error' in op) return NextResponse.json({ error: op.error }, { status: 400 })
     // V8 (§19): quien compra llega con su ficha de necesidad completa. La forma vieja (qué busca,
     // zona y presupuesto en texto) se acepta mientras quede alguna página que la mande.
     const ficha = quiere === 'comprar' && b.necesidad ? validarNecesidad(b.necesidad) : null
@@ -89,7 +92,8 @@ export async function POST(req: NextRequest) {
       const { data, error } = await admin.from('activos').insert({
         usuario_id: uid, cargado_por: 'propietario', nombre: `${propiedad.tipo} en ${lugar}`, tipo: propiedad.tipo,
         superficie: propiedad.superficie, municipio: propiedad.municipio, colonia: propiedad.colonia || null,
-        estado: 'Nuevo León', precio_total: propiedad.precio, status: 'ingresado', es_demo: esDemo,
+        estado: 'Nuevo León', status: 'ingresado', es_demo: esDemo,
+        ...('error' in op ? {} : { precio_total: op.precio_total, operacion: op.operacion, renta_mensual: op.renta_mensual, renta: op.renta }),
       }).select('id').single()
       if (error) { await deshacer(); return NextResponse.json({ error: error.message }, { status: 500 }) }
       activoId = (data as { id: string }).id

@@ -7,6 +7,11 @@
 // Solo tipo, municipio y presupuesto máximo son obligatorios: las características ayudan, pero no
 // deben frenar la captura.
 //
+// V9 (§22, rentas): cada ficha es de COMPRA o de RENTA (obligatorio, una operación por ficha). En
+// renta el presupuesto es la renta mensual, forma de pago y "¿para qué?" no aplican, y se piden
+// plazo del contrato, garantía, fecha de entrada, amueblada y mascotas. Una propiedad puede estar en
+// venta, en renta o en las dos: en una búsqueda de renta cuenta su renta mensual, no su precio.
+//
 // Sin imports de alias: se prueba con `node --test lib/necesidad.test.ts`.
 import { municipioCanonico, normalizarTipos } from './matching.ts'
 
@@ -14,6 +19,52 @@ export type TipoNecesidad = 'casa' | 'departamento' | 'terreno' | 'bodega' | 'of
 export type FormaPago = 'contado' | 'credito' | 'infonavit'
 export type Plazo = 'ya' | '3_meses' | '6_meses' | 'explorando'
 export type Proposito = 'vivir' | 'invertir'
+export type Operacion = 'compra' | 'renta'
+export type OperacionActivo = 'venta' | 'renta' | 'ambas'
+export type PlazoContrato = '1_anio' | '2_3_anios' | '5_anios'
+export type Garantia = 'aval' | 'poliza' | 'deposito'
+export type Entrada = 'ya' | '1_mes' | '3_meses'
+export type Amueblada = 'si' | 'no' | 'indistinto'
+
+export const OPERACIONES: { id: Operacion; etiqueta: string; verbo: string }[] = [
+  { id: 'compra', etiqueta: 'Comprar', verbo: 'comprar' }, { id: 'renta', etiqueta: 'Rentar', verbo: 'rentar' },
+]
+export const PLAZOS_CONTRATO: { id: PlazoContrato; etiqueta: string }[] = [
+  { id: '1_anio', etiqueta: '1 año' }, { id: '2_3_anios', etiqueta: '2 a 3 años' }, { id: '5_anios', etiqueta: '5 años o más' },
+]
+/** Lo que el inquilino puede dar (en la ficha). La propiedad pide una de estas o "cualquiera". */
+export const GARANTIAS: { id: Garantia; etiqueta: string }[] = [
+  { id: 'aval', etiqueta: 'Aval con propiedad' }, { id: 'poliza', etiqueta: 'Póliza jurídica' }, { id: 'deposito', etiqueta: 'Depósito adicional' },
+]
+export const ENTRADAS: { id: Entrada; etiqueta: string }[] = [
+  { id: 'ya', etiqueta: 'Ya' }, { id: '1_mes', etiqueta: 'En un mes' }, { id: '3_meses', etiqueta: 'En tres meses' },
+]
+export const AMUEBLADAS: { id: Amueblada; etiqueta: string }[] = [
+  { id: 'si', etiqueta: 'Amueblada' }, { id: 'no', etiqueta: 'Sin amueblar' }, { id: 'indistinto', etiqueta: 'Indistinto' },
+]
+/** §22.2: amueblada aplica a casa, departamento y oficina; mascotas, a casa y departamento. */
+export const CON_AMUEBLADA: string[] = ['casa', 'departamento', 'oficina']
+export const CON_MASCOTAS: string[] = ['casa', 'departamento']
+
+/** Lo propio de una ficha de renta (§22.2). */
+export interface RentaNecesidad {
+  plazo_contrato: PlazoContrato | null
+  garantia: Garantia | null
+  fecha_entrada: Entrada | null
+  amueblada: Amueblada | null
+  mascotas: boolean | null
+}
+
+/** Lo propio de una propiedad en renta (§22.3). */
+export interface RentaActivo {
+  incluye_mantenimiento: boolean
+  mantenimiento: number | null
+  deposito_meses: number | null
+  plazo_minimo: PlazoContrato | null
+  garantia: Garantia | 'cualquiera' | null
+  amueblada: boolean | null
+  mascotas: boolean | null
+}
 
 // Las claves coinciden con las que devuelve normalizarTipos() (lib/matching.ts), así una
 // propiedad y una necesidad se comparan con el mismo diccionario.
@@ -144,6 +195,9 @@ export interface ZonaBusqueda {
 export interface MercadoZona { precioM2: number | null; comparables: number; fecha: string }
 
 export interface Necesidad {
+  /** V9: comprar o rentar. En renta, presupuesto_min/max son la renta MENSUAL. */
+  operacion: Operacion
+  renta: RentaNecesidad | null
   tipo: TipoNecesidad
   caracteristicas: Record<string, number | string | string[]>
   estado: string
@@ -198,8 +252,13 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
   }
   const { estado, municipio, colonias } = zonas[0]
 
+  // V9: la captura obliga a elegir. Sin el campo (clientes de la V8) la ficha es de compra.
+  const operacion: Operacion | null = x.operacion == null ? 'compra' : de(x.operacion, ['compra', 'renta'])
+  if (!operacion) return { error: 'Elige si quieres comprar o rentar' }
+  const enRenta = operacion === 'renta'
+
   const presupuesto_max = numero(x.presupuesto_max)
-  if (!presupuesto_max) return { error: 'Escribe tu presupuesto máximo' }
+  if (!presupuesto_max) return { error: enRenta ? 'Escribe la renta mensual máxima' : 'Escribe tu presupuesto máximo' }
   const presupuesto_min = numero(x.presupuesto_min)
   if (presupuesto_min != null && presupuesto_min > presupuesto_max) return { error: 'El presupuesto mínimo es mayor que el máximo' }
 
@@ -207,23 +266,135 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
   const publicada_brokers = x.publicada_brokers !== false
   if (!busqueda_directa && !publicada_brokers) return { error: 'Elige al menos una forma de buscar' }
 
+  const r = (x.renta ?? {}) as Record<string, unknown>
+  const renta: RentaNecesidad | null = enRenta ? {
+    plazo_contrato: de(r.plazo_contrato, PLAZOS_CONTRATO.map((p) => p.id)),
+    garantia: de(r.garantia, GARANTIAS.map((g) => g.id)),
+    fecha_entrada: de(r.fecha_entrada, ENTRADAS.map((e) => e.id)),
+    amueblada: CON_AMUEBLADA.includes(tipo) ? de(r.amueblada, AMUEBLADAS.map((a) => a.id)) : null,
+    mascotas: CON_MASCOTAS.includes(tipo) && typeof r.mascotas === 'boolean' ? r.mascotas : null,
+  } : null
+
   return {
     necesidad: {
+      operacion, renta,
       tipo, caracteristicas, estado, municipio, zona: zonas[0].nombre, colonias, zonas,
       presupuesto_min, presupuesto_max,
-      forma_pago: de(x.forma_pago, FORMAS_PAGO.map((f) => f.id)),
-      plazo: de(x.plazo, PLAZOS.map((p) => p.id)),
-      proposito: de(x.proposito, PROPOSITOS.map((p) => p.id)),
+      // En renta no aplican: se paga cada mes, la fecha de entrada reemplaza "¿para cuándo?" y
+      // quien renta la va a usar (§22.2).
+      forma_pago: enRenta ? null : de(x.forma_pago, FORMAS_PAGO.map((f) => f.id)),
+      plazo: enRenta ? null : de(x.plazo, PLAZOS.map((p) => p.id)),
+      proposito: enRenta ? null : de(x.proposito, PROPOSITOS.map((p) => p.id)),
       busqueda_directa, publicada_brokers,
     },
   }
 }
 
+const RENTA_VACIA: RentaActivo = { incluye_mantenimiento: false, mantenimiento: null, deposito_meses: null, plazo_minimo: null, garantia: null, amueblada: null, mascotas: null }
+
+/** Limpia la operación y los datos de renta de una propiedad (alta del dueño o del broker, §22.3). */
+export function validarOperacionActivo(b: unknown): { operacion: OperacionActivo; renta_mensual: number | null; renta: RentaActivo | null; precio_total: number | null } | { error: string } {
+  const x = (b ?? {}) as Record<string, unknown>
+  const operacion = x.operacion == null ? 'venta' : de(x.operacion, ['venta', 'renta', 'ambas'] as OperacionActivo[])
+  if (!operacion) return { error: 'Elige si la propiedad está en venta, en renta o en las dos' }
+  const precio_total = numero(x.precio_total ?? x.precio)
+  const renta_mensual = numero(x.renta_mensual)
+  if (operacion !== 'renta' && !precio_total) return { error: 'Escribe el precio de venta' }
+  if (operacion !== 'venta' && !renta_mensual) return { error: 'Escribe la renta mensual' }
+  if (operacion === 'venta') return { operacion, precio_total, renta_mensual: null, renta: null }
+  const r = (x.renta ?? {}) as Record<string, unknown>
+  const bool = (v: unknown) => (typeof v === 'boolean' ? v : v === 'si' ? true : v === 'no' ? false : null)
+  return {
+    operacion, renta_mensual, precio_total: operacion === 'renta' ? null : precio_total,
+    renta: {
+      ...RENTA_VACIA,
+      incluye_mantenimiento: r.incluye_mantenimiento === true || r.incluye_mantenimiento === 'si',
+      mantenimiento: numero(r.mantenimiento),
+      deposito_meses: Math.min(numero(r.deposito_meses) ?? 0, 12) || null,
+      plazo_minimo: de(r.plazo_minimo, PLAZOS_CONTRATO.map((p) => p.id)),
+      garantia: de(r.garantia, [...GARANTIAS.map((g) => g.id), 'cualquiera'] as (Garantia | 'cualquiera')[]),
+      amueblada: bool(r.amueblada),
+      mascotas: bool(r.mascotas),
+    },
+  }
+}
+
+/** Datos de operación de una propiedad, como vienen de la base. Las viejas no los tienen: venta. */
+export interface OperacionDeActivo { operacion?: OperacionActivo | null; precio_total: number | null; renta_mensual?: number | null; renta?: RentaActivo | null }
+
+/** ¿La propiedad se ofrece para esta operación? */
+export const seOfrecePara = (a: Pick<OperacionDeActivo, 'operacion'>, op: Operacion) => {
+  const o = a.operacion ?? 'venta'
+  return o === 'ambas' || (op === 'compra' ? o === 'venta' : o === 'renta')
+}
+
+/** El precio que cuenta en esta búsqueda: precio total en compra, renta mensual en renta (§22.3). */
+export function precioPara(a: OperacionDeActivo, op: Operacion): number | null {
+  if (!seOfrecePara(a, op)) return null
+  return op === 'renta' ? a.renta_mensual ?? null : a.precio_total
+}
+
+/** "$28,000 al mes" (o "$28,000 al mes + $2,500 de mantenimiento"). */
+export const rentaTexto = (n: number) => `$${Math.round(n).toLocaleString('es-MX')} al mes`
+
+/** Precio o renta, según la operación: "$7.6M" o "$28,000 al mes". */
+export const dinero = (n: number, op: Operacion | null | undefined) => (op === 'renta' ? rentaTexto(n) : millones(n))
+
+const orden = <T extends string>(lista: { id: T }[], v: T | null | undefined) => (v ? lista.findIndex((x) => x.id === v) : -1)
+const etiqueta = <T extends string>(lista: { id: T; etiqueta: string }[], v: T | null | undefined) => lista.find((x) => x.id === v)?.etiqueta ?? null
+
+/** Detalle de renta de la ficha para tarjetas: ["Contrato: 1 año", "Garantía: póliza jurídica", ...]. */
+export function detalleRenta(r: RentaNecesidad | null | undefined): string[] {
+  if (!r) return []
+  return [
+    r.plazo_contrato && `Contrato: ${etiqueta(PLAZOS_CONTRATO, r.plazo_contrato)}`,
+    r.garantia && `Garantía: ${etiqueta(GARANTIAS, r.garantia)!.toLowerCase()}`,
+    r.fecha_entrada && `Entrada: ${etiqueta(ENTRADAS, r.fecha_entrada)!.toLowerCase()}`,
+    r.amueblada && r.amueblada !== 'indistinto' && etiqueta(AMUEBLADAS, r.amueblada),
+    r.mascotas === true && 'Con mascotas',
+  ].filter((v): v is string => !!v)
+}
+
+/** Detalle de renta de la propiedad: ["Depósito: 2 meses", "Plazo mínimo: 1 año", ...]. */
+export function detalleRentaActivo(r: RentaActivo | null | undefined): string[] {
+  if (!r) return []
+  return [
+    r.incluye_mantenimiento ? 'Mantenimiento incluido' : r.mantenimiento ? `Mantenimiento: $${r.mantenimiento.toLocaleString('es-MX')} al mes` : null,
+    r.deposito_meses && `Depósito: ${r.deposito_meses} ${r.deposito_meses === 1 ? 'mes' : 'meses'}`,
+    r.plazo_minimo && `Plazo mínimo: ${etiqueta(PLAZOS_CONTRATO, r.plazo_minimo)}`,
+    r.garantia && `Pide: ${r.garantia === 'cualquiera' ? 'cualquier garantía' : etiqueta(GARANTIAS, r.garantia)!.toLowerCase()}`,
+    r.amueblada === true ? 'Amueblada' : r.amueblada === false ? 'Sin amueblar' : null,
+    r.mascotas === true ? 'Acepta mascotas' : r.mascotas === false ? 'Sin mascotas' : null,
+  ].filter((v): v is string => !!v)
+}
+
+/**
+ * Lo de renta que NO cumple (§22.4, "cumplimiento de la ficha": plazo, garantía, amueblada y
+ * mascotas). Solo cuando los dos lados lo dicen: un dato que falta no descalifica.
+ */
+export function conflictosRenta(r: RentaActivo | null | undefined, n: Pick<Necesidad, 'renta'>): string[] {
+  const f = n.renta
+  if (!r || !f) return []
+  const m: string[] = []
+  if (f.mascotas === true && r.mascotas === false) m.push('No acepta mascotas')
+  if (f.amueblada === 'si' && r.amueblada === false) m.push('No está amueblada')
+  if (f.amueblada === 'no' && r.amueblada === true) m.push('Está amueblada')
+  if (f.garantia && r.garantia && r.garantia !== 'cualquiera' && r.garantia !== f.garantia) m.push(`Pide ${etiqueta(GARANTIAS, r.garantia)!.toLowerCase()}`)
+  if (f.plazo_contrato && r.plazo_minimo && orden(PLAZOS_CONTRATO, r.plazo_minimo) > orden(PLAZOS_CONTRATO, f.plazo_contrato)) {
+    m.push(`Pide contrato de ${etiqueta(PLAZOS_CONTRATO, r.plazo_minimo)}`)
+  }
+  return m
+}
+
 export const millones = (n: number) =>
   n >= 1_000_000 ? `$${+(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000).toLocaleString('es-MX')} mil`
 
-/** "$6M a $8M" o "hasta $8M". */
-export function presupuestoTexto(n: Pick<Necesidad, 'presupuesto_min' | 'presupuesto_max'>): string {
+/** "$6M a $8M" o "hasta $8M"; en renta, "$25,000 a $35,000 al mes". */
+export function presupuestoTexto(n: Pick<Necesidad, 'presupuesto_min' | 'presupuesto_max'> & { operacion?: Operacion | null }): string {
+  if (n.operacion === 'renta') {
+    const m = (v: number) => `$${Math.round(v).toLocaleString('es-MX')}`
+    return n.presupuesto_min ? `${m(n.presupuesto_min)} a ${m(n.presupuesto_max)} al mes` : `hasta ${m(n.presupuesto_max)} al mes`
+  }
   return n.presupuesto_min ? `${millones(n.presupuesto_min)} a ${millones(n.presupuesto_max)}` : `hasta ${millones(n.presupuesto_max)}`
 }
 
@@ -231,7 +402,7 @@ export const etiquetaTipo = (t: string) => TIPOS_NECESIDAD.find((x) => x.id === 
 
 /** Tarjeta del panel de brokers (§19.3): "Busca bodega · 1,000 m² · Apodaca · $6M a $8M · contado · ya". */
 export function resumenNecesidad(n: Necesidad): string {
-  const partes = [`Busca ${etiquetaTipo(n.tipo).toLowerCase()}`]
+  const partes = [`Busca ${etiquetaTipo(n.tipo).toLowerCase()}${n.operacion === 'renta' ? ' en renta' : ''}`]
   const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
   const rec = n.caracteristicas.recamaras
   if (typeof rec === 'number') partes.push(`${rec} rec`)
@@ -242,6 +413,8 @@ export function resumenNecesidad(n: Necesidad): string {
   if (pago) partes.push(pago.etiqueta.toLowerCase())
   const plazo = PLAZOS.find((p) => p.id === n.plazo)
   if (plazo) partes.push(plazo.id === 'ya' ? 'para ya' : plazo.etiqueta.toLowerCase())
+  if (n.renta?.plazo_contrato) partes.push(`contrato ${etiqueta(PLAZOS_CONTRATO, n.renta.plazo_contrato)}`)
+  if (n.renta?.fecha_entrada) partes.push(n.renta.fecha_entrada === 'ya' ? 'entrada ya' : `entrada ${etiqueta(ENTRADAS, n.renta.fecha_entrada)!.toLowerCase()}`)
   return partes.join(' · ')
 }
 
@@ -289,21 +462,22 @@ export function zonaDeActivo(a: { municipio: string | null; colonia?: string | n
  *   25 (sin pedirla: 20 si se conoce, 10 si no) · en las colonias pedidas 20 (zona sin colonias: 20).
  */
 export function puntajeOpcion(
-  a: { tipo: string | null; municipio: string | null; colonia?: string | null; precio_total: number | null; superficie: number | null },
+  a: { tipo: string | null; municipio: string | null; colonia?: string | null; superficie: number | null } & OperacionDeActivo,
   n: Necesidad,
 ): { puntaje: number; razones: string[] } {
   const razones: string[] = []
   let p = 0
   if ([...normalizarTipos(a.tipo)].includes(n.tipo)) p += 15
-  if (a.precio_total) {
+  const precio = precioPara(a, n.operacion ?? 'compra')
+  if (precio) {
     const min = n.presupuesto_min ?? 0, max = n.presupuesto_max
-    if (a.precio_total >= min && a.precio_total <= max) {
+    if (precio >= min && precio <= max) {
       p += 40
-      const abajo = Math.round((1 - a.precio_total / max) * 100)
+      const abajo = Math.round((1 - precio / max) * 100)
       razones.push(abajo >= 3 ? `${abajo} % abajo de tu tope` : 'dentro de tu presupuesto')
-    } else if (a.precio_total >= min * (1 - MARGEN_PRECIO) && a.precio_total <= max * (1 + MARGEN_PRECIO)) {
+    } else if (precio >= min * (1 - MARGEN_PRECIO) && precio <= max * (1 + MARGEN_PRECIO)) {
       p += 20
-      razones.push(a.precio_total > max ? `${Math.round((a.precio_total / max - 1) * 100)} % arriba de tu tope` : 'cerca de tu presupuesto')
+      razones.push(precio > max ? `${Math.round((precio / max - 1) * 100)} % arriba de tu tope` : 'cerca de tu presupuesto')
     }
   }
   const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
@@ -317,7 +491,13 @@ export function puntajeOpcion(
     p += 20
     if (z.colonias.length && a.colonia) razones.push(`en ${a.colonia}`)
   }
-  return { puntaje: Math.min(100, p), razones }
+  // Renta: plazo y garantía que no embonan restan (la ficha los pide, pero se pueden negociar).
+  if (n.operacion === 'renta') {
+    const c = conflictosRenta(a.renta, n).filter((m) => m.startsWith('Pide'))
+    p -= 10 * c.length
+    razones.push(...c.map((m) => m.toLowerCase()))
+  }
+  return { puntaje: Math.max(0, Math.min(100, p)), razones }
 }
 
 /**
@@ -333,11 +513,10 @@ export function rindeDinero(precioM2: number | null | undefined, n: Pick<Necesid
   return { m2, faltaPct }
 }
 
-export interface ActivoPropuesta {
+export interface ActivoPropuesta extends OperacionDeActivo {
   tipo: string | null
   municipio: string | null
   colonia: string | null
-  precio_total: number | null
   superficie: number | null
 }
 
@@ -356,11 +535,16 @@ export function cumpleNecesidad(a: ActivoPropuesta, n: Necesidad): { cumple: boo
       ? `No está en las colonias que pidió (${zs.flatMap((z) => z.colonias).join(', ')})`
       : zs.length > 1 ? `No está en sus zonas (${zs.map(nombreZona).join(', ')})` : `No está en ${zs[0].municipio}`)
   }
-  if (!a.precio_total) motivos.push('No tiene precio')
+  const op = n.operacion ?? 'compra'
+  const precio = precioPara(a, op)
+  if (!seOfrecePara(a, op)) motivos.push(op === 'renta' ? 'No está en renta' : 'No está en venta')
+  else if (!precio) motivos.push(op === 'renta' ? 'No tiene renta mensual' : 'No tiene precio')
   else {
     const min = (n.presupuesto_min ?? 0) * (1 - MARGEN_PRECIO), max = n.presupuesto_max * (1 + MARGEN_PRECIO)
-    if (a.precio_total < min || a.precio_total > max) motivos.push(`Su precio (${millones(a.precio_total)}) está fuera del presupuesto (${presupuestoTexto(n)}, ±10 %)`)
+    if (precio < min || precio > max) motivos.push(`Su ${op === 'renta' ? 'renta' : 'precio'} (${dinero(precio, op)}) está fuera del presupuesto (${presupuestoTexto(n)}, ±10 %)`)
   }
+  // Renta: mascotas y amueblada sí descalifican; plazo y garantía solo bajan el puntaje.
+  if (op === 'renta') motivos.push(...conflictosRenta(a.renta, n).filter((m) => !m.startsWith('Pide')))
   const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
   if (typeof area === 'number' && a.superficie && a.superficie < area * 0.9) {
     motivos.push(`Mide ${a.superficie.toLocaleString('es-MX')} m²; pidió al menos ${area.toLocaleString('es-MX')} m²`)
@@ -369,7 +553,10 @@ export function cumpleNecesidad(a: ActivoPropuesta, n: Necesidad): { cumple: boo
 }
 
 /** Texto de perfiles_intencion (formato que entiende lib/matching.ts): "$6M – $8M" o "Menos de $8M". */
-export function presupuestoPerfil(n: Pick<Necesidad, 'presupuesto_min' | 'presupuesto_max'>): string {
+export function presupuestoPerfil(n: Pick<Necesidad, 'presupuesto_min' | 'presupuesto_max'> & { operacion?: Operacion | null }): string {
+  // Renta: texto que el matching de la V7 no lee como precio de compra (no hay que comparar una
+  // renta mensual contra precios de venta).
+  if (n.operacion === 'renta') return `Renta ${presupuestoTexto(n)}`
   const m = (v: number) => `$${+(v / 1_000_000).toFixed(2)}M`
   return n.presupuesto_min ? `${m(n.presupuesto_min)} – ${m(n.presupuesto_max)}` : `Menos de ${m(n.presupuesto_max)}`
 }

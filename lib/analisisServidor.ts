@@ -43,8 +43,9 @@ async function comparablesGuardados(admin: SupabaseClient, activoId: string, ope
     if (d && reciente(d.fecha) && Array.isArray(d.resultado.comparables)) return { comparables: d.resultado.comparables as Comparable[], fecha: d.fecha }
     const { data: p } = await admin.from('propuestas').select('precio_mercado').eq('activo_id', activoId).not('precio_mercado', 'is', null)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    const pm = (p as { precio_mercado: DatosMercado | null } | null)?.precio_mercado
-    if (pm && reciente(pm.fecha)) return { comparables: pm.comparables, fecha: pm.fecha }
+    const pm = (p as { precio_mercado: (DatosMercado & { operacion?: Operacion }) | null } | null)?.precio_mercado
+    // V9: la propuesta a una ficha de renta guarda comparables de renta; esos no sirven para la venta.
+    if (pm && pm.operacion !== 'renta' && reciente(pm.fecha)) return { comparables: pm.comparables, fecha: pm.fecha }
   }
   const { data: a } = await admin.from('analisis').select('resultado, created_at').eq('activo_id', activoId)
     .order('created_at', { ascending: false }).limit(5)

@@ -8,6 +8,8 @@
 // Con sesión (un comprador que crea otra búsqueda, /buscar) se salta la cuenta y se guarda directo.
 // V9 (§23): la ubicación tiene hasta 3 zonas, cada una con su municipio; los resultados se muestran
 // por zona, con "lo que rinde tu dinero" en cada una.
+// V9 (§22): el primer paso es "¿Comprar o rentar?" (obligatorio, sin "me da igual"). En renta el
+// presupuesto es la renta mensual y se piden plazo, garantía, fecha de entrada, amueblada y mascotas.
 import { useState } from 'react'
 import { BandaPaso, Avance } from '../components/Banda'
 import { useRouter } from 'next/navigation'
@@ -15,15 +17,16 @@ import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
 import {
   TIPOS_NECESIDAD, CARACTERISTICAS, ESTADOS_MX, MUNICIPIOS_NL, FORMAS_PAGO, PLAZOS, PROPOSITOS,
-  millones, rindeDinero, MAX_ZONAS, MEJORES_POR_ZONA, type TipoNecesidad, type MercadoZona,
+  dinero, rindeDinero, MAX_ZONAS, MEJORES_POR_ZONA, OPERACIONES, PLAZOS_CONTRATO, GARANTIAS, ENTRADAS, AMUEBLADAS,
+  CON_AMUEBLADA, CON_MASCOTAS, type TipoNecesidad, type MercadoZona, type Operacion,
 } from '@/lib/necesidad'
 
-type Paso = 'tipo' | 'caract' | 'ubicacion' | 'presupuesto' | 'buscar'
-const PASOS: Paso[] = ['tipo', 'caract', 'ubicacion', 'presupuesto', 'buscar']
+type Paso = 'operacion' | 'tipo' | 'caract' | 'ubicacion' | 'presupuesto' | 'buscar'
+const PASOS: Paso[] = ['operacion', 'tipo', 'caract', 'ubicacion', 'presupuesto', 'buscar']
 
 interface Resultados {
   zonas: { municipio: string; nombre: string | null; colonias: string[]; mercado: MercadoZona | null }[]
-  plataforma: { activoId: string; nombre: string; municipio: string; precio_total: number | null; superficie: number | null; certificada: boolean; zona: number; puntaje: number; razones: string[] }[]
+  plataforma: { activoId: string; nombre: string; municipio: string; precio: number | null; superficie: number | null; certificada: boolean; zona: number; puntaje: number; razones: string[] }[]
   portales: { url: string; titulo: string; fuente: string; zona: number }[]
 }
 
@@ -46,7 +49,10 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   totalPasos: number
 }) {
   const router = useRouter()
-  const [paso, setPaso] = useState<Paso>('tipo')
+  const [paso, setPaso] = useState<Paso>('operacion')
+  const [operacion, setOperacion] = useState<Operacion | null>(null)
+  const [renta, setRenta] = useState<{ plazo_contrato: string | null; garantia: string | null; fecha_entrada: string | null; amueblada: string | null; mascotas: boolean | null }>(
+    { plazo_contrato: null, garantia: null, fecha_entrada: null, amueblada: null, mascotas: null })
   const [tipo, setTipo] = useState<TipoNecesidad | null>(null)
   const [car, setCar] = useState<Record<string, string | string[]>>({})
   const [zonas, setZonas] = useState<ZonaCaptura[]>([zonaVacia()])
@@ -67,7 +73,9 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   const ir = (p: Paso) => { setError(null); setPaso(p) }
   const atras = () => (i === 0 ? onAtras() : ir(PASOS[i - 1]))
 
+  const enRenta = operacion === 'renta'
   const necesidad = () => ({
+    operacion, renta: enRenta ? renta : null,
     tipo,
     zonas: zonas.map((z) => ({ estado: z.estado, municipio: z.municipio, nombre: z.nombre, colonias: z.colonias })),
     caracteristicas: Object.fromEntries(Object.entries(car).filter(([, v]) => (Array.isArray(v) ? v.length : v !== ''))),
@@ -76,7 +84,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   })
 
   const buscar = async () => {
-    if (!pres.max) { setError('Escribe tu presupuesto máximo'); return }
+    if (!pres.max) { setError(enRenta ? 'Escribe la renta mensual máxima' : 'Escribe tu presupuesto máximo'); return }
     if (pres.min && Number(pres.min) > Number(pres.max)) { setError('El mínimo es mayor que el máximo'); return }
     setCargando(true); setError(null)
     const r = await fetch('/api/necesidades/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(necesidad()) })
@@ -118,7 +126,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     <BandaPaso barra={barra} titulo={t} subtitulo={sub}
       atras={<button onClick={atras} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>}
       avance={<Avance total={totalPasos} hechos={pasoBase + i + 1} color="var(--c-acento)" />}
-      etiqueta={`Paso ${pasoBase + i + 1} de ${totalPasos} · Buscar`} />
+      etiqueta={`Paso ${pasoBase + i + 1} de ${totalPasos} · ${operacion === 'renta' ? 'Rentar' : operacion === 'compra' ? 'Comprar' : 'Buscar'}`} />
   )
   const continuar = (onClick: () => void, texto = 'Continuar →', deshabilitado = false) => (
     <button type="button" onClick={onClick} disabled={deshabilitado || cargando} className={`${boton} text-white`} style={{ background: verde }}>{texto}</button>
@@ -128,9 +136,27 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
   return (
     <>
+      {paso === 'operacion' && (
+        <>
+          {titulo('¿Quieres comprar o rentar?', 'Una búsqueda por operación. Si estás entre las dos, al terminar puedes crear otra.')}
+          <div className="grid grid-cols-2 gap-2.5" data-operacion>
+            {OPERACIONES.map((o) => (
+              <button key={o.id} data-op={o.id} onClick={() => {
+                if (o.id !== operacion) { setPres({ min: '', max: '' }); setResultados(null) }
+                setOperacion(o.id); ir('tipo')
+              }}
+                className={`${chip(operacion === o.id)} py-5 text-left px-4 bg-tarjeta rounded-xl flex flex-col gap-1`} style={estiloOn(operacion === o.id)}>
+                <span className="font-display text-[21px] font-medium text-tinta">{o.etiqueta}</span>
+                <span className="text-[15px] text-tinta-2">{o.id === 'compra' ? 'Con tu presupuesto total' : 'Con la renta que puedes pagar al mes'}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {paso === 'tipo' && (
         <>
-          {titulo('¿Qué tipo de propiedad buscas?')}
+          {titulo(enRenta ? '¿Qué tipo de propiedad quieres rentar?' : '¿Qué tipo de propiedad buscas?')}
           <div className="grid grid-cols-2 gap-2.5">
             {TIPOS_NECESIDAD.map((t) => (
               <button key={t.id} onClick={() => { if (t.id !== tipo) setCar({}); setTipo(t.id); ir('caract') }}
@@ -234,17 +260,17 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
       {paso === 'presupuesto' && (
         <>
-          {titulo('Presupuesto')}
+          {titulo(enRenta ? 'Renta mensual' : 'Presupuesto', enRenta ? 'Lo que puedes pagar al mes, y lo que el dueño necesita saber para rentarte.' : undefined)}
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-2.5">
-              <Field label="Desde (MXN)" tema="oscuro">
-                <input value={conComas(pres.min)} onChange={(e) => setPres((x) => ({ ...x, min: soloDigitos(e.target.value) }))} inputMode="numeric" placeholder="6,000,000" className={cls} />
+              <Field label={enRenta ? 'Desde (MXN al mes)' : 'Desde (MXN)'} tema="oscuro">
+                <input value={conComas(pres.min)} onChange={(e) => setPres((x) => ({ ...x, min: soloDigitos(e.target.value) }))} inputMode="numeric" placeholder={enRenta ? '25,000' : '6,000,000'} className={cls} name="presupuesto-min" />
               </Field>
-              <Field label="Hasta (MXN)" required tema="oscuro">
-                <input value={conComas(pres.max)} onChange={(e) => setPres((x) => ({ ...x, max: soloDigitos(e.target.value) }))} inputMode="numeric" placeholder="8,000,000" className={cls} />
+              <Field label={enRenta ? 'Hasta (MXN al mes)' : 'Hasta (MXN)'} required tema="oscuro">
+                <input value={conComas(pres.max)} onChange={(e) => setPres((x) => ({ ...x, max: soloDigitos(e.target.value) }))} inputMode="numeric" placeholder={enRenta ? '35,000' : '8,000,000'} className={cls} name="presupuesto-max" />
               </Field>
             </div>
-            {([['¿Cómo pagarías?', FORMAS_PAGO, formaPago, setFormaPago], ['¿Para cuándo?', PLAZOS, plazo, setPlazo], ['¿Para qué la quieres?', PROPOSITOS, proposito, setProposito]] as const).map(([l, ops, v, set]) => (
+            {!enRenta && ([['¿Cómo pagarías?', FORMAS_PAGO, formaPago, setFormaPago], ['¿Para cuándo?', PLAZOS, plazo, setPlazo], ['¿Para qué la quieres?', PROPOSITOS, proposito, setProposito]] as const).map(([l, ops, v, set]) => (
               <div key={l} className="flex flex-col gap-2">
                 <span className="font-sans text-[13px] font-medium text-tenue">{l}</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -252,6 +278,33 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
                 </div>
               </div>
             ))}
+            {/* §22.2: lo propio de la renta. Amueblada (casa, depa, oficina) y mascotas (casa, depa) según el tipo. */}
+            {enRenta && ([
+              ['Plazo del contrato', 'plazo_contrato', PLAZOS_CONTRATO, true],
+              ['Garantía que puedes dar', 'garantia', GARANTIAS, true],
+              ['¿Cuándo quieres entrar?', 'fecha_entrada', ENTRADAS, true],
+              ['Amueblada', 'amueblada', AMUEBLADAS, !!tipo && CON_AMUEBLADA.includes(tipo)],
+            ] as const).filter(([, , , aplica]) => aplica).map(([l, k, ops]) => (
+              <div key={k} className="flex flex-col gap-2" data-renta={k}>
+                <span className="font-sans text-[13px] font-medium text-tenue">{l}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {ops.map((o) => {
+                    const on = renta[k] === o.id
+                    return <button key={o.id} type="button" className={chip(on)} style={estiloOn(on)} onClick={() => setRenta((x) => ({ ...x, [k]: on ? null : o.id }))}>{o.etiqueta}</button>
+                  })}
+                </div>
+              </div>
+            ))}
+            {enRenta && tipo && CON_MASCOTAS.includes(tipo) && (
+              <div className="flex flex-col gap-2" data-renta="mascotas">
+                <span className="font-sans text-[13px] font-medium text-tenue">¿Tienes mascotas?</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {([[true, 'Sí'], [false, 'No']] as const).map(([v, t]) => (
+                    <button key={t} type="button" className={chip(renta.mascotas === v)} style={estiloOn(renta.mascotas === v)} onClick={() => setRenta((x) => ({ ...x, mascotas: x.mascotas === v ? null : v }))}>{t}</button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           {error && <p className="text-[16px] text-error">{error}</p>}
           {continuar(buscar, cargando ? 'Buscando…' : 'Buscar →')}
@@ -275,18 +328,18 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
                 <div key={k} className="bg-tarjeta border border-linea p-4 flex flex-col gap-2.5 rounded-xl" data-zona-resultado={k}>
                   <div className="flex flex-col">
                     <span className="font-display text-[19px] font-medium">{nombreDe(z)}</span>
-                    <span className="text-[15px] text-tenue">{plat.length} {plat.length === 1 ? 'propiedad' : 'propiedades'}{z.mercado?.precioM2 ? ` · ~$${z.mercado.precioM2.toLocaleString('es-MX')}/m²` : ''}</span>
+                    <span className="text-[15px] text-tenue">{plat.length} {plat.length === 1 ? 'propiedad' : 'propiedades'}{z.mercado?.precioM2 ? ` · ~$${z.mercado.precioM2.toLocaleString('es-MX')}/m²${enRenta ? ' al mes' : ''}` : ''}</span>
                   </div>
                   {rinde && (
                     <p className="text-[15px] text-tinta-2" data-rinde>
-                      Te alcanzan ~{rinde.m2.toLocaleString('es-MX')} m²{rinde.faltaPct != null && rinde.faltaPct > 0 ? <span className="text-aviso"> · tu presupuesto está {rinde.faltaPct} % abajo de lo que pides aquí</span> : null}
+                      {enRenta ? 'Con esa renta, ~' : 'Te alcanzan ~'}{rinde.m2.toLocaleString('es-MX')} m²{rinde.faltaPct != null && rinde.faltaPct > 0 ? <span className="text-aviso"> · tu presupuesto está {rinde.faltaPct} % abajo de lo que pides aquí</span> : null}
                     </p>
                   )}
                   {plat.length + port.length === 0 && <p className="text-[15px] text-tenue">Aún no hay opciones en {nombreDe(z)}.</p>}
                   {plat.slice(0, MEJORES_POR_ZONA).map((o) => (
                     <div key={o.activoId} className="flex flex-col border-t border-linea pt-2">
                       <span className="text-[17px]">{o.nombre}</span>
-                      <span className="text-[15px] text-tenue">{o.precio_total ? millones(o.precio_total) : 'Sin precio'} · {o.puntaje} % · {o.certificada ? 'Certificada' : 'Particular'}</span>
+                      <span className="text-[15px] text-tenue">{o.precio ? dinero(o.precio, operacion) : 'Sin precio'} · {o.puntaje} % · {o.certificada ? 'Certificada' : 'Particular'}</span>
                       {o.razones.length > 0 && <span className="text-[14px] text-tenue">{o.razones.join(' · ')}</span>}
                     </div>
                   ))}

@@ -118,3 +118,58 @@ test('lo que rinde tu dinero en cada zona', () => {
   assert.deepEqual(rindeDinero(26_000, n), { m2: 310, faltaPct: -54 })   // Carretera Nacional: le sobra
   assert.equal(rindeDinero(null, n), null)
 })
+
+// ── V9 §22: rentas ─────────────────────────────────────────────────────────────────────────────
+import { validarOperacionActivo, precioPara, presupuestoTexto as presTexto, detalleRenta } from './necesidad.ts'
+
+const depa = (renta: Record<string, unknown> = {}) => {
+  const r = validarNecesidad({
+    operacion: 'renta', tipo: 'departamento', municipio: 'San Pedro Garza García', presupuesto_min: 25000, presupuesto_max: '35,000',
+    forma_pago: 'credito', proposito: 'invertir', plazo: 'ya', caracteristicas: { m2_min: 90 },
+    renta: { plazo_contrato: '1_anio', garantia: 'poliza', fecha_entrada: 'ya', amueblada: 'si', mascotas: true, ...renta },
+  })
+  assert.ok('necesidad' in r, JSON.stringify(r))
+  return (r as { necesidad: Necesidad }).necesidad
+}
+
+test('renta: la ficha limpia lo que no aplica y guarda lo de renta', () => {
+  const n = depa()
+  assert.equal(n.operacion, 'renta')
+  assert.equal(n.forma_pago, null); assert.equal(n.proposito, null); assert.equal(n.plazo, null)
+  assert.deepEqual(n.renta, { plazo_contrato: '1_anio', garantia: 'poliza', fecha_entrada: 'ya', amueblada: 'si', mascotas: true })
+  assert.equal(presTexto(n), '$25,000 a $35,000 al mes')
+  assert.match(resumenNecesidad(n), /^Busca departamento en renta · 90 m² · San Pedro Garza García · \$25,000 a \$35,000 al mes · contrato 1 año · entrada ya$/)
+  assert.deepEqual(detalleRenta(n.renta), ['Contrato: 1 año', 'Garantía: póliza jurídica', 'Entrada: ya', 'Amueblada', 'Con mascotas'])
+  // Bodega: sin amueblada ni mascotas. Operación inválida: error. Sin operación (V8): compra.
+  const b = validarNecesidad({ operacion: 'renta', tipo: 'bodega', municipio: 'Apodaca', presupuesto_max: 90000, renta: { amueblada: 'si', mascotas: true } })
+  assert.ok('necesidad' in b && b.necesidad.renta!.amueblada === null && b.necesidad.renta!.mascotas === null)
+  assert.deepEqual(validarNecesidad({ operacion: 'ambas', tipo: 'casa', municipio: 'Apodaca', presupuesto_max: 1 }), { error: 'Elige si quieres comprar o rentar' })
+  assert.equal(bodega().operacion, 'compra')
+})
+
+test('renta: la propiedad valida su operación y cuenta su renta, no su precio', () => {
+  assert.deepEqual(validarOperacionActivo({ operacion: 'renta' }), { error: 'Escribe la renta mensual' })
+  assert.deepEqual(validarOperacionActivo({ operacion: 'ambas', renta_mensual: 30000 }), { error: 'Escribe el precio de venta' })
+  const v = validarOperacionActivo({ operacion: 'ambas', precio_total: '9,000,000', renta_mensual: '32,000', renta: { deposito_meses: 2, garantia: 'cualquiera', mascotas: 'si', plazo_minimo: '1_anio' } })
+  assert.ok(!('error' in v))
+  assert.equal(v.renta!.deposito_meses, 2); assert.equal(v.renta!.mascotas, true); assert.equal(v.renta!.amueblada, null)
+  assert.equal(precioPara(v, 'renta'), 32000); assert.equal(precioPara(v, 'compra'), 9_000_000)
+  assert.equal(precioPara({ precio_total: 9e6 }, 'renta'), null) // propiedad vieja: solo venta
+})
+
+test('renta: cumple y puntaje con renta mensual, mascotas, amueblada, plazo y garantía', () => {
+  const n = depa()
+  const base = { tipo: 'Departamento', municipio: 'San Pedro Garza García', colonia: 'Valle Oriente', superficie: 110, precio_total: null,
+    operacion: 'renta' as const, renta_mensual: 30000, renta: { incluye_mantenimiento: true, mantenimiento: null, deposito_meses: 1, plazo_minimo: '1_anio' as const, garantia: 'cualquiera' as const, amueblada: true, mascotas: true } }
+  assert.deepEqual(cumpleNecesidad(base, n), { cumple: true, motivos: [] })
+  assert.equal(puntajeOpcion(base, n).puntaje, 100)
+  assert.deepEqual(cumpleNecesidad({ ...base, operacion: 'venta', precio_total: 9e6 }, n).motivos, ['No está en renta'])
+  assert.deepEqual(cumpleNecesidad({ ...base, renta_mensual: 45000 }, n).motivos, ['Su renta ($45,000 al mes) está fuera del presupuesto ($25,000 a $35,000 al mes, ±10 %)'])
+  assert.deepEqual(cumpleNecesidad({ ...base, renta: { ...base.renta, mascotas: false, amueblada: false } }, n).motivos, ['No acepta mascotas', 'No está amueblada'])
+  // Plazo y garantía: no descalifican, restan 10 cada uno y se dicen.
+  const p = puntajeOpcion({ ...base, renta: { ...base.renta, plazo_minimo: '5_anios', garantia: 'aval' } }, n)
+  assert.equal(p.puntaje, 80)
+  assert.ok(p.razones.includes('pide aval con propiedad') && p.razones.includes('pide contrato de 5 años o más'))
+  // Una casa en venta y renta no aparece por su precio de venta en una búsqueda de compra barata.
+  assert.equal(cumpleNecesidad({ ...base, operacion: 'renta' }, bodega()).motivos.includes('No está en venta'), true)
+})

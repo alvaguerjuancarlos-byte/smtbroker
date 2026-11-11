@@ -27,6 +27,8 @@ interface MercadoReal {
   grounded: boolean
 }
 
+import { rentaTexto, detalleRentaActivo, type RentaActivo } from '@/lib/necesidad'
+
 interface Activo {
   id: string
   usuario_id: string
@@ -50,6 +52,10 @@ interface Activo {
   gravamenes_conocidos: string | null
   uso_suelo_declarado: string | null
   superficie_construccion_m2: number | null
+  // V9 (§22.3): en venta, en renta o las dos.
+  operacion?: 'venta' | 'renta' | 'ambas' | null
+  renta_mensual?: number | null
+  renta?: RentaActivo | null
 }
 
 function MetricRow({ label, value, valueClass = 'text-tinta' }: {
@@ -426,6 +432,15 @@ export default function ActivoPage() {
           {activo.usuario_id === uid && !activo.broker_id && rol === 'propietario' && (
             <div id="elegir-broker" className="scroll-mt-6">
               <ElegirBroker activoId={activo.id} onAsignado={refrescarExpediente} />
+            </div>
+          )}
+
+          {/* V9 (§22.3): la propiedad en renta, con sus condiciones. */}
+          {activo.operacion && activo.operacion !== 'venta' && (
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 flex flex-col gap-2 rounded-xl" data-en-renta>
+              <span className="font-sans text-[14px] font-medium text-tenue">{activo.operacion === 'ambas' ? 'En venta y en renta' : 'En renta'}</span>
+              <span className="font-display text-[24px] font-medium">{activo.renta_mensual ? rentaTexto(activo.renta_mensual) : 'Sin renta mensual'}</span>
+              {detalleRentaActivo(activo.renta).length > 0 && <span className="text-[16px] text-tinta-2">{detalleRentaActivo(activo.renta).join(' · ')}</span>}
             </div>
           )}
 

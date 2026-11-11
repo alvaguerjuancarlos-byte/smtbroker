@@ -36,7 +36,7 @@ export default function BuscarPage() {
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative w-full max-w-[680px] mx-auto px-5 pb-12 flex flex-col gap-6">
         {listo
-          ? <FichaNecesidad conSesion barra={<><MarcaBarra href="/inicio" /><a href="/inicio" className="font-sans text-[16px] font-medium text-tinta">Mi inicio</a></>} onAtras={() => router.push('/inicio')} pasoBase={0} totalPasos={5} />
+          ? <FichaNecesidad conSesion barra={<><MarcaBarra href="/inicio" /><a href="/inicio" className="font-sans text-[16px] font-medium text-tinta">Mi inicio</a></>} onAtras={() => router.push('/inicio')} pasoBase={0} totalPasos={6} />
           : <p className="text-tenue text-[17px] font-sans py-10 text-center">Cargando…</p>}
       </div>
     </div>

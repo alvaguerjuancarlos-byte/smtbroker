@@ -12,6 +12,10 @@
 // V8 (Documento Maestro §19, JC 10-nov-2026): quien compra ya no llena "tus datos" ni elige camino
 // aquí: captura su ficha de necesidad en FichaNecesidad.tsx (tipo, características, ubicación,
 // presupuesto), ve los primeros resultados y al final crea su cuenta. Quien vende sigue igual.
+//
+// V9 (§22): las dos puertas cubren rentas. "Quiero comprar o rentar" abre la ficha, cuyo primer paso
+// es elegir la operación. "Quiero vender o rentar mi propiedad" pide en venta, en renta o las dos, con
+// precio y/o renta mensual.
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -39,7 +43,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
   const [paso, setPaso] = useState<Paso>(inicial ? 'datos' : 'que')
   const [f, setF] = useState({
     nombre: '', email: '', password: '', telefono: '',
-    tipo: 'Casa', superficie: '', municipio: '', colonia: '', precio: '',
+    tipo: 'Casa', superficie: '', municipio: '', colonia: '', precio: '', operacion: 'venta', renta_mensual: '', deposito_meses: '',
     busca: '', zona: '', presupuesto: PRESUPUESTOS[2],
   })
   const [trampa, setTrampa] = useState('')
@@ -70,7 +74,10 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         quiere, nombre: f.nombre, email: f.email, password: f.password, telefono: f.telefono, sitio_web: trampa,
-        propiedad: { tipo: f.tipo, superficie: f.superficie, municipio: f.municipio, colonia: f.colonia, precio: f.precio },
+        propiedad: {
+          tipo: f.tipo, superficie: f.superficie, municipio: f.municipio, colonia: f.colonia, precio: f.precio,
+          operacion: f.operacion, renta_mensual: f.renta_mensual, renta: { deposito_meses: f.deposito_meses },
+        },
         busqueda: { busca: f.busca, zona: f.zona, presupuesto: f.presupuesto },
       }),
     })
@@ -104,7 +111,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
       <div className="relative w-full max-w-[680px] mx-auto px-5 pb-12 flex flex-col gap-6">
         {quiere === 'comprar' && paso !== 'que' ? (
           <FichaNecesidad conSesion={false} barra={barra} onAtras={() => (inicial ? router.push('/bienvenida') : setPaso('que'))}
-            pasoBase={inicial ? 0 : 1} totalPasos={inicial ? 5 : 6} />
+            pasoBase={inicial ? 0 : 1} totalPasos={inicial ? 6 : 7} />
         ) : <>
         {paso === 'que' && (
           <>
@@ -114,14 +121,14 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
               <button onClick={() => elegir('vender')} className="text-left bg-tarjeta border border-gold-500 p-5 flex gap-4 hover:bg-tarjeta/80 rounded-xl">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-acento shrink-0" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg>
                 <span className="flex flex-col gap-1">
-                  <span className="font-display text-[22px] font-medium">Quiero vender</span>
-                  <span className="text-[16px] text-tinta-2">Precio realista de mercado, certificación y compradores reales.</span>
+                  <span className="font-display text-[22px] font-medium">Quiero vender o rentar mi propiedad</span>
+                  <span className="text-[16px] text-tinta-2">Precio realista de mercado, certificación y clientes reales.</span>
                 </span>
               </button>
               <button onClick={() => elegir('comprar')} className="text-left bg-tarjeta border border-linea p-5 flex gap-4 hover:border-verde/60 rounded-xl">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7fd1b9" strokeWidth="1.6" className="shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></svg>
                 <span className="flex flex-col gap-1">
-                  <span className="font-display text-[22px] font-medium">Quiero comprar</span>
+                  <span className="font-display text-[22px] font-medium">Quiero comprar o rentar</span>
                   <span className="text-[16px] text-tinta-2">Dinos qué buscas una sola vez y te llegan opciones que coinciden.</span>
                 </span>
               </button>
@@ -149,7 +156,25 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
                     <Field label="Colonia" tema="oscuro"><input value={f.colonia} onChange={set('colonia')} className={cls} /></Field>
                     <Field label="Municipio" required tema="oscuro"><input value={f.municipio} onChange={set('municipio')} required placeholder="San Pedro Garza García" className={cls} /></Field>
                   </div>
-                  <Field label="Precio que buscas (MXN)" required tema="oscuro"><input value={f.precio} onChange={set('precio')} required inputMode="numeric" placeholder="19,500,000" className={cls} /></Field>
+                  <div className="flex flex-col gap-2" data-operacion-activo>
+                    <span className="font-sans text-[13px] font-medium text-tenue">¿La vendes o la rentas?</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([['venta', 'En venta'], ['renta', 'En renta'], ['ambas', 'Las dos']] as const).map(([id, t]) => (
+                        <button key={id} type="button" data-op={id} onClick={() => setF((x) => ({ ...x, operacion: id }))}
+                          className={`px-3 py-2.5 text-[16px] border rounded-lg ${f.operacion === id ? 'text-tinta' : 'border-linea text-tinta-2'}`}
+                          style={f.operacion === id ? { borderColor: '#c9a227', background: 'rgba(201,162,39,.12)' } : undefined}>{t}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {f.operacion !== 'renta' && (
+                    <Field label="Precio que buscas (MXN)" required tema="oscuro"><input value={f.precio} onChange={set('precio')} required inputMode="numeric" placeholder="19,500,000" className={cls} name="precio" /></Field>
+                  )}
+                  {f.operacion !== 'venta' && (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <Field label="Renta mensual (MXN)" required tema="oscuro"><input value={f.renta_mensual} onChange={set('renta_mensual')} required inputMode="numeric" placeholder="35,000" className={cls} name="renta_mensual" /></Field>
+                      <Field label="Depósito (meses)" tema="oscuro"><input value={f.deposito_meses} onChange={set('deposito_meses')} inputMode="numeric" placeholder="1" className={cls} name="deposito_meses" /></Field>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

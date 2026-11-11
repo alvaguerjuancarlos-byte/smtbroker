@@ -9,12 +9,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { millones, MAX_PROPUESTAS_POR_BROKER } from '@/lib/necesidad'
+import { dinero, MAX_PROPUESTAS_POR_BROKER } from '@/lib/necesidad'
 
 interface NecesidadPanel {
-  id: string; resumen: string; detalle: string[]; proposito: string | null; created_at: string
+  id: string; operacion: 'compra' | 'renta'; resumen: string; detalle: string[]; proposito: string | null; created_at: string
   enMiZona: boolean; propuestasTotal: number; misPropuestas: string[]; puedeProponer: boolean
-  compatibles: { activoId: string; nombre: string; precio_total: number | null; superficie: number | null }[]
+  compatibles: { activoId: string; nombre: string; precio_total: number | null; precio: number | null; superficie: number | null }[]
   detallePropuestas: { activoId: string; nombre: string; precioMercado: { estado: 'arriba' | 'en_linea' | 'abajo' | null; texto: string } | null }[]
 }
 
@@ -34,6 +34,8 @@ export default function PanelNecesidades() {
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState<{ id: string; texto: string; ok: boolean } | null>(null)
   const [soloZona, setSoloZona] = useState(false)
+  // V9 (§22.5): el broker filtra por lo que maneja, compra o renta.
+  const [operacion, setOperacion] = useState<'todas' | 'compra' | 'renta'>('todas')
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
   const cargar = useCallback(async () => {
@@ -64,7 +66,7 @@ export default function PanelNecesidades() {
   }
 
   if (!lista) return <p className="text-[16px] text-tenue font-sans">Cargando necesidades…</p>
-  const visibles = soloZona ? lista.filter((n) => n.enMiZona) : lista
+  const visibles = lista.filter((n) => (!soloZona || n.enMiZona) && (operacion === 'todas' || n.operacion === operacion))
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,9 +74,14 @@ export default function PanelNecesidades() {
         <p className="text-[16px] text-tinta-2 max-w-[560px]">
           Lo que buscan los compradores de la plataforma. Si tienes una propiedad que cumple, propónla: el comprador la ve en su bandeja con tu nombre y tu nivel. Ves al comprador cuando él pida ver tu propiedad.
         </p>
-        <button onClick={() => setSoloZona(!soloZona)} className={`px-3 py-2 text-[15px] border ${soloZona ? 'border-gold-500 text-acento' : 'border-linea text-tinta-2'} rounded-lg`}>
-          {soloZona ? '✓ ' : ''}Solo mi zona
-        </button>
+        <div className="flex flex-wrap gap-1.5" data-filtro-operacion>
+          {([['todas', 'Todas'], ['compra', 'Compra'], ['renta', 'Renta']] as const).map(([id, t]) => (
+            <button key={id} data-op={id} onClick={() => setOperacion(id)} className={`px-3 py-2 text-[15px] border ${operacion === id ? 'border-gold-500 text-acento' : 'border-linea text-tinta-2'} rounded-lg`}>{t}</button>
+          ))}
+          <button onClick={() => setSoloZona(!soloZona)} className={`px-3 py-2 text-[15px] border ${soloZona ? 'border-gold-500 text-acento' : 'border-linea text-tinta-2'} rounded-lg`}>
+            {soloZona ? '✓ ' : ''}Solo mi zona
+          </button>
+        </div>
       </div>
 
       {visibles.length === 0 ? (
@@ -86,7 +93,10 @@ export default function PanelNecesidades() {
         <div key={n.id} className={`bg-tarjeta border p-4 md:p-5 flex flex-col gap-2.5 ${n.enMiZona ? 'border-gold-500/50' : 'border-linea'} rounded-xl`}>
           <div className="flex items-start justify-between gap-3">
             <p className="text-[18px] text-tinta font-medium">{n.resumen}</p>
-            {n.enMiZona && <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-2 py-1 shrink-0 rounded-lg">TU ZONA</span>}
+            <span className="flex gap-1.5 shrink-0">
+              <span data-etiqueta-operacion={n.operacion} className={`font-sans text-[13px] px-2 py-1 rounded-lg border ${n.operacion === 'renta' ? 'border-acento text-acento' : 'border-linea-fuerte text-tinta-2'}`}>{n.operacion === 'renta' ? 'RENTA' : 'COMPRA'}</span>
+              {n.enMiZona && <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-2 py-1 rounded-lg">TU ZONA</span>}
+            </span>
           </div>
           {n.detalle.length > 0 && <p className="text-[15px] text-tenue">{n.detalle.join(' · ')}</p>}
           <p className="text-[15px] text-tenue">
@@ -131,13 +141,15 @@ export default function PanelNecesidades() {
                       <input type="radio" name={`prop-${n.id}`} checked={elegida === a.activoId} onChange={() => setElegida(a.activoId)} />
                       <span className="flex flex-col">
                         <span className="text-[17px] text-tinta">{a.nombre}</span>
-                        <span className="text-[15px] text-tenue">{[a.precio_total ? millones(a.precio_total) : null, a.superficie ? `${a.superficie.toLocaleString('es-MX')} m²` : null].filter(Boolean).join(' · ')}</span>
+                        <span className="text-[15px] text-tenue">{[a.precio ? dinero(a.precio, n.operacion) : null, a.superficie ? `${a.superficie.toLocaleString('es-MX')} m²` : null].filter(Boolean).join(' · ')}</span>
                       </span>
                     </label>
                   ))}
                   <label className="flex items-start gap-2.5 text-[15px] text-tinta-2 cursor-pointer">
                     <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} className="mt-0.5" />
-                    <span>Acepto los términos: si cierro la operación con este comprador, SMTBROKER cobra un porcentaje de mi comisión, según los términos vigentes de la plataforma.</span>
+                    <span>{n.operacion === 'renta'
+                      ? 'Acepto los términos: mi comisión por esta renta es de un mes de renta y, si cierro el contrato con este cliente, SMTBROKER cobra un porcentaje de esa comisión, según los términos vigentes de la plataforma.'
+                      : 'Acepto los términos: si cierro la operación con este comprador, SMTBROKER cobra un porcentaje de mi comisión, según los términos vigentes de la plataforma.'}</span>
                   </label>
                   <button onClick={() => proponer(n.id)} disabled={!elegida || !acepto || enviando}
                     className="w-fit bg-gold-500 text-navy-950 font-sans text-[15px] px-4 py-2.5 hover:bg-gold-400 disabled:opacity-50 rounded-lg">

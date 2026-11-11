@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { avisarUsuario } from '@/lib/avisos'
-import { cumpleNecesidad, etiquetaTipo, millones, MAX_PROPUESTAS_POR_BROKER } from '@/lib/necesidad'
+import { cumpleNecesidad, etiquetaTipo, dinero, precioPara, MAX_PROPUESTAS_POR_BROKER, type OperacionActivo, type RentaActivo } from '@/lib/necesidad'
 import { vigente, COLS_NECESIDAD, type FilaNecesidad } from '@/lib/necesidadServidor'
 import { datosDeMercado, COLS_ACTIVO_ANALISIS, type ActivoParaAnalisis } from '@/lib/analisisServidor'
 import { precioContraMercado } from '@/lib/analisis'
@@ -20,6 +20,9 @@ import { precioContraMercado } from '@/lib/analisis'
 // V8 Parte 2 (§20.5 regla 4): al proponer se calcula el precio contra mercado de la propiedad
 // (propuestas.precio_mercado). Es lo único del análisis que ve el broker, y no depende de que el
 // comprador se interese.
+//
+// V9 (§22): en una ficha de renta se compara la RENTA mensual contra comparables de renta; la
+// comisión que acepta el broker es un mes de renta (§22.5).
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,10 +34,11 @@ export async function POST(req: NextRequest) {
 
     const [{ data: nd }, { data: ad }] = await Promise.all([
       s.admin.from('necesidades').select(COLS_NECESIDAD).eq('id', b.necesidadId ?? '').maybeSingle(),
-      s.admin.from('activos').select('id, nombre, tipo, municipio, colonia, superficie, precio_total, broker_id, status, es_demo').eq('id', b.activoId ?? '').maybeSingle(),
+      s.admin.from('activos').select('id, nombre, tipo, municipio, colonia, superficie, precio_total, operacion, renta_mensual, renta, broker_id, status, es_demo').eq('id', b.activoId ?? '').maybeSingle(),
     ])
     const n = nd as FilaNecesidad | null
-    const a = ad as { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null; broker_id: string | null; status: string | null; es_demo: boolean } | null
+    const a = ad as { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null; broker_id: string | null; status: string | null; es_demo: boolean
+      operacion: OperacionActivo | null; renta_mensual: number | null; renta: RentaActivo | null } | null
     if (!n || n.es_demo !== s.esDemo || !vigente(n) || !n.publicada_brokers) return NextResponse.json({ error: 'Esta necesidad ya no está publicada' }, { status: 404 })
     if (!a || a.broker_id !== s.uid || a.es_demo !== s.esDemo) return NextResponse.json({ error: 'Solo puedes proponer propiedades de tu cartera' }, { status: 403 })
     if (a.status === 'cerrado') return NextResponse.json({ error: 'Esa propiedad ya se cerró' }, { status: 409 })
@@ -55,13 +59,17 @@ export async function POST(req: NextRequest) {
 
     after(async () => {
       const { data: completo } = await s.admin.from('activos').select(COLS_ACTIVO_ANALISIS).eq('id', a.id).single()
-      const m = await datosDeMercado(s.admin, completo as ActivoParaAnalisis, 'venta')
-      await s.admin.from('propuestas').update({ precio_mercado: { ...m, semaforo: precioContraMercado(a.precio_total, m.precio) } }).eq('id', (nueva as { id: string }).id)
+      const enRenta = n.operacion === 'renta'
+      const m = await datosDeMercado(s.admin, completo as ActivoParaAnalisis, enRenta ? 'renta' : 'venta')
+      await s.admin.from('propuestas').update({
+        precio_mercado: { ...m, operacion: enRenta ? 'renta' : 'venta', semaforo: precioContraMercado(precioPara(a, n.operacion), m.precio) },
+      }).eq('id', (nueva as { id: string }).id)
     })
+    const precio = precioPara(a, n.operacion)
     after(() => avisarUsuario(s.admin, n.usuario_id, {
       asunto: `Un broker verificado te propone una opción en ${a.municipio}: ${etiquetaTipo(n.tipo).toLowerCase()}`,
       titulo: 'Tienes una propuesta nueva',
-      lineas: [`${a.nombre}${a.precio_total ? ` · ${millones(a.precio_total)}` : ''}.`, 'Cumple lo que buscas. Revísala en tu bandeja.'],
+      lineas: [`${a.nombre}${precio ? ` · ${dinero(precio, n.operacion)}` : ''}.`, 'Cumple lo que buscas. Revísala en tu bandeja.'],
       enlace: { texto: 'Ver mi bandeja', ruta: '/inicio' },
     }, { esDemo: s.esDemo }))
     return NextResponse.json({ ok: true })

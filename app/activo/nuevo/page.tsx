@@ -51,11 +51,23 @@ export default function NuevoActivoPage() {
     superficie:  '',
     precio_total: '',
     descripcion: '',
+    // V9 (§22.3): en venta, en renta o las dos; lo de renta solo si aplica.
+    operacion:   'venta' as 'venta' | 'renta' | 'ambas',
+    renta_mensual: '',
+    deposito_meses: '',
+    mantenimiento: '',
+    incluye_mantenimiento: false,
+    plazo_minimo: '',
+    garantia: '',
+    amueblada: '',
+    mascotas: '',
   })
   const [catastro, setCatastro] = useState<CatastroLegalValue>(CATASTRO_INICIAL)
   const setCatastroPatch = (patch: Partial<CatastroLegalValue>) => setCatastro(c => ({ ...c, ...patch }))
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k: string, v: string | boolean) => setForm(f => ({ ...f, [k]: v }))
+  const enRenta = form.operacion !== 'venta'
+  const enVenta = form.operacion !== 'renta'
 
   const addressForMap = [form.calle, form.numero, form.colonia, form.municipio, form.estado, 'México']
     .filter(Boolean).join(', ')
@@ -69,6 +81,7 @@ export default function NuevoActivoPage() {
     estado_documentacion_legal: !catastro.estado_documentacion_legal,
     propietario_nombre: esBroker && !representacion.propietario_nombre.trim(),
     representacion:     esBroker && !representacion.declarada,
+    renta_mensual:      enRenta && !(Number(form.renta_mensual) > 0),
   }
   const hasErrors = Object.values(required).some(Boolean)
 
@@ -96,7 +109,18 @@ export default function NuevoActivoPage() {
         cp:           form.cp,
         estado:       form.estado,
         superficie:   form.superficie   ? parseFloat(form.superficie)   : null,
-        precio_total: form.precio_total ? parseFloat(form.precio_total) : null,
+        precio_total: enVenta && form.precio_total ? parseFloat(form.precio_total) : null,
+        operacion:    form.operacion,
+        renta_mensual: enRenta ? parseFloat(form.renta_mensual) : null,
+        renta: enRenta ? {
+          incluye_mantenimiento: form.incluye_mantenimiento,
+          mantenimiento: !form.incluye_mantenimiento && form.mantenimiento ? parseFloat(form.mantenimiento) : null,
+          deposito_meses: form.deposito_meses ? Math.min(12, parseInt(form.deposito_meses)) : null,
+          plazo_minimo: form.plazo_minimo || null,
+          garantia: form.garantia || null,
+          amueblada: form.amueblada === '' ? null : form.amueblada === 'si',
+          mascotas: form.mascotas === '' ? null : form.mascotas === 'si',
+        } : null,
         descripcion:  form.descripcion,
         lat,
         lng,
@@ -292,11 +316,66 @@ export default function NuevoActivoPage() {
                   <input type="number" value={form.superficie} onChange={e => set('superficie', e.target.value)}
                     placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
                 </Field>
-                <Field label="Precio total (MXN)">
-                  <input type="number" value={form.precio_total} onChange={e => set('precio_total', e.target.value)}
-                    placeholder="0" min="0" className={inputCls(false, 'oscuro')} />
+                <Field label="Operación">
+                  <select value={form.operacion} onChange={e => set('operacion', e.target.value)} className={inputCls(false, 'oscuro')} name="operacion">
+                    <option className="bg-superficie" value="venta">En venta</option>
+                    <option className="bg-superficie" value="renta">En renta</option>
+                    <option className="bg-superficie" value="ambas">En venta y en renta</option>
+                  </select>
                 </Field>
+                {enVenta && (
+                  <Field label="Precio total (MXN)">
+                    <input type="number" value={form.precio_total} onChange={e => set('precio_total', e.target.value)}
+                      placeholder="0" min="0" className={inputCls(false, 'oscuro')} name="precio_total" />
+                  </Field>
+                )}
+                {enRenta && (
+                  <Field label="Renta mensual (MXN)" required>
+                    <input type="number" value={form.renta_mensual} onChange={e => set('renta_mensual', e.target.value)}
+                      placeholder="0" min="0" className={inputCls(submitted && required.renta_mensual, 'oscuro')} name="renta_mensual" />
+                  </Field>
+                )}
               </div>
+
+              {enRenta && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-renta-activo>
+                  <Field label="Depósito (meses de renta)">
+                    <input type="number" value={form.deposito_meses} onChange={e => set('deposito_meses', e.target.value)} placeholder="1" min="0" max="12" className={inputCls(false, 'oscuro')} name="deposito_meses" />
+                  </Field>
+                  <Field label="Mantenimiento">
+                    <div className="flex gap-2 items-center">
+                      <input type="number" value={form.mantenimiento} disabled={form.incluye_mantenimiento} onChange={e => set('mantenimiento', e.target.value)} placeholder="Al mes" min="0" className={inputCls(false, 'oscuro')} />
+                      <label className="flex items-center gap-1.5 text-[15px] text-tinta-2 shrink-0">
+                        <input type="checkbox" checked={form.incluye_mantenimiento} onChange={e => set('incluye_mantenimiento', e.target.checked)} /> Incluido
+                      </label>
+                    </div>
+                  </Field>
+                  <Field label="Plazo mínimo">
+                    <select value={form.plazo_minimo} onChange={e => set('plazo_minimo', e.target.value)} className={inputCls(false, 'oscuro')}>
+                      <option className="bg-superficie" value="">Sin mínimo</option><option className="bg-superficie" value="1_anio">1 año</option><option className="bg-superficie" value="2_3_anios">2 a 3 años</option><option className="bg-superficie" value="5_anios">5 años o más</option>
+                    </select>
+                  </Field>
+                  <Field label="Garantía que pide">
+                    <select value={form.garantia} onChange={e => set('garantia', e.target.value)} className={inputCls(false, 'oscuro')}>
+                      <option className="bg-superficie" value="">Sin definir</option><option className="bg-superficie" value="cualquiera">Cualquiera</option><option className="bg-superficie" value="aval">Aval con propiedad</option><option className="bg-superficie" value="poliza">Póliza jurídica</option><option className="bg-superficie" value="deposito">Depósito adicional</option>
+                    </select>
+                  </Field>
+                  {/^(casa|depa|oficina)/i.test(form.tipo) && (
+                    <Field label="Amueblada">
+                      <select value={form.amueblada} onChange={e => set('amueblada', e.target.value)} className={inputCls(false, 'oscuro')}>
+                        <option className="bg-superficie" value="">Sin definir</option><option className="bg-superficie" value="si">Sí</option><option className="bg-superficie" value="no">No</option>
+                      </select>
+                    </Field>
+                  )}
+                  {/^(casa|depa)/i.test(form.tipo) && (
+                    <Field label="Mascotas">
+                      <select value={form.mascotas} onChange={e => set('mascotas', e.target.value)} className={inputCls(false, 'oscuro')}>
+                        <option className="bg-superficie" value="">Sin definir</option><option className="bg-superficie" value="si">Acepta</option><option className="bg-superficie" value="no">No acepta</option>
+                      </select>
+                    </Field>
+                  )}
+                </div>
+              )}
 
               <Field label="Descripción / Observaciones">
                 <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
