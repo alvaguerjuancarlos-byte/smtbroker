@@ -3,7 +3,7 @@ import { consultarNormativaReal } from '@smt/shared-realestate'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { puedeAccederActivo } from '@/lib/accesoActivo'
 import { mismoMundo } from '@/lib/mundo'
-import { documentosFaltantes, listoParaCertificar, type ActivoExpediente } from '@/lib/expediente'
+import { documentosFaltantes, listoParaCertificar, type ActivoExpediente, alcancePara } from '@/lib/expediente'
 
 // Diagnóstico RÁPIDO (Documento Maestro V6.3, §13) — gratis, sin LLM, se calcula en cada visita:
 //   - uso de suelo oficial cuando hay GIS municipal (hoy solo San Pedro Garza García, mismo motor
@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
     if (!activoId) return NextResponse.json({ error: 'Falta activoId' }, { status: 400 })
 
     const { data } = await s.admin.from('activos')
-      .select('id, usuario_id, broker_id, es_demo, municipio, lat, lng, folio_real, clave_catastral, escritura_publica, gravamenes_conocidos, uso_suelo_declarado')
+      .select('id, usuario_id, broker_id, es_demo, municipio, tipo, operacion, lat, lng, folio_real, clave_catastral, escritura_publica, gravamenes_conocidos, uso_suelo_declarado')
       .eq('id', activoId).maybeSingle()
     const activo = data as (ActivoExpediente & {
-      usuario_id: string; broker_id: string | null; es_demo: boolean; municipio: string | null
+      usuario_id: string; broker_id: string | null; es_demo: boolean; municipio: string | null; tipo: string | null; operacion: string | null
       lat: number | null; lng: number | null
     }) | null
     const acceso = activo && (puedeAccederActivo(activo, s.uid) || (s.esOperacion && mismoMundo(s.esDemo, activo.es_demo)))
@@ -47,8 +47,10 @@ export async function POST(req: NextRequest) {
         : null,
       gisDisponible: esSanPedro,
       usoSueloDeclarado: activo.uso_suelo_declarado ?? null,
-      faltantes: documentosFaltantes(activo),
-      listoParaCertificar: listoParaCertificar(activo),
+      // V9 (§22.6): solo en renta, lo que pide la certificación de renta.
+      faltantes: documentosFaltantes(activo, alcancePara(activo.operacion)),
+      listoParaCertificar: documentosFaltantes(activo, alcancePara(activo.operacion)).length === 0,
+      alcance: alcancePara(activo.operacion),
       certificacion: cert ?? null,
     })
   } catch (e) {

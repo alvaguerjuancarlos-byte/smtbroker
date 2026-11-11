@@ -13,19 +13,20 @@ import { leerUltimo } from '@/lib/diagnosticoGuardado'
 import { buscarComparables, type Comparable, type Operacion } from '@/lib/comparables'
 import { calcularPrecioMercado, type PrecioMercado } from '@/lib/precioMercado'
 import {
-  precioContraMercado, proyectarPlusvalia, cumplimientoFicha, costoTotalCompra, mensualidadCredito, rendimientoRenta,
+  precioContraMercado, proyectarPlusvalia, cumplimientoFicha, costoTotalCompra, mensualidadCredito, rendimientoRenta, costoRenta,
 } from '@/lib/analisis'
-import type { Necesidad } from '@/lib/necesidad'
+import { precioPara, type Necesidad, type Operacion as OperacionFicha, type OperacionActivo, type RentaActivo } from '@/lib/necesidad'
 
 const TREINTA_DIAS = 30 * 86400_000
 const reciente = (fecha: string) => Date.now() - new Date(fecha).getTime() < TREINTA_DIAS
 
-export const COLS_ACTIVO_ANALISIS = 'id, nombre, tipo, municipio, colonia, estado, superficie, precio_total, broker_id, usuario_id, status, es_demo, lat, lng'
+export const COLS_ACTIVO_ANALISIS = 'id, nombre, tipo, municipio, colonia, estado, superficie, precio_total, operacion, renta_mensual, renta, broker_id, usuario_id, status, es_demo, lat, lng'
 
 export interface ActivoParaAnalisis {
   id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; estado: string
   superficie: number | null; precio_total: number | null; broker_id: string | null; usuario_id: string
   status: string | null; es_demo: boolean; lat: number | null; lng: number | null
+  operacion?: OperacionActivo | null; renta_mensual?: number | null; renta?: RentaActivo | null
 }
 
 export interface DatosMercado {
@@ -119,6 +120,7 @@ export async function analizarPropiedad(
   n: (Necesidad & { id: string }) | null,
   opts: { porTipo: boolean },
 ) {
+  if (n?.operacion === 'renta') return analizarRenta(admin, a, n, opts)
   const invierte = n?.proposito === 'invertir'
   const vivienda = /casa|depa/i.test(a.tipo)
   const [venta, renta, suelo, legal] = await Promise.all([
@@ -132,12 +134,13 @@ export async function analizarPropiedad(
   return {
     version: 1,
     fecha: new Date().toISOString(),
-    activo: { id: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie, precio_total: a.precio_total },
+    operacion: 'compra' as OperacionFicha,
+    activo: { id: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie, precio_total: a.precio_total, renta_mensual: null as number | null },
     mercado: { ...venta, semaforo: precioContraMercado(a.precio_total, venta.precio) },
     plusvalia: plusvaliaDe(a.municipio, a.tipo),
     cumplimiento: n ? cumplimientoFicha(a, n) : null,
     solidez: {
-      comparablesVenta: venta.precio.comparablesUsados,
+      comparablesVenta: venta.precio.comparablesUsados as number | null,
       comparablesRenta: renta ? renta.precio.comparablesUsados : null,
       fuentes: [...new Set([...venta.fuentes, ...(renta?.fuentes ?? [])])].slice(0, 8),
       fechaDatos: venta.fecha,
@@ -146,6 +149,7 @@ export async function analizarPropiedad(
     porTipo: opts.porTipo ? {
       costoTotal: a.precio_total ? costoTotalCompra(a.precio_total, a.estado || 'Nuevo León') : null,
       mensualidad: a.precio_total && vivienda && (n?.forma_pago === 'credito' || n?.forma_pago === 'infonavit') ? mensualidadCredito(a.precio_total) : null,
+      costoRenta: null as ReturnType<typeof costoRenta> | null,
       usoSuelo: suelo,
       renta: renta ? {
         ...renta,
@@ -154,6 +158,45 @@ export async function analizarPropiedad(
           ? `Sin dato: solo ${renta.precio.comparablesUsados} comparable${renta.precio.comparablesUsados === 1 ? '' : 's'} de renta de tamaño parecido.`
           : 'Sin dato: falta la superficie de la propiedad.',
       } : null,
+    } : null,
+    legal,
+  }
+}
+
+/**
+ * Análisis en renta (V9, §22.4): renta contra mercado con comparables de renta, costo de entrada y
+ * costo mensual, cumplimiento con lo de renta y, para locales, oficinas y bodegas, el uso de suelo
+ * para el giro (§22.6). La plusvalía no aplica: quien renta no compra.
+ */
+async function analizarRenta(admin: SupabaseClient, a: ActivoParaAnalisis, n: Necesidad & { id: string }, opts: { porTipo: boolean }) {
+  const rentaMensual = precioPara(a, 'renta')
+  const [renta, suelo, legal] = await Promise.all([
+    datosDeMercado(admin, a, 'renta'),
+    opts.porTipo && /local|oficina|bodega|terreno/i.test(a.tipo) ? usoDeSuelo(a) : Promise.resolve(null),
+    legalDe(admin, a.id),
+  ])
+  const nComp = renta.precio.comparablesUsados
+  return {
+    version: 1,
+    fecha: new Date().toISOString(),
+    operacion: 'renta' as OperacionFicha,
+    activo: { id: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie, precio_total: a.precio_total, renta_mensual: rentaMensual },
+    mercado: { ...renta, semaforo: precioContraMercado(rentaMensual, renta.precio, 'renta') },
+    plusvalia: null as ReturnType<typeof plusvaliaDe>,
+    cumplimiento: cumplimientoFicha(a, n),
+    solidez: {
+      comparablesVenta: null as number | null,
+      comparablesRenta: nComp as number | null,
+      fuentes: renta.fuentes.slice(0, 8),
+      fechaDatos: renta.fecha,
+      nivel: nComp >= 5 ? 'alta' : nComp >= 3 ? 'media' : 'baja',
+    },
+    porTipo: opts.porTipo ? {
+      costoTotal: null as ReturnType<typeof costoTotalCompra> | null,
+      mensualidad: null as ReturnType<typeof mensualidadCredito> | null,
+      costoRenta: rentaMensual ? costoRenta(rentaMensual, a.renta ?? null, n.renta?.garantia) : null,
+      usoSuelo: suelo,
+      renta: null,
     } : null,
     legal,
   }

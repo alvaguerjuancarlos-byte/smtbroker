@@ -6,9 +6,16 @@
 //   Por tipo y propósito (§20.2): costo total de compra y mensualidad, rendimiento por renta.
 // Regla: sin datos suficientes se dice "sin dato" y por qué; nunca se rellena.
 //
+// V9 (§22.4), en renta: renta contra mercado (comparables de renta), costo de entrada (depósito +
+// primer mes + póliza) y costo mensual total; sin plusvalía; el cumplimiento suma plazo, garantía,
+// amueblada y mascotas.
+//
 // Sin imports de alias: se prueba con `node --test lib/analisis.test.ts`.
 import type { PrecioMercado } from './precioMercado.ts'
-import { cumpleNecesidad, etiquetaTipo, CARACTERISTICAS, CAMPO_AREA, millones, presupuestoTexto, type Necesidad } from './necesidad.ts'
+import {
+  cumpleNecesidad, etiquetaTipo, CARACTERISTICAS, CAMPO_AREA, millones, presupuestoTexto, precioPara, dinero, rentaTexto,
+  PLAZOS_CONTRATO, GARANTIAS, type Necesidad, type Operacion, type OperacionDeActivo, type RentaActivo,
+} from './necesidad.ts'
 
 export type Semaforo = 'arriba' | 'en_linea' | 'abajo'
 
@@ -19,9 +26,15 @@ export interface PrecioContraMercado {
   margenNegociacionMXN: number | null // cuánto arriba del precio realista está lo pedido (si lo está)
 }
 
-/** Arriba si lo pedido supera el rango de comparables; abajo si queda por debajo; en línea dentro. */
-export function precioContraMercado(precio: number | null, m: PrecioMercado): PrecioContraMercado {
-  if (!precio) return { estado: null, texto: 'La propiedad no tiene precio publicado.', diferenciaPct: null, margenNegociacionMXN: null }
+/**
+ * Arriba si lo pedido supera el rango de comparables; abajo si queda por debajo; en línea dentro.
+ * En renta (§22.4) se compara la renta mensual contra comparables de renta: "renta realista".
+ */
+export function precioContraMercado(precio: number | null, m: PrecioMercado, op: Operacion = 'compra'): PrecioContraMercado {
+  const enRenta = op === 'renta'
+  const millones = (n: number) => dinero(n, op)
+  const realista = enRenta ? 'la renta realista' : 'el precio realista'
+  if (!precio) return { estado: null, texto: enRenta ? 'La propiedad no tiene renta mensual publicada.' : 'La propiedad no tiene precio publicado.', diferenciaPct: null, margenNegociacionMXN: null }
   if (m.rangoMinMXN == null || m.rangoMaxMXN == null || m.precioSalidaRecomendadoMXN == null) {
     return {
       estado: null, diferenciaPct: null, margenNegociacionMXN: null,
@@ -37,10 +50,10 @@ export function precioContraMercado(precio: number | null, m: PrecioMercado): Pr
   const rango = millones(m.rangoMinMXN) === millones(m.rangoMaxMXN)
     ? `alrededor de ${millones(m.rangoMinMXN)}` : `entre ${millones(m.rangoMinMXN)} y ${millones(m.rangoMaxMXN)}`
   const texto = estado === 'arriba'
-    ? `Pide ${Math.abs(diferenciaPct)} % más que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: hay margen para negociar.`
+    ? `Pide ${Math.abs(diferenciaPct)} % más que ${realista} (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: hay margen para negociar.`
     : estado === 'abajo'
-      ? `Pide ${Math.abs(diferenciaPct)} % menos que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: buena oportunidad, revisa por qué.`
-      : `En línea con el mercado (${rango}; precio realista ${millones(m.precioSalidaRecomendadoMXN)}).`
+      ? `Pide ${Math.abs(diferenciaPct)} % menos que ${realista} (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: buena oportunidad, revisa por qué.`
+      : `En línea con el mercado (${rango}; ${realista.replace('la ', '').replace('el ', '')} ${millones(m.precioSalidaRecomendadoMXN)}).`
   return { estado, texto, diferenciaPct, margenNegociacionMXN: margen }
 }
 
@@ -59,11 +72,10 @@ export function proyectarPlusvalia(tasa: number, min: number, max: number): Hori
 export type EstadoCriterio = 'cumple' | 'no_cumple' | 'por_confirmar'
 export interface Criterio { criterio: string; estado: EstadoCriterio; detalle: string }
 
-export interface ActivoAnalisis {
+export interface ActivoAnalisis extends OperacionDeActivo {
   tipo: string | null
   municipio: string | null
   colonia: string | null
-  precio_total: number | null
   superficie: number | null
 }
 
@@ -81,16 +93,20 @@ export function cumplimientoFicha(a: ActivoAnalisis, n: Necesidad): { cumple: nu
   const fLugar = falla('No está en')
   criterios.push({ criterio: 'Ubicación', estado: fLugar ? 'no_cumple' : 'cumple', detalle: fLugar ?? [a.colonia, a.municipio].filter(Boolean).join(', ') })
 
-  if (!a.precio_total) criterios.push({ criterio: 'Presupuesto', estado: 'por_confirmar', detalle: 'Sin precio publicado' })
+  const op = n.operacion ?? 'compra'
+  const precio = precioPara(a, op)
+  if (!precio) criterios.push({ criterio: 'Presupuesto', estado: 'por_confirmar', detalle: op === 'renta' ? 'Sin renta mensual publicada' : 'Sin precio publicado' })
   else {
-    const dentro = a.precio_total >= (n.presupuesto_min ?? 0) && a.precio_total <= n.presupuesto_max
-    const pct = r1((a.precio_total / n.presupuesto_max - 1) * 100)
+    const f = (v: number) => dinero(v, op)
+    const dentro = precio >= (n.presupuesto_min ?? 0) && precio <= n.presupuesto_max
+    const pct = r1((precio / n.presupuesto_max - 1) * 100)
     criterios.push({
       criterio: 'Presupuesto', estado: dentro ? 'cumple' : 'no_cumple',
-      detalle: dentro ? `${millones(a.precio_total)}, dentro de ${presupuestoTexto(n)}`
-        : a.precio_total > n.presupuesto_max ? `${millones(a.precio_total)}: ${pct} % arriba de tu máximo` : `${millones(a.precio_total)}: abajo de tu mínimo`,
+      detalle: dentro ? `${f(precio)}, dentro de ${presupuestoTexto(n)}`
+        : precio > n.presupuesto_max ? `${f(precio)}: ${pct} % arriba de tu máximo` : `${f(precio)}: abajo de tu mínimo`,
     })
   }
+  if (op === 'renta') criterios.push(...criteriosRenta(a.renta ?? null, n))
 
   const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
   if (typeof area === 'number') {
@@ -107,6 +123,65 @@ export function cumplimientoFicha(a: ActivoAnalisis, n: Necesidad): { cumple: nu
   }
   const verificables = criterios.filter((c) => c.estado !== 'por_confirmar')
   return { cumple: verificables.filter((c) => c.estado === 'cumple').length, verificables: verificables.length, criterios }
+}
+
+const etq = <T extends string>(l: { id: T; etiqueta: string }[], v: T | null | undefined) => l.find((x) => x.id === v)?.etiqueta ?? ''
+
+/** Lo propio de la renta en el cumplimiento (§22.4): plazo, garantía, amueblada y mascotas. */
+function criteriosRenta(r: RentaActivo | null, n: Necesidad): Criterio[] {
+  const f = n.renta
+  if (!f) return []
+  const c: Criterio[] = []
+  const porConfirmar = (criterio: string, pediste: string) => ({ criterio, estado: 'por_confirmar' as const, detalle: `Pediste: ${pediste}. Confírmalo con quien la ofrece` })
+  if (f.plazo_contrato) {
+    const orden = (v: string | null | undefined) => PLAZOS_CONTRATO.findIndex((x) => x.id === v)
+    c.push(!r?.plazo_minimo ? porConfirmar('Plazo del contrato', etq(PLAZOS_CONTRATO, f.plazo_contrato))
+      : orden(r.plazo_minimo) <= orden(f.plazo_contrato)
+        ? { criterio: 'Plazo del contrato', estado: 'cumple', detalle: `Pide mínimo ${etq(PLAZOS_CONTRATO, r.plazo_minimo)}; tú, ${etq(PLAZOS_CONTRATO, f.plazo_contrato)}` }
+        : { criterio: 'Plazo del contrato', estado: 'no_cumple', detalle: `Pide mínimo ${etq(PLAZOS_CONTRATO, r.plazo_minimo)}; tú buscas ${etq(PLAZOS_CONTRATO, f.plazo_contrato)}` })
+  }
+  if (f.garantia) {
+    c.push(!r?.garantia ? porConfirmar('Garantía', etq(GARANTIAS, f.garantia).toLowerCase())
+      : r.garantia === 'cualquiera' || r.garantia === f.garantia
+        ? { criterio: 'Garantía', estado: 'cumple', detalle: r.garantia === 'cualquiera' ? 'Acepta cualquier garantía' : `Pide ${etq(GARANTIAS, r.garantia).toLowerCase()}, la que puedes dar` }
+        : { criterio: 'Garantía', estado: 'no_cumple', detalle: `Pide ${etq(GARANTIAS, r.garantia).toLowerCase()}; tú puedes dar ${etq(GARANTIAS, f.garantia).toLowerCase()}` })
+  }
+  if (f.amueblada && f.amueblada !== 'indistinto') {
+    const quiere = f.amueblada === 'si'
+    c.push(r?.amueblada == null ? porConfirmar('Amueblada', quiere ? 'amueblada' : 'sin amueblar')
+      : { criterio: 'Amueblada', estado: r.amueblada === quiere ? 'cumple' : 'no_cumple', detalle: r.amueblada ? 'Está amueblada' : 'No está amueblada' })
+  }
+  if (f.mascotas === true) {
+    c.push(r?.mascotas == null ? porConfirmar('Mascotas', 'que acepte mascotas')
+      : { criterio: 'Mascotas', estado: r.mascotas ? 'cumple' : 'no_cumple', detalle: r.mascotas ? 'Acepta mascotas' : 'No acepta mascotas' })
+  }
+  return c
+}
+
+// Póliza jurídica: en Monterrey cuesta alrededor de 35 % de una renta mensual, con un mínimo de unos
+// $3,500 (referencia de mercado; varía por empresa y por el monto de la renta).
+export const POLIZA = { pctRenta: 0.35, minimo: 3_500 }
+
+/**
+ * Costo de entrada y costo mensual de una renta (§22.4). El depósito que no está capturado se toma de
+ * 1 mes y se dice; la póliza solo cuenta si la garantía que se va a dar es póliza jurídica.
+ */
+export function costoRenta(rentaMensual: number, r: RentaActivo | null, garantia: string | null | undefined) {
+  const depositoMeses = r?.deposito_meses ?? 1
+  const deposito = Math.round(rentaMensual * depositoMeses)
+  const poliza = garantia === 'poliza' ? Math.max(POLIZA.minimo, Math.round(rentaMensual * POLIZA.pctRenta / 100) * 100) : null
+  const mantenimiento = r?.incluye_mantenimiento ? 0 : r?.mantenimiento ?? null
+  const notas = [
+    r?.deposito_meses ? null : 'Depósito de 1 mes supuesto: confírmalo con quien la ofrece.',
+    poliza ? `Póliza jurídica estimada en ${Math.round(POLIZA.pctRenta * 100)} % de una renta (mínimo ${rentaTexto(POLIZA.minimo).replace(' al mes', '')}); varía por empresa.` : null,
+    mantenimiento == null ? 'Mantenimiento sin capturar: pregúntalo.' : null,
+  ].filter(Boolean)
+  return {
+    depositoMeses, deposito, depositoSupuesto: !r?.deposito_meses, primerMes: Math.round(rentaMensual), poliza,
+    entrada: deposito + Math.round(rentaMensual) + (poliza ?? 0),
+    mantenimiento, mensual: Math.round(rentaMensual) + (mantenimiento ?? 0),
+    nota: notas.join(' '),
+  }
 }
 
 // Gastos de escrituración (ISAI, notario, registro y avalúo) como % del precio. Nuevo León ~6–8 %

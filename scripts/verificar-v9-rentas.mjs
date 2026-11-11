@@ -1,6 +1,7 @@
-// Prueba de punta a punta de RENTAS, Parte A (Documento Maestro V9, §22.1–22.3 y §22.5) contra la
+// Prueba de punta a punta de RENTAS (Documento Maestro V9, §22): Parte A (ficha, propiedad,
+// búsqueda y panel) y Parte B (análisis, conexión con solicitud de renta y certificación de renta) contra la
 // base real, en el MUNDO DEMO, con cuentas y propiedades temporales que se borran al final.
-// Necesita la migración 20261115000000_v9_rentas.sql aplicada y la app corriendo en el puerto 3011.
+// Necesita las migraciones 20261115000000 y 20261115000100 (rentas) aplicadas y la app corriendo en el puerto 3011.
 // Uso: node --env-file=.env.local scripts/verificar-v9-rentas.mjs <carpeta-para-capturas>
 //
 // 1. Una dueña registra en /empezar un departamento "en venta y en renta" ($9M o $32,000 al mes).
@@ -234,6 +235,64 @@ try {
   const m2 = zonas?.[0]?.mercado?.precioM2
   ok(zonas && (m2 == null || m2 < 2000), `el precio por m² de la zona es renta mensual por m² (${m2 ?? 'sin dato'}, ${zonas?.[0]?.mercado?.comparables ?? 0} comparables)`)
 
+  // ── Parte B ───────────────────────────────────────────────────────────────────────────────
+  // 7. Análisis en renta (§22.4): "Me interesa" en el depa del broker.
+  const tkI2 = await token(correoInquilina)
+  let rb = await api(tkI2, '/api/analisis', 'POST', { activoId: delBroker, necesidadId: n.id })
+  ok(rb.status === 200, `"Me interesa" en una renta (${rb.status} ${rb.j.error ?? ''})`)
+  const an = (await api(tkI2, '/api/analisis')).j.analisis.find((x) => x.activo_id === delBroker)?.resultado
+  ok(an?.operacion === 'renta' && an.plusvalia === null && an.activo.renta_mensual === 34000, 'el análisis es en renta: renta mensual y sin plusvalía')
+  ok(an?.porTipo?.costoRenta?.entrada === 79900 && an.porTipo.costoRenta.mensual === 34000 && an.porTipo.costoRenta.poliza === 11900,
+    `costo de entrada $79,900 (depósito + primer mes + póliza) y $34,000 al mes (${JSON.stringify(an?.porTipo?.costoRenta && { e: an.porTipo.costoRenta.entrada, m: an.porTipo.costoRenta.mensual })})`)
+  const crit = Object.fromEntries((an?.cumplimiento?.criterios ?? []).map((c) => [c.criterio, c.estado]))
+  ok(crit['Plazo del contrato'] === 'no_cumple' && crit['Mascotas'] === 'cumple' && crit['Garantía'] === 'cumple' && crit['Amueblada'] === 'cumple',
+    `el cumplimiento suma plazo, garantía, amueblada y mascotas (${JSON.stringify(crit)})`)
+  ok(/renta realista|Sin dato/.test(an?.mercado?.semaforo?.texto ?? ''), `renta contra mercado: ${an?.mercado?.semaforo?.texto}`)
+  await pg.goto(BASE + '/analisis', { waitUntil: 'networkidle2' })
+  await pg.waitForSelector('[data-costo-renta]', { timeout: 30000 })
+  const ta = await t2()
+  ok(ta.includes('renta contra mercado') && ta.includes('para entrar') && ta.includes('cada mes') && !ta.includes('plusvalía · proyección'), 'la pantalla del análisis está en modo renta')
+  await pg.screenshot({ path: `${out}/renta-6-analisis.png`, fullPage: true })
+
+  // 8. Conexión en renta (§22.5): igual hasta la visita; solicitud de renta; contrato firmado.
+  rb = await api(tkI2, '/api/conexiones', 'POST', { activoId: delBroker })
+  ok(rb.status === 200 && rb.j.estado === 'activa', `"Quiero verla" (${rb.j.estado ?? rb.j.error})`)
+  const cx = rb.j.id
+  const acc = (tk, cuerpo) => api(tk, `/api/conexiones/${cx}`, 'POST', cuerpo)
+  const manana = new Date(Date.now() + 26 * 3600_000).toISOString()
+  await acc(tkI2, { accion: 'proponer_horarios', horarios: [manana] })
+  ok((await acc(tkB, { accion: 'confirmar_visita', horario: manana })).status === 200, 'el broker confirma la visita')
+  await admin.from('conexiones').update({ visita_at: new Date(Date.now() - 20 * 3600_000).toISOString() }).eq('id', cx)
+  ok((await acc(tkI2, { accion: 'resultado_visita', resultado: 'quiero_ofertar' })).status === 200, '"¿cómo te fue?": quiero rentarla')
+  const sinPlazo = await acc(tkI2, { accion: 'oferta', monto: '33,000' })
+  ok(sinPlazo.status === 400 && /plazo/.test(sinPlazo.j.error), `la solicitud de renta pide el plazo (${sinPlazo.j.error})`)
+  ok((await acc(tkI2, { accion: 'oferta', monto: '33,000', plazo_contrato: '1_anio', garantia: 'poliza', fecha_entrada: 'ya' })).status === 200, 'solicitud de renta enviada')
+  let dc = await api(tkI2, `/api/conexiones/${cx}`)
+  ok(dc.j.operacion === 'renta' && dc.j.textoFase === 'Solicitud de renta enviada' && dc.j.conexion.oferta_monto === 33000 && dc.j.conexion.solicitud_renta?.garantia === 'poliza',
+    `la conexión es de renta y guarda la solicitud (${dc.j.textoFase})`)
+  await pg.goto(`${BASE}/conexion/${cx}`, { waitUntil: 'networkidle2' })
+  await pg.waitForSelector('[data-solicitud-renta]', { timeout: 30000 })
+  ok((await t2()).includes('$33,000 al mes · contrato de 1 año · póliza jurídica · entrada ya'), 'la pantalla muestra la solicitud de renta')
+  await pg.screenshot({ path: `${out}/renta-7-conexion.png`, fullPage: true })
+  ok((await acc(tkB, { accion: 'reportar_cierre', precio: 33000, fecha: '2026-11-11' })).status === 200, 'el broker reporta el contrato firmado')
+  const { data: cr } = await admin.from('cierres_reportados').select('operacion, precio_cierre').eq('conexion_id', cx).single()
+  ok(cr?.operacion === 'renta' && cr.precio_cierre === 33000, 'el cierre cuenta como renta (no se mezcla con precios de venta)')
+  const { data: ac } = await admin.from('activos').select('status').eq('id', delBroker).single()
+  ok(ac?.status === 'cerrado', 'la propiedad solo en renta queda cerrada')
+  ok((await acc(tkI2, { accion: 'confirmar_cierre' })).status === 200, 'quien renta confirma el contrato')
+  dc = await api(tkI2, `/api/conexiones/${cx}`)
+  ok(dc.j.textoFase === 'Contrato firmado y verificado', dc.j.textoFase)
+
+  // 9. Certificación de renta (§22.6): la propiedad solo en renta pide menos documentos.
+  const tkO = await token(correoOtro)
+  rb = await api(tkO, '/api/certificaciones', 'POST', { activoId: cumple })
+  ok(rb.status === 422 && JSON.stringify(rb.j.faltantes.map((f) => f.campo)) === '["escritura_publica","clave_catastral"]',
+    `la de renta solo pide escritura y clave catastral (${rb.j.faltantes?.map((f) => f.documento).join(', ')})`)
+  await admin.from('activos').update({ escritura_publica: 'si', clave_catastral: '31-070-00000' }).eq('id', cumple)
+  rb = await api(tkO, '/api/certificaciones', 'POST', { activoId: cumple })
+  const { data: ce } = await admin.from('certificaciones').select('alcance').eq('activo_id', cumple).single()
+  ok(rb.status === 200 && ce?.alcance === 'renta', `se pide como certificación de renta (${ce?.alcance})`)
+
   // 6. Validaciones del servidor.
   const r6 = await api(tkI, '/api/necesidades', 'POST', { operacion: 'las dos', tipo: 'casa', presupuesto_max: 30000, zonas: [{ municipio: 'Monterrey' }] })
   ok(r6.status === 400 && r6.j.error === 'Elige si quieres comprar o rentar', `una operación inválida se rechaza (${r6.j.error})`)
@@ -246,6 +305,7 @@ try {
   }
 } finally {
   if (b) await b.close()
+  for (const id of limpiar.usuarios) await admin.from('analisis').delete().eq('usuario_id', id)
   if (limpiar.activos.length) {
     await admin.from('propuestas').delete().in('activo_id', limpiar.activos)
     await admin.from('activos').delete().in('id', limpiar.activos)

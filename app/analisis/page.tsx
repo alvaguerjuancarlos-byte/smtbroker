@@ -11,12 +11,14 @@
 //   - Un anuncio de portal (opción 2, 10-nov-2026) se analiza igual, marcado "De portal · no
 //     certificada", con su liga original; en vez de "Quiero verla", se invita al anunciante a certificar.
 // Con dos o más, el comparativo lado a lado (§20.4). Todo sale de app/api/analisis.
+// V9 (§22.4): un análisis de una ficha de renta muestra renta contra mercado, costo de entrada y
+// costo mensual, sin plusvalía; lo legal es la certificación de renta.
 import { EncabezadoPantalla } from '../components/Banda'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Topbar from '../components/Topbar'
-import { millones } from '@/lib/necesidad'
+import { millones, rentaTexto } from '@/lib/necesidad'
 import type { ResultadoAnalisis } from '@/lib/analisisServidor'
 
 type Resultado = ResultadoAnalisis & { topeMensual?: string; certificacionPedidaAt?: string; origen?: { portal: string; url: string; lectura: string | null } }
@@ -40,6 +42,10 @@ const COLOR_CRITERIO = { cumple: verde, no_cumple: 'var(--c-rojo)', por_confirma
 const etiqueta = 'font-sans text-[14px] text-tenue'
 const bloque = 'border-t border-linea pt-3 flex flex-col gap-1.5'
 const pesos = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+const enRenta = (r: Resultado) => r.operacion === 'renta'
+/** Precio o renta de lo analizado: "$7.6M" o "$28,000 al mes". */
+const cuanto = (r: Resultado) => enRenta(r) ? (r.activo.renta_mensual ? rentaTexto(r.activo.renta_mensual) : null) : (r.activo.precio_total ? millones(r.activo.precio_total) : null)
+const montoDe = (r: Resultado) => (enRenta(r) ? r.activo.renta_mensual : r.activo.precio_total) ?? null
 
 export default function AnalisisPage() {
   const router = useRouter()
@@ -102,7 +108,7 @@ export default function AnalisisPage() {
         <main className="flex-1 px-4 md:px-6 pb-10">
           <div className="w-full max-w-[980px] mx-auto flex flex-col gap-4">
             <EncabezadoPantalla ancho="max-w-[980px]" titulo="Tu análisis"
-              subtitulo="Precio contra mercado, plusvalía y si cumple lo que buscas. Quien ofrece la propiedad no se entera de que la analizaste.">
+              subtitulo="Contra el mercado, lo que te cuesta y si cumple lo que buscas. Quien ofrece la propiedad no se entera de que la analizaste.">
               <a href="/inicio" className="font-sans text-[16px] text-tinta-2 hover:text-tinta w-fit -order-1">← Mi bandeja</a>
             </EncabezadoPantalla>
             {error && <p className="text-[16px] text-error">{error}</p>}
@@ -127,13 +133,14 @@ export default function AnalisisPage() {
                     </thead>
                     <tbody>
                       {([
-                        ['Precio', (r: Resultado) => r.activo.precio_total ? millones(r.activo.precio_total) : '—'],
-                        ['Precio/m²', (r: Resultado) => r.activo.precio_total && r.activo.superficie ? pesos(r.activo.precio_total / r.activo.superficie) : '—'],
+                        ['Precio o renta', (r: Resultado) => cuanto(r) ?? '—'],
+                        ['Por m²', (r: Resultado) => montoDe(r) && r.activo.superficie ? `${pesos(montoDe(r)! / r.activo.superficie)}${enRenta(r) ? ' al mes' : ''}` : '—'],
                         ['Contra mercado', (r: Resultado) => r.mercado.semaforo.estado ? SEMAFORO[r.mercado.semaforo.estado].texto.replace(' del mercado', '').replace(' con el mercado', '') : 'Sin dato'],
-                        ['Plusvalía 5 años', (r: Resultado) => r.plusvalia ? `+${r.plusvalia.horizontes[1].pct} %` : '—'],
+                        ['Plusvalía 5 años', (r: Resultado) => r.plusvalia ? `+${r.plusvalia.horizontes[1].pct} %` : enRenta(r) ? 'No aplica' : '—'],
+                        ['Para entrar', (r: Resultado) => r.porTipo?.costoRenta ? pesos(r.porTipo.costoRenta.entrada) : '—'],
                         ['Cumple tu ficha', (r: Resultado) => r.cumplimiento ? `${r.cumplimiento.cumple} de ${r.cumplimiento.verificables}` : '—'],
                         ['Rendimiento por renta', (r: Resultado) => r.porTipo?.renta?.rendimiento ? `${r.porTipo.renta.rendimiento.capRatePct} %` : '—'],
-                        ['Legal', (r: Resultado) => r.legal.certificada ? 'Certificada' : 'Sin revisar'],
+                        ['Legal', (r: Resultado) => r.legal.certificada ? (enRenta(r) ? 'Certificada para renta' : 'Certificada') : 'Sin revisar'],
                       ] as [string, (r: Resultado) => string][]).map(([l, f]) => (
                         <tr key={l} className="border-t border-linea">
                           <td className="text-tenue py-2 pr-3 whitespace-nowrap">{l}</td>
@@ -156,17 +163,17 @@ export default function AnalisisPage() {
                     {r.origen && <span className="font-sans text-[13px] text-[#8a93a3]">De portal ({r.origen.portal}) · no certificada{r.origen.lectura === 'capturado' ? ' · datos que escribiste' : ''}</span>}
                     <h2 className="font-display text-[23px] font-medium leading-tight">{r.activo.nombre}</h2>
                     <span className="text-[15px] text-tenue">
-                      {[r.activo.precio_total ? millones(r.activo.precio_total) : null, r.activo.superficie ? `${r.activo.superficie.toLocaleString('es-MX')} m²` : null, [r.activo.colonia, r.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+                      {[enRenta(r) ? 'En renta' : null, cuanto(r), r.activo.superficie ? `${r.activo.superficie.toLocaleString('es-MX')} m²` : null, [r.activo.colonia, r.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
                     </span>
                     {r.origen && <a href={r.origen.url} target="_blank" rel="noopener noreferrer" className="font-sans text-[15px] w-fit" style={{ color: verde }}>Ver el anuncio original →</a>}
                   </div>
 
                   <div className={bloque}>
-                    <span className={etiqueta}>Precio contra mercado</span>
+                    <span className={etiqueta}>{enRenta(r) ? 'Renta contra mercado' : 'Precio contra mercado'}</span>
                     {sem.estado && <span className="font-display text-[21px]" style={{ color: SEMAFORO[sem.estado].color }}>{SEMAFORO[sem.estado].texto}</span>}
                     <p className="text-[16px] text-tinta-2">{sem.texto}</p>
-                    {sem.margenNegociacionMXN != null && <p className="text-[16px]">Margen de negociación de referencia: <b>{pesos(sem.margenNegociacionMXN)}</b></p>}
-                    {p.precioPromedioM2Zona != null && <p className="text-[15px] text-tenue">Precio/m² de la zona (mediana): {pesos(p.precioPromedioM2Zona)}</p>}
+                    {sem.margenNegociacionMXN != null && <p className="text-[16px]">Margen de negociación de referencia: <b>{pesos(sem.margenNegociacionMXN)}{enRenta(r) ? ' al mes' : ''}</b></p>}
+                    {p.precioPromedioM2Zona != null && <p className="text-[15px] text-tenue">{enRenta(r) ? `Renta por m² de la zona (mediana): ${pesos(p.precioPromedioM2Zona)} al mes` : `Precio/m² de la zona (mediana): ${pesos(p.precioPromedioM2Zona)}`}</p>}
                   </div>
 
                   {r.plusvalia && (
@@ -197,9 +204,16 @@ export default function AnalisisPage() {
                     </div>
                   )}
 
-                  {r.porTipo && (r.porTipo.costoTotal || r.porTipo.mensualidad || r.porTipo.usoSuelo || r.porTipo.renta) && (
+                  {r.porTipo && (r.porTipo.costoTotal || r.porTipo.mensualidad || r.porTipo.usoSuelo || r.porTipo.renta || r.porTipo.costoRenta) && (
                     <div className={bloque}>
                       <span className={etiqueta}>Para tu decisión</span>
+                      {r.porTipo.costoRenta && (
+                        <div className="flex flex-col gap-1" data-costo-renta>
+                          <p className="text-[16px]"><b className="font-medium">Para entrar:</b> {pesos(r.porTipo.costoRenta.entrada)} <span className="text-tenue">(depósito de {r.porTipo.costoRenta.depositoMeses} {r.porTipo.costoRenta.depositoMeses === 1 ? 'mes' : 'meses'} {pesos(r.porTipo.costoRenta.deposito)} + primer mes {pesos(r.porTipo.costoRenta.primerMes)}{r.porTipo.costoRenta.poliza ? ` + póliza jurídica ~${pesos(r.porTipo.costoRenta.poliza)}` : ''})</span></p>
+                          <p className="text-[16px]"><b className="font-medium">Cada mes:</b> {pesos(r.porTipo.costoRenta.mensual)} <span className="text-tenue">{r.porTipo.costoRenta.mantenimiento === 0 ? '(mantenimiento incluido)' : r.porTipo.costoRenta.mantenimiento ? `(renta + mantenimiento de ${pesos(r.porTipo.costoRenta.mantenimiento)})` : '(renta; sin dato de mantenimiento)'}</span></p>
+                          {r.porTipo.costoRenta.nota && <p className="text-[15px] text-tenue">{r.porTipo.costoRenta.nota}</p>}
+                        </div>
+                      )}
                       {r.porTipo.costoTotal && (
                         <p className="text-[16px]"><b className="font-medium">Costo total de compra:</b> {pesos(r.porTipo.costoTotal.totalMin)} a {pesos(r.porTipo.costoTotal.totalMax)}. <span className="text-tenue">{r.porTipo.costoTotal.nota}</span></p>
                       )}
@@ -226,7 +240,7 @@ export default function AnalisisPage() {
                     <span className={etiqueta}>Legal</span>
                     {r.legal.certificada ? (
                       <>
-                        <span className="text-[17px]" style={{ color: verde }}>✓ Certificada por SMTBROKER</span>
+                        <span className="text-[17px]" style={{ color: verde }}>✓ {enRenta(r) ? 'Certificada para renta por SMTBROKER' : 'Certificada por SMTBROKER'}</span>
                         {'resumen' in r.legal && r.legal.resumen && <p className="text-[16px] text-tinta-2">{r.legal.resumen}</p>}
                       </>
                     ) : (
@@ -244,7 +258,7 @@ export default function AnalisisPage() {
                   <div className={bloque}>
                     <span className={etiqueta}>Qué tan sólido es · {r.solidez.nivel}</span>
                     <p className="text-[15px] text-tenue">
-                      {r.solidez.comparablesVenta} comparables de venta{r.solidez.comparablesRenta != null ? ` y ${r.solidez.comparablesRenta} de renta` : ''} de tamaño parecido · datos del {new Date(r.solidez.fechaDatos).toLocaleDateString('es-MX')}
+                      {[r.solidez.comparablesVenta != null ? `${r.solidez.comparablesVenta} comparable${r.solidez.comparablesVenta === 1 ? '' : 's'} de venta` : null, r.solidez.comparablesRenta != null ? `${r.solidez.comparablesRenta} ${r.solidez.comparablesVenta != null ? 'de renta' : `comparable${r.solidez.comparablesRenta === 1 ? '' : 's'} de renta`}` : null].filter(Boolean).join(' y ')} de tamaño parecido · datos del {new Date(r.solidez.fechaDatos).toLocaleDateString('es-MX')}
                       {r.solidez.fuentes.length > 0 ? ` · fuentes: ${r.solidez.fuentes.join(', ')}` : ''}
                     </p>
                   </div>

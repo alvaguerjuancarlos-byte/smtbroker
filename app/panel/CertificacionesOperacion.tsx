@@ -9,9 +9,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { mismoMundo } from '@/lib/mundo'
-import type { EstadoCertificacion } from '@/lib/expediente'
+import { ETIQUETA_ALCANCE, REVISION_RENTA, type EstadoCertificacion, type AlcanceCertificacion } from '@/lib/expediente'
 
-interface Certificacion { id: string; activo_id: string; solicitado_por: string; estado: EstadoCertificacion; created_at: string }
+interface Certificacion { id: string; activo_id: string; solicitado_por: string; estado: EstadoCertificacion; alcance?: AlcanceCertificacion | null; created_at: string }
 interface Activo { id: string; nombre: string; municipio: string; es_demo: boolean }
 interface Usuario { id: string; nombre: string | null; es_demo: boolean; pionero: boolean }
 interface Dictamen {
@@ -43,7 +43,7 @@ export default function CertificacionesOperacion() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       const [c, a, u] = await Promise.all([
-        supabase.from('certificaciones').select('id, activo_id, solicitado_por, estado, created_at').order('created_at', { ascending: true }),
+        supabase.from('certificaciones').select('id, activo_id, solicitado_por, estado, alcance, created_at').order('created_at', { ascending: true }),
         supabase.from('activos').select('id, nombre, municipio, es_demo'),
         supabase.from('usuarios').select('id, nombre, es_demo, pionero'),
       ])
@@ -100,8 +100,9 @@ export default function CertificacionesOperacion() {
               <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2 py-1 shrink-0 rounded-lg">En revisión</span>
             </div>
             <p className="text-[14px] text-tenue">
-              Solicitó: {quien?.nombre ?? '—'}{quien?.pionero ? ' · ★ Pionero' : ''} · {new Date(c.created_at).toLocaleDateString('es-MX')}
+              {ETIQUETA_ALCANCE[c.alcance ?? 'venta']} · Solicitó: {quien?.nombre ?? '—'}{quien?.pionero ? ' · ★ Pionero' : ''} · {new Date(c.created_at).toLocaleDateString('es-MX')}
             </p>
+            {c.alcance === 'renta' && <p className="text-[14px] text-tinta-2" data-revision-renta>Revisar (§22.6): {REVISION_RENTA.join(' · ')}. Contrato modelo de la plataforma, opcional.</p>}
             <div className="flex flex-wrap gap-2">
               <button disabled={d === 'cargando'} onClick={() => pedirDictamen(c, true)}
                 className={`${boton} border-gold-500/40 text-acento hover:border-gold-500`}>

@@ -15,6 +15,7 @@ import { etiquetaTipo } from '@/lib/necesidad'
 //   - el análisis básico es ilimitado; el análisis por tipo (costo total, renta, uso de suelo) tiene
 //     tope de 5 al mes;
 //   - si ya hay uno de menos de 7 días, se devuelve ese (salvo `actualizar`).
+// V9 (§22.4): si la ficha es de renta, el análisis es en renta (lib/analisisServidor.ts).
 // GET: su comparativo (el análisis más reciente de cada propiedad o anuncio no descartado).
 
 const MAX_A_LA_VEZ = 5
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest) {
         id: x.id, nombre: x.titulo || `Anuncio de ${x.fuente}`, tipo: x.tipo || (necesidad ? etiquetaTipo(necesidad.tipo) : 'Casa'),
         municipio: x.municipio || necesidad?.municipio || '', colonia: x.colonia, estado: necesidad?.estado || 'Nuevo León',
         superficie: x.superficie, precio_total: x.precio, broker_id: null, usuario_id: '', status: null, es_demo: x.es_demo, lat: null, lng: null,
+        // V9 (§22.4): el anuncio de una ficha de renta trae renta mensual, no precio de venta.
+        ...(necesidad?.operacion === 'renta' ? { operacion: 'renta' as const, renta_mensual: x.precio, precio_total: null } : {}),
       }
       origen = { portal: x.fuente, url: x.url, lectura: x.lectura }
     } else {

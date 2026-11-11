@@ -58,3 +58,31 @@ test('costo total, mensualidad y rendimiento por renta', () => {
   assert.ok(m.mensualidad > 41_000 && m.mensualidad < 41_500, String(m.mensualidad))
   assert.deepEqual(rendimientoRenta(50_000, 7_500_000), { rentaMensual: 50_000, rentaAnual: 600_000, capRatePct: 8, aniosRecuperar: 12.5 })
 })
+
+// ── V9 §22.4: análisis en renta ───────────────────────────────────────────────────────────────
+import { costoRenta } from './analisis.ts'
+import { validarNecesidad as vn } from './necesidad.ts'
+
+test('renta: costo de entrada, costo mensual y supuestos a la vista', () => {
+  const c = costoRenta(30000, { incluye_mantenimiento: false, mantenimiento: 2500, deposito_meses: 2, plazo_minimo: null, garantia: 'cualquiera', amueblada: null, mascotas: null }, 'poliza')
+  assert.deepEqual([c.deposito, c.primerMes, c.poliza, c.entrada, c.mensual], [60000, 30000, 10500, 100500, 32500])
+  const s = costoRenta(8000, null, 'aval')
+  assert.equal(s.depositoSupuesto, true); assert.equal(s.poliza, null); assert.equal(s.entrada, 16000)
+  assert.match(s.nota, /Depósito de 1 mes supuesto/); assert.match(s.nota, /Mantenimiento sin capturar/)
+  assert.equal(costoRenta(8000, null, 'poliza').poliza, 3500) // mínimo
+})
+
+test('renta: renta contra mercado y cumplimiento con plazo, garantía, amueblada y mascotas', () => {
+  const m = { precioSalidaRecomendadoMXN: 30000, rangoMinMXN: 27000, rangoMaxMXN: 33000, comparablesUsados: 5, precioPromedioM2Zona: 300 }
+  const s = precioContraMercado(36000, m as never, 'renta')
+  assert.equal(s.estado, 'arriba')
+  assert.match(s.texto, /^Pide 20 % más que la renta realista \(\$30,000 al mes\)/)
+  const r = vn({ operacion: 'renta', tipo: 'departamento', municipio: 'Monterrey', presupuesto_max: 35000,
+    renta: { plazo_contrato: '1_anio', garantia: 'poliza', amueblada: 'si', mascotas: true } })
+  assert.ok('necesidad' in r)
+  const c = cumplimientoFicha({ tipo: 'Departamento', municipio: 'Monterrey', colonia: null, superficie: null, precio_total: null, operacion: 'renta', renta_mensual: 30000,
+    renta: { incluye_mantenimiento: true, mantenimiento: null, deposito_meses: 1, plazo_minimo: '2_3_anios', garantia: 'cualquiera', amueblada: null, mascotas: true } }, r.necesidad)
+  const e = Object.fromEntries(c.criterios.map((x) => [x.criterio, x.estado]))
+  assert.deepEqual(e, { Tipo: 'cumple', 'Ubicación': 'cumple', Presupuesto: 'cumple', 'Plazo del contrato': 'no_cumple', 'Garantía': 'cumple', Amueblada: 'por_confirmar', Mascotas: 'cumple' })
+  assert.equal(c.criterios.find((x) => x.criterio === 'Presupuesto').detalle, '$30,000 al mes, dentro de hasta $35,000 al mes')
+})

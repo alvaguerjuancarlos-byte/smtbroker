@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sesionServidor, type SesionServidor } from '@/lib/sesionServidor'
 import { avisarOperacion } from '@/lib/avisos'
-import { millones } from '@/lib/necesidad'
+import { millones, rentaTexto } from '@/lib/necesidad'
 import {
-  fase, rolEn, ladoComprador, TEXTO_FASE, validarHorarios, validarOferta, validarCalificacion,
+  fase, rolEn, ladoComprador, textoFase, validarHorarios, validarOferta, validarCalificacion, validarSolicitudRenta, textoSolicitud,
   type ResultadoVisita, type RespuestaCompra,
 } from '@/lib/conexion'
-import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, fechaHora, type FilaConexion } from '@/lib/conexionServidor'
+import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, fechaHora, operacionDeConexion, type FilaConexion } from '@/lib/conexionServidor'
 
 // Una conexión (Documento Maestro V8, Parte 3, §21).
 //
@@ -25,6 +25,10 @@ import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, fechaHora, type Fil
 //   compre {respuesta}            el comprador, en el seguimiento de 30, 60 y 90 días (paso 3)
 //   calificar {atencion, rapidez, honestidad, comentario?}  el comprador califica al broker (paso 4)
 // La plataforma no negocia: no hay contraoferta ni contrato aquí.
+//
+// V9 (§22.5), en renta: `oferta` es la SOLICITUD DE RENTA {monto (renta ofrecida), plazo_contrato,
+// garantia?, fecha_entrada?}; `reportar_cierre` es el contrato firmado (renta mensual y fecha de
+// firma). Al cerrarse, una propiedad en venta y renta sigue en venta; una solo en renta se cierra.
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 const FORMA_PAGO: Record<string, string> = { contado: 'contado', credito: 'crédito bancario', infonavit: 'Infonavit / Fovissste' }
@@ -45,12 +49,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const r = await cargar(s, (await ctx.params).id)
     if (!r) return NextResponse.json({ error: 'Conexión no encontrada' }, { status: 404 })
     const { c, rol } = r
+    const op = await operacionDeConexion(s.admin, c)
 
-    const [{ data: activo }, { data: mens }, nombres, { data: calif }] = await Promise.all([
-      s.admin.from('activos').select('id, nombre, tipo, municipio, colonia, superficie, precio_total').eq('id', c.activo_id).single(),
+    const [{ data: activo }, { data: mens }, nombres, { data: calif }, { data: ficha }] = await Promise.all([
+      s.admin.from('activos').select('id, nombre, tipo, municipio, colonia, superficie, precio_total, operacion, renta_mensual').eq('id', c.activo_id).single(),
       s.admin.from('mensajes').select('id, autor_id, texto, created_at').eq('conexion_id', c.id).order('created_at'),
       nombresDe(s.admin, [c.comprador_id, c.contraparte_id, c.broker_comprador_id ?? '']),
       s.admin.from('calificaciones').select('atencion, rapidez, honestidad, comentario').eq('conexion_id', c.id).maybeSingle(),
+      // En renta, la ficha del lado del comprador llena de entrada su solicitud (plazo, garantía, entrada).
+      op === 'renta' && c.necesidad_id && ladoComprador(rol) ? s.admin.from('necesidades').select('renta').eq('id', c.necesidad_id).maybeSingle() : Promise.resolve({ data: null }),
     ])
     // Teléfonos solo con la visita confirmada (§21.3). Del lado del comprador con broker, el de su broker.
     const telefonos = c.visita_confirmada_at ? {
@@ -72,9 +79,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         oferta_monto: c.oferta_monto, oferta_forma_pago: c.oferta_forma_pago, oferta_at: c.oferta_at,
         cierre_precio: c.cierre_precio, cierre_fecha: c.cierre_fecha, cierre_reportado_at: c.cierre_reportado_at,
         cierre_confirmado_at: c.cierre_confirmado_at, compro_respuesta: c.compro_respuesta, created_at: c.created_at,
+        solicitud_renta: c.solicitud_renta,
         ...(s.esOperacion ? { aporte: c.aporte } : {}),
       },
-      rol: rol ?? 'operacion', fase: f, textoFase: TEXTO_FASE[f],
+      rol: rol ?? 'operacion', fase: f, textoFase: textoFase(f, op), operacion: op,
+      fichaRenta: (ficha as { renta: Record<string, unknown> | null } | null)?.renta ?? null,
       activo,
       partes: {
         comprador: nombres.get(c.comprador_id), contraparte: nombres.get(c.contraparte_id), contraparteEsBroker: c.contraparte_es_broker,
@@ -101,8 +110,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const { c, rol } = r
     const b = await req.json().catch(() => ({})) as Record<string, unknown>
     const ahora = new Date().toISOString()
-    const { data: ad } = await s.admin.from('activos').select('id, nombre, broker_id, precio_total').eq('id', c.activo_id).single()
-    const activo = ad as { id: string; nombre: string; broker_id: string | null; precio_total: number | null }
+    const { data: ad } = await s.admin.from('activos').select('id, nombre, broker_id, precio_total, operacion, renta_mensual').eq('id', c.activo_id).single()
+    const activo = ad as { id: string; nombre: string; broker_id: string | null; precio_total: number | null; operacion: string | null; renta_mensual: number | null }
+    const op = await operacionDeConexion(s.admin, c)
+    const enRenta = op === 'renta'
     const yo = (await nombresDe(s.admin, [s.uid])).get(s.uid) ?? 'Usuario'
     const enlace = { texto: 'Abrir la conversación', ruta: `/conexion/${c.id}` }
     const actualizar = async (cambios: Record<string, unknown>) => {
@@ -187,8 +198,23 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }
 
       case 'oferta': {
-        if (!ladoComprador(rol)) return falla('La intención de oferta la registra el comprador', 403)
+        if (!ladoComprador(rol)) return falla(enRenta ? 'La solicitud de renta la envía quien busca rentar' : 'La intención de oferta la registra el comprador', 403)
         if (!activa) return falla('La conexión no está activa', 409)
+        if (enRenta) {
+          const v = validarSolicitudRenta(b.monto, b)
+          if ('error' in v) return falla(v.error)
+          const err = await actualizar({ oferta_monto: v.monto, oferta_forma_pago: 'renta', solicitud_renta: v.solicitud, oferta_at: ahora, ...(c.visita_resultado ? {} : { visita_resultado: 'quiero_ofertar' }) })
+          if (err) return falla(err.message, 500)
+          const pct = activo.renta_mensual ? Math.round((v.monto / activo.renta_mensual - 1) * 1000) / 10 : null
+          after(() => avisarPartes(s.admin, c, {
+            asunto: `Solicitud de renta · ${activo.nombre}`, titulo: 'Recibiste una solicitud de renta',
+            lineas: [
+              `${rentaTexto(v.monto)}${pct != null ? ` (${pct > 0 ? '+' : ''}${pct} % contra la renta pedida de ${rentaTexto(activo.renta_mensual!)})` : ''} · ${textoSolicitud(v.solicitud)}.`,
+              'No es vinculante: es un dato para acordar. El contrato y la firma van por su cuenta.',
+            ], enlace,
+          }, s.uid))
+          return listo()
+        }
         const o = validarOferta(b.monto, b.formaPago)
         if ('error' in o) return falla(o.error)
         const err = await actualizar({ oferta_monto: o.monto, oferta_forma_pago: o.formaPago, oferta_at: ahora, ...(c.visita_resultado ? {} : { visita_resultado: 'quiero_ofertar' }) })
@@ -209,26 +235,30 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         if (!activa || c.cierre_reportado_at) return falla('El cierre ya se reportó o la conexión no está activa', 409)
         const precio = Number(String(b.precio ?? '').replace(/[^\d.]/g, ''))
         const fecha = typeof b.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.fecha) ? b.fecha : null
-        if (!(precio > 0) || !fecha) return falla('Captura el precio y la fecha del cierre')
+        if (!(precio > 0) || !fecha) return falla(enRenta ? 'Captura la renta mensual del contrato y la fecha de firma' : 'Captura el precio y la fecha del cierre')
         // Con broker, el cierre entra a cierres_reportados (nivel del broker e índice de precios, §16).
         if (c.contraparte_es_broker && activo.broker_id === s.uid) {
           const { error } = await s.admin.from('cierres_reportados').insert({
-            activo_id: activo.id, broker_id: s.uid, precio_cierre: precio, fecha_cierre: fecha, conexion_id: c.id,
+            activo_id: activo.id, broker_id: s.uid, precio_cierre: precio, fecha_cierre: fecha, conexion_id: c.id, operacion: enRenta ? 'renta' : 'venta',
             origen_comprador: c.broker_comprador_id ? 'otro_broker' : 'comprador_directo',
           })
           if (error) return falla('No se pudo reportar el cierre', 500)
         }
         const err = await actualizar({ cierre_precio: precio, cierre_fecha: fecha, cierre_reportado_at: ahora })
         if (err) return falla(err.message, 500)
-        await s.admin.from('activos').update({ status: 'cerrado' }).eq('id', activo.id)
+        // Una renta cerrada en una propiedad que también está en venta la deja solo en venta.
+        await s.admin.from('activos').update(enRenta && activo.operacion === 'ambas' ? { operacion: 'venta' } : { status: 'cerrado' }).eq('id', activo.id)
         after(async () => {
-          await avisarPartes(s.admin, c, {
+          await avisarPartes(s.admin, c, enRenta ? {
+            asunto: `Confirma tu contrato · ${activo.nombre}`, titulo: 'Confirma tu renta',
+            lineas: [`${yo} reportó la firma del contrato de ${activo.nombre} en ${rentaTexto(precio)} (${fecha}).`, 'Confírmalo en la plataforma para que quede verificado.'], enlace,
+          } : {
             asunto: `Confirma el cierre · ${activo.nombre}`, titulo: 'Confirma tu compra',
             lineas: [`${yo} reportó el cierre de ${activo.nombre} en ${mxn(precio)} (${fecha}).`, 'Confírmalo en la plataforma para que quede verificado.'], enlace,
           }, s.uid)
           await avisarOperacion({
-            asunto: `Cierre reportado en una conexión · ${activo.nombre}`, titulo: 'Cierre por verificar',
-            lineas: [`${mxn(precio)} · ${fecha}. Falta la confirmación del comprador.`], enlace: { texto: 'Abrir la consola', ruta: '/panel' },
+            asunto: `${enRenta ? 'Contrato de renta' : 'Cierre'} reportado en una conexión · ${activo.nombre}`, titulo: enRenta ? 'Renta por verificar' : 'Cierre por verificar',
+            lineas: [`${enRenta ? rentaTexto(precio) : mxn(precio)} · ${fecha}. Falta la confirmación ${enRenta ? 'de quien renta' : 'del comprador'}.`], enlace: { texto: 'Abrir la consola', ruta: '/panel' },
           }, { esDemo: c.es_demo })
         })
         return listo()
@@ -241,7 +271,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         if (err) return falla(err.message, 500)
         after(() => avisarOperacion({
           asunto: `Cierre confirmado por ambas partes · ${activo.nombre}`, titulo: 'Cierre con doble confirmación',
-          lineas: [`${mxn(c.cierre_precio ?? 0)} · ${c.cierre_fecha}. Verifícalo para el nivel del broker y el índice de precios.`],
+          lineas: [`${enRenta ? `Renta de ${rentaTexto(c.cierre_precio ?? 0)}` : mxn(c.cierre_precio ?? 0)} · ${c.cierre_fecha}. Verifícalo para el nivel del broker${enRenta ? '' : ' y el índice de precios'}.`],
           enlace: { texto: 'Abrir la consola', ruta: '/panel' },
         }, { esDemo: c.es_demo }))
         return listo()
@@ -255,8 +285,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         if (err) return falla(err.message, 500)
         // Protege contra brincarse la plataforma (§21.7): dice que compró y nadie reportó el cierre.
         if (respuesta === 'si_esta' && !c.cierre_reportado_at) after(() => avisarOperacion({
-          asunto: `Alerta: el comprador dice que compró · ${activo.nombre}`, titulo: 'Compra sin cierre reportado',
-          lineas: ['El comprador dice que ya compró esta propiedad y nadie ha reportado el cierre. Revísalo con quien la ofrecía.'],
+          asunto: `Alerta: ${enRenta ? 'dice que ya la rentó' : 'el comprador dice que compró'} · ${activo.nombre}`, titulo: enRenta ? 'Renta sin contrato reportado' : 'Compra sin cierre reportado',
+          lineas: [enRenta ? 'Quien buscaba rentar dice que ya rentó esta propiedad y nadie ha reportado el contrato. Revísalo con quien la ofrecía.' : 'El comprador dice que ya compró esta propiedad y nadie ha reportado el cierre. Revísalo con quien la ofrecía.'],
           enlace: { texto: 'Abrir la consola', ruta: '/panel' },
         }, { esDemo: c.es_demo }))
         return listo()

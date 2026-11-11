@@ -20,7 +20,7 @@ import { buscarComparables } from '@/lib/comparables'
 import { calcularPrecioMercado } from '@/lib/precioMercado'
 import {
   cumpleNecesidad, resumenNecesidad, presupuestoPerfil, etiquetaTipo, TIPOS_NECESIDAD, zonasDe, nombreZona,
-  zonaDeActivo, puntajeOpcion, precioPara, CAMPO_AREA, MAX_NECESIDADES_ACTIVAS, type Necesidad, type ZonaBusqueda, type MercadoZona,
+  zonaDeActivo, puntajeOpcion, precioPara, detalleRentaActivo, CAMPO_AREA, MAX_NECESIDADES_ACTIVAS, type Necesidad, type ZonaBusqueda, type MercadoZona,
   type OperacionActivo, type RentaActivo,
 } from '@/lib/necesidad'
 
@@ -99,6 +99,8 @@ export interface OpcionPlataforma {
   operacion: OperacionActivo
   renta_mensual: number | null
   precio: number | null
+  /** En una ficha de renta: depósito, plazo mínimo, garantía, etc. */
+  detalleRenta?: string[]
   certificada: boolean
   deBroker: boolean
   /** V9: índice de la zona de la ficha donde cae, su puntaje (0-100) y por qué. */
@@ -133,6 +135,7 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
     return {
       activoId: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie,
       precio_total: a.precio_total, operacion: a.operacion ?? 'venta', renta_mensual: a.renta_mensual, precio: precioPara(a, n.operacion),
+      detalleRenta: n.operacion === 'renta' ? detalleRentaActivo(a.renta) : undefined,
       certificada: certificadas.has(a.id), deBroker: !!a.broker_id,
       zona: zonaDeActivo(a, n), puntaje, razones,
     }

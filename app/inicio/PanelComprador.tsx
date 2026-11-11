@@ -92,7 +92,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     setAnalizando(id); setError(null)
     const r = await fetch('/api/analisis', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
-      body: JSON.stringify(o.activoId ? { activoId: o.activoId, necesidadId: o.necesidadId } : { anuncioId: o.anuncioId }),
+      body: JSON.stringify(o.activoId ? { activoId: o.activoId, necesidadId: o.necesidadId } : { anuncioId: o.anuncioId, necesidadId: o.necesidadId }),
     })
     const j = await r.json().catch(() => ({}))
     setAnalizando(null)
@@ -175,6 +175,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       <span className="text-[15px] text-tenue">
         {[o.precio ? dinero(o.precio, o.operacion) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
       </span>
+      {o.detalleRenta && o.detalleRenta.length > 0 && <span className="text-[14px] text-tenue">{o.detalleRenta.join(' · ')}</span>}
       {o.puntaje != null && o.origen !== 'portal' && (
         <span className="text-[14px] text-tinta-2"><b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>{o.razones?.length ? ` · ${o.razones.join(' · ')}` : ''}</span>
       )}
@@ -306,7 +307,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
             {otras.map(verOpcion)}
           </div>
         )}
-        <p className="text-[15px] text-tenue">Marca &quot;Me interesa&quot; y recibe el análisis: precio contra mercado, plusvalía y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
+        <p className="text-[15px] text-tenue">Marca &quot;Me interesa&quot; y recibe el análisis: {activas.length > 0 && activas.every((n) => n.operacion === 'renta') ? 'renta contra mercado, lo que pagarías para entrar y cada mes' : 'precio contra mercado, plusvalía'} y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
       </div>
 
       {porSuCuenta && (

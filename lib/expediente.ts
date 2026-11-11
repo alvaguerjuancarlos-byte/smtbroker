@@ -30,25 +30,43 @@ const vacio = (s: string | null | undefined) => !s?.trim()
 export const tieneEscritura = (e: string | null | undefined) =>
   !vacio(e) && !['no', 'no_sabe'].includes((e as string).trim().toLowerCase())
 
-export function documentosFaltantes(a: ActivoExpediente): DocumentoFaltante[] {
+/**
+ * Certificación de VENTA o de RENTA (V9, §22.6). La de renta es más ligera: que quien renta pueda
+ * rentar (escritura o constancia de propiedad, clave catastral para el predial) y, en locales,
+ * oficinas y bodegas, el uso de suelo para el giro. No pide folio real ni gravámenes.
+ */
+export type AlcanceCertificacion = 'venta' | 'renta'
+export const ETIQUETA_ALCANCE: Record<AlcanceCertificacion, string> = { venta: 'Certificación de venta', renta: 'Certificación de renta' }
+export const REVISION_RENTA = [
+  'Identidad del dueño o poder del administrador',
+  'Escritura o constancia de propiedad',
+  'Predial al corriente',
+  'Uso de suelo para el giro (locales, oficinas y bodegas)',
+]
+/** Una propiedad solo en renta se certifica para renta; en venta (o en las dos), la de venta, que también sirve para rentar. */
+export const alcancePara = (operacion: string | null | undefined): AlcanceCertificacion => (operacion === 'renta' ? 'renta' : 'venta')
+
+export function documentosFaltantes(a: ActivoExpediente & { tipo?: string | null }, alcance: AlcanceCertificacion = 'venta'): DocumentoFaltante[] {
   const faltan: DocumentoFaltante[] = []
-  if (vacio(a.folio_real)) faltan.push({
+  const renta = alcance === 'renta'
+  if (!renta && vacio(a.folio_real)) faltan.push({
     campo: 'folio_real', documento: 'Folio real',
     porque: 'Identifica el inmueble en el Registro Público de la Propiedad.',
   })
   if (!tieneEscritura(a.escritura_publica)) faltan.push({
     campo: 'escritura_publica', documento: 'Escritura pública',
-    porque: 'Acredita quién es el dueño y que puede vender.',
+    porque: renta ? 'Acredita quién es el dueño y que puede rentar.' : 'Acredita quién es el dueño y que puede vender.',
   })
   if (vacio(a.clave_catastral)) faltan.push({
     campo: 'clave_catastral', documento: 'Clave catastral',
     porque: 'Liga la propiedad con el catastro municipal (predial y uso de suelo).',
   })
-  if (vacio(a.gravamenes_conocidos) || a.gravamenes_conocidos === 'no_sabe') faltan.push({
+  if (!renta && (vacio(a.gravamenes_conocidos) || a.gravamenes_conocidos === 'no_sabe')) faltan.push({
     campo: 'gravamenes_conocidos', documento: 'Gravámenes declarados',
     porque: 'Hipotecas o embargos que el comprador debe conocer antes de ofertar.',
   })
-  if (vacio(a.uso_suelo_declarado) || a.uso_suelo_declarado === 'no_determinado') faltan.push({
+  const usoAplica = !renta || /local|oficina|bodega/i.test(a.tipo ?? '')
+  if (usoAplica && (vacio(a.uso_suelo_declarado) || a.uso_suelo_declarado === 'no_determinado')) faltan.push({
     campo: 'uso_suelo_declarado', documento: 'Uso de suelo declarado',
     porque: 'Se contrasta con la zonificación oficial del municipio.',
   })

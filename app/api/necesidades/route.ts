@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
         vistos.add(o.activoId)
         bandeja.push({
           clave: `a:${o.activoId}`, origen: o.certificada ? 'certificada' : 'particular', titulo: o.nombre, tipo: o.tipo,
-          municipio: o.municipio, precio: o.precio, superficie: o.superficie, certificada: o.certificada, operacion: n.operacion,
+          municipio: o.municipio, precio: o.precio, superficie: o.superficie, certificada: o.certificada, operacion: n.operacion, detalleRenta: o.detalleRenta,
           activoId: o.activoId, necesidadId: n.id, colonia: o.colonia, zona: o.zona, puntaje: o.puntaje, razones: o.razones,
         })
       }

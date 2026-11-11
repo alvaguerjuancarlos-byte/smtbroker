@@ -14,7 +14,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useRolUsuario } from '@/lib/useRolUsuario'
 import Topbar from '../../components/Topbar'
-import { millones } from '@/lib/necesidad'
+import { millones, rentaTexto, PLAZOS_CONTRATO, GARANTIAS, ENTRADAS } from '@/lib/necesidad'
+import { textoSolicitud, type SolicitudRenta } from '@/lib/conexion'
 
 interface Detalle {
   conexion: {
@@ -23,10 +24,14 @@ interface Detalle {
     oferta_monto: number | null; oferta_forma_pago: string | null; oferta_at: string | null
     cierre_precio: number | null; cierre_fecha: string | null; cierre_reportado_at: string | null; cierre_confirmado_at: string | null
     compro_respuesta: string | null; created_at: string; aporte?: Record<string, unknown>
+    solicitud_renta: SolicitudRenta | null
   }
+  /** V9 (§22.5): en renta, solicitud de renta, contrato firmado y "¿ya rentaste?". */
+  operacion: 'compra' | 'renta'
+  fichaRenta: { plazo_contrato?: string | null; garantia?: string | null; fecha_entrada?: string | null } | null
   rol: 'comprador' | 'contraparte' | 'broker_comprador' | 'operacion'
   fase: string; textoFase: string
-  activo: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null }
+  activo: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null; operacion?: string | null; renta_mensual?: number | null }
   partes: { comprador: string; contraparte: string; contraparteEsBroker: boolean; brokerComprador: string | null }
   telefonos: { comprador: string | null; contraparte: string | null } | null
   referencia: { rangoMinMXN: number | null; rangoMaxMXN: number | null; precioSalidaRecomendadoMXN: number | null; texto: string | null } | null
@@ -60,6 +65,7 @@ export default function ConexionPage() {
   const [texto, setTexto] = useState('')
   const [horarios, setHorarios] = useState(['', '', ''])
   const [oferta, setOferta] = useState({ monto: '', formaPago: 'contado' })
+  const [solicitud, setSolicitud] = useState<{ plazo_contrato: string; garantia: string; fecha_entrada: string } | null>(null)
   const [cierre, setCierre] = useState({ precio: '', fecha: new Date().toISOString().slice(0, 10) })
   const [motivo, setMotivo] = useState('')
   const [notas, setNotas] = useState({ atencion: 0, rapidez: 0, honestidad: 0, comentario: '' })
@@ -72,6 +78,9 @@ export default function ConexionPage() {
     if (!r.ok) { setError(j.error ?? 'No se pudo cargar'); return }
     setD(j as Detalle)
     setAhora(Date.now())
+    // La solicitud de renta arranca con lo que ya dijo en su ficha (o con la que ya envió).
+    const f = (j as Detalle).conexion.solicitud_renta ?? (j as Detalle).fichaRenta
+    setSolicitud((x) => x ?? { plazo_contrato: f?.plazo_contrato ?? '', garantia: f?.garantia ?? '', fecha_entrada: f?.fecha_entrada ?? '' })
   }, [id])
   useEffect(() => {
     const init = async () => {
@@ -106,6 +115,7 @@ export default function ConexionPage() {
   const c = d.conexion
   const ladoComprador = d.rol === 'comprador' || d.rol === 'broker_comprador'
   const activa = c.estado === 'activa'
+  const renta = d.operacion === 'renta'
   const visitaPasada = !!c.visita_at && new Date(c.visita_at).getTime() <= ahora
   const otraParte = ladoComprador
     ? `${d.partes.contraparte}${d.partes.contraparteEsBroker ? ' (broker verificado)' : ' (dueño)'}`
@@ -124,7 +134,7 @@ export default function ConexionPage() {
               <a href={volver} className="font-sans text-[16px] text-tinta-2 hover:text-tinta w-fit -order-1">← Volver</a>
               <span className="font-sans text-[16px] font-semibold -order-1" style={{ color: verde }}>{d.textoFase}</span>
               <p className="text-[18px] text-tinta-2">
-                {[d.activo.precio_total ? millones(d.activo.precio_total) : null, d.activo.superficie ? `${d.activo.superficie.toLocaleString('es-MX')} m²` : null, [d.activo.colonia, d.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+                {[renta ? (d.activo.renta_mensual ? rentaTexto(d.activo.renta_mensual) : null) : d.activo.precio_total ? millones(d.activo.precio_total) : null, d.activo.superficie ? `${d.activo.superficie.toLocaleString('es-MX')} m²` : null, [d.activo.colonia, d.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
               </p>
             </EncabezadoPantalla>
             {error && <p className="text-[16px] text-error">{error}</p>}
@@ -189,7 +199,7 @@ export default function ConexionPage() {
                     <p className="text-[17px] font-medium">¿Cómo te fue?</p>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'me_interesa' })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg" style={{ borderColor: verde }}>Me interesa</button>
-                      <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'quiero_ofertar' })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg" style={{ borderColor: verde }}>Quiero ofertar</button>
+                      <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'quiero_ofertar' })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg" style={{ borderColor: verde }}>{renta ? 'Quiero rentarla' : 'Quiero ofertar'}</button>
                     </div>
                     <div className="flex gap-2">
                       <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo: precio, estado, ubicación…" className={campo} />
@@ -197,11 +207,42 @@ export default function ConexionPage() {
                     </div>
                   </div>
                 )}
-                {c.visita_resultado && <p className="text-[15px] text-tenue">Después de la visita: {c.visita_resultado === 'me_interesa' ? 'le interesa' : c.visita_resultado === 'quiero_ofertar' ? 'quiere ofertar' : 'la descartó'}.</p>}
+                {c.visita_resultado && <p className="text-[15px] text-tenue">Después de la visita: {c.visita_resultado === 'me_interesa' ? 'le interesa' : c.visita_resultado === 'quiero_ofertar' ? (renta ? 'quiere rentarla' : 'quiere ofertar') : 'la descartó'}.</p>}
               </div>
             )}
 
-            {(c.oferta_at || (ladoComprador && activa && !c.cierre_reportado_at)) && (
+            {renta && (c.oferta_at || (ladoComprador && activa && !c.cierre_reportado_at)) && (
+              <div className={tarjeta} data-solicitud-renta>
+                <span className={etiqueta}>Solicitud de renta · no vinculante</span>
+                {c.oferta_at && c.oferta_monto ? (
+                  <p className="text-[17px]"><b>{rentaTexto(c.oferta_monto)}</b>{c.solicitud_renta ? ` · ${textoSolicitud(c.solicitud_renta)}` : ''} · enviada el {new Date(c.oferta_at).toLocaleDateString('es-MX')}.</p>
+                ) : null}
+                {ladoComprador && activa && !c.cierre_reportado_at && solicitud && (
+                  <>
+                    {d.referencia?.texto && <p className="text-[15px] text-tenue">Tu análisis: {d.referencia.texto}</p>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input value={oferta.monto ? Number(oferta.monto).toLocaleString('es-MX') : ''} onChange={(e) => setOferta((x) => ({ ...x, monto: e.target.value.replace(/\D/g, '') }))}
+                        inputMode="numeric" placeholder={d.activo.renta_mensual ? `Renta que ofreces al mes (pide ${d.activo.renta_mensual.toLocaleString('es-MX')})` : 'Renta que ofreces al mes'} className={campo} name="renta-ofrecida" />
+                      <select value={solicitud.plazo_contrato} onChange={(e) => setSolicitud((x) => ({ ...x!, plazo_contrato: e.target.value }))} className={campo} name="plazo">
+                        <option value="">Plazo del contrato</option>{PLAZOS_CONTRATO.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
+                      </select>
+                      <select value={solicitud.garantia} onChange={(e) => setSolicitud((x) => ({ ...x!, garantia: e.target.value }))} className={campo} name="garantia">
+                        <option value="">Garantía que das</option>{GARANTIAS.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
+                      </select>
+                      <select value={solicitud.fecha_entrada} onChange={(e) => setSolicitud((x) => ({ ...x!, fecha_entrada: e.target.value }))} className={campo} name="entrada">
+                        <option value="">¿Cuándo entras?</option>{ENTRADAS.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
+                      </select>
+                    </div>
+                    <button onClick={() => accion({ accion: 'oferta', monto: oferta.monto, ...solicitud })} disabled={ocupado || !oferta.monto || !solicitud.plazo_contrato} className={botonPrimario} style={{ background: verde }}>
+                      {c.oferta_at ? 'Actualizar solicitud de renta' : 'Enviar solicitud de renta'}
+                    </button>
+                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. El contrato y la firma van por su cuenta{d.partes.brokerComprador ? ' con tu broker' : ''}.</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!renta && (c.oferta_at || (ladoComprador && activa && !c.cierre_reportado_at)) && (
               <div className={tarjeta}>
                 <span className={etiqueta}>Intención de oferta · no vinculante</span>
                 {c.oferta_at && c.oferta_monto ? (
@@ -228,22 +269,22 @@ export default function ConexionPage() {
 
             {(c.cierre_reportado_at || (d.rol === 'contraparte' && activa)) && (
               <div className={tarjeta}>
-                <span className={etiqueta}>Cierre</span>
+                <span className={etiqueta}>{renta ? 'Contrato de renta' : 'Cierre'}</span>
                 {c.cierre_reportado_at ? (
                   <>
-                    <p className="text-[17px]">Cierre reportado: <b>{pesos(c.cierre_precio ?? 0)}</b> · {c.cierre_fecha}. {c.cierre_confirmado_at ? <span style={{ color: verde }}>Confirmado por el comprador ✓</span> : <span className="text-tenue">Falta la confirmación del comprador.</span>}</p>
+                    <p className="text-[17px]">{renta ? 'Contrato firmado' : 'Cierre reportado'}: <b>{renta ? rentaTexto(c.cierre_precio ?? 0) : pesos(c.cierre_precio ?? 0)}</b> · {c.cierre_fecha}. {c.cierre_confirmado_at ? <span style={{ color: verde }}>Confirmado por {renta ? 'quien renta' : 'el comprador'} ✓</span> : <span className="text-tenue">Falta la confirmación {renta ? 'de quien renta' : 'del comprador'}.</span>}</p>
                     {d.rol === 'comprador' && !c.cierre_confirmado_at && (
-                      <button onClick={() => accion({ accion: 'confirmar_cierre' })} disabled={ocupado} className={botonPrimario} style={{ background: verde }}>Confirmo que compré</button>
+                      <button onClick={() => accion({ accion: 'confirmar_cierre' })} disabled={ocupado} className={botonPrimario} style={{ background: verde }}>{renta ? 'Confirmo que firmé el contrato' : 'Confirmo que compré'}</button>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="text-[16px] text-tinta-2">Cuando se firme, repórtalo aquí. El comprador lo confirma y queda como cierre verificado.</p>
+                    <p className="text-[16px] text-tinta-2">{renta ? 'Cuando se firme el contrato, repórtalo aquí. Quien renta lo confirma y queda como renta verificada.' : 'Cuando se firme, repórtalo aquí. El comprador lo confirma y queda como cierre verificado.'}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input value={cierre.precio ? Number(cierre.precio).toLocaleString('es-MX') : ''} onChange={(e) => setCierre((x) => ({ ...x, precio: e.target.value.replace(/\D/g, '') }))} inputMode="numeric" placeholder="Precio de cierre (MXN)" className={campo} />
+                      <input value={cierre.precio ? Number(cierre.precio).toLocaleString('es-MX') : ''} onChange={(e) => setCierre((x) => ({ ...x, precio: e.target.value.replace(/\D/g, '') }))} inputMode="numeric" placeholder={renta ? 'Renta mensual del contrato (MXN)' : 'Precio de cierre (MXN)'} className={campo} name="cierre-precio" />
                       <input type="date" value={cierre.fecha} onChange={(e) => setCierre((x) => ({ ...x, fecha: e.target.value }))} className={campo} />
                     </div>
-                    <button onClick={() => accion({ accion: 'reportar_cierre', ...cierre })} disabled={ocupado || !cierre.precio} className={botonPrimario} style={{ background: verde }}>Reportar cierre</button>
+                    <button onClick={() => accion({ accion: 'reportar_cierre', ...cierre })} disabled={ocupado || !cierre.precio} className={botonPrimario} style={{ background: verde }}>{renta ? 'Reportar contrato firmado' : 'Reportar cierre'}</button>
                   </>
                 )}
                 {d.puedeCalificar && (
@@ -267,9 +308,9 @@ export default function ConexionPage() {
 
             {d.rol === 'comprador' && activa && !c.cierre_reportado_at && ahora - new Date(c.created_at).getTime() >= 30 * DIA && (
               <div className={tarjeta}>
-                <span className={etiqueta}>¿Ya compraste?</span>
+                <span className={etiqueta}>{renta ? '¿Ya rentaste?' : '¿Ya compraste?'}</span>
                 <div className="flex flex-wrap gap-2">
-                  {([['si_esta', 'Sí, esta'], ['otra', 'Compré otra'], ['no_aun', 'Todavía no']] as const).map(([v, t]) => (
+                  {([['si_esta', 'Sí, esta'], ['otra', renta ? 'Renté otra' : 'Compré otra'], ['no_aun', 'Todavía no']] as const).map(([v, t]) => (
                     <button key={v} onClick={() => accion({ accion: 'compre', respuesta: v })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg"
                       style={c.compro_respuesta === v ? { borderColor: verde, background: 'var(--c-verde-suave)' } : { borderColor: 'var(--c-linea)' }}>{t}</button>
                   ))}

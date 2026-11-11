@@ -4,7 +4,12 @@
 // La plataforma conecta, ordena la visita, registra la intención de oferta y da seguimiento hasta el
 // cierre verificado. NO negocia ni cierra por nadie (§21.5).
 //
+// V9 (§22.5), en renta: igual hasta la visita; la intención de oferta es una SOLICITUD DE RENTA
+// (renta ofrecida, plazo, garantía y fecha de entrada), el cierre verificado es el contrato firmado y
+// el seguimiento es a 30 y 60 días (las rentas se cierran más rápido).
+//
 // Sin imports de alias: se prueba con `node --test lib/conexion.test.ts`.
+import { PLAZOS_CONTRATO, GARANTIAS, ENTRADAS, type Operacion, type PlazoContrato, type Garantia, type Entrada } from './necesidad.ts'
 
 export type EstadoConexion = 'por_validar' | 'activa' | 'rechazada' | 'cerrada' | 'descartada'
 export type ResultadoVisita = 'me_interesa' | 'quiero_ofertar' | 'descarto'
@@ -93,14 +98,48 @@ export function validarCalificacion(b: Record<string, unknown>): { atencion: num
 }
 
 export const DIAS_SEGUIMIENTO = [30, 60, 90]
+/** En renta, 30 y 60 días (§22.5). Es el principio de la lista de compra: el índice sirve igual. */
+export const DIAS_SEGUIMIENTO_RENTA = [30, 60]
 const DIA = 24 * HORA
 
-/** ¿Toca preguntarle al comprador "¿ya compraste?"? (§21.7): a los 30, 60 y 90 días sin cierre. */
-export function seguimientoPendiente(c: ConexionBase, ahora = Date.now()): number | null {
+/** ¿Toca preguntarle "¿ya compraste?" (o "¿ya rentaste?")? A los 30, 60 y 90 días sin cierre (renta: 30 y 60). */
+export function seguimientoPendiente(c: ConexionBase, ahora = Date.now(), op: Operacion = 'compra'): number | null {
   if (c.estado !== 'activa' || c.cierre_reportado_at || c.cierre_confirmado_at) return null
+  const lista = op === 'renta' ? DIAS_SEGUIMIENTO_RENTA : DIAS_SEGUIMIENTO
   const dias = (ahora - new Date(c.created_at).getTime()) / DIA
-  const tocan = DIAS_SEGUIMIENTO.filter((d) => dias >= d).length
-  return tocan > c.seguimientos_enviados ? DIAS_SEGUIMIENTO[tocan - 1] : null
+  const tocan = lista.filter((d) => dias >= d).length
+  return tocan > c.seguimientos_enviados ? lista[tocan - 1] : null
+}
+
+/** Textos de las fases que cambian en renta. */
+export const TEXTO_FASE_RENTA: Partial<Record<Fase, string>> = {
+  oferta: 'Solicitud de renta enviada',
+  cierre_por_confirmar: 'Contrato reportado, falta la confirmación de quien renta',
+  cerrada: 'Contrato firmado y verificado',
+}
+export const textoFase = (f: Fase, op: Operacion = 'compra') => (op === 'renta' ? TEXTO_FASE_RENTA[f] : undefined) ?? TEXTO_FASE[f]
+
+export interface SolicitudRenta { plazo_contrato: PlazoContrato; garantia: Garantia | null; fecha_entrada: Entrada | null }
+
+/** Solicitud de renta (§22.5): renta ofrecida y plazo obligatorios; garantía y entrada, si las da. */
+export function validarSolicitudRenta(monto: unknown, b: Record<string, unknown>): { monto: number; solicitud: SolicitudRenta } | { error: string } {
+  const m = Number(String(monto ?? '').replace(/[^\d.]/g, ''))
+  if (!Number.isFinite(m) || m <= 0) return { error: 'Escribe la renta que ofreces' }
+  const de = <T extends string>(v: unknown, l: { id: T }[]) => (l.some((x) => x.id === v) ? v as T : null)
+  const plazo = de(b.plazo_contrato, PLAZOS_CONTRATO)
+  if (!plazo) return { error: 'Elige el plazo del contrato' }
+  return { monto: Math.round(m), solicitud: { plazo_contrato: plazo, garantia: de(b.garantia, GARANTIAS), fecha_entrada: de(b.fecha_entrada, ENTRADAS) } }
+}
+
+/** "contrato de 1 año · póliza jurídica · entrada ya". */
+export function textoSolicitud(s: SolicitudRenta | null | undefined): string {
+  if (!s) return ''
+  const e = <T extends string>(l: { id: T; etiqueta: string }[], v: T | null) => l.find((x) => x.id === v)?.etiqueta
+  return [
+    `contrato de ${e(PLAZOS_CONTRATO, s.plazo_contrato)}`,
+    s.garantia && e(GARANTIAS, s.garantia)!.toLowerCase(),
+    s.fecha_entrada && `entrada ${e(ENTRADAS, s.fecha_entrada)!.toLowerCase()}`,
+  ].filter(Boolean).join(' · ')
 }
 
 /** Recordatorio de la visita: un día antes (entre 12 y 36 horas antes, para un cron diario). */

@@ -27,6 +27,16 @@ export async function GET(req: NextRequest) {
   const ahora = new Date().toISOString()
   const cuenta = { recordatorios: 0, comoTeFue: 0, seguimientos: 0 }
 
+  // Qué conexiones son de renta: por su ficha o, sin ficha, porque la propiedad solo está en renta.
+  const idsNec = [...new Set(C.map((c) => c.necesidad_id).filter((x): x is string => !!x))]
+  const [{ data: necs }, { data: acts }] = await Promise.all([
+    idsNec.length ? admin.from('necesidades').select('id, operacion').in('id', idsNec) : Promise.resolve({ data: [] }),
+    C.length ? admin.from('activos').select('id, operacion').in('id', [...new Set(C.map((c) => c.activo_id))]) : Promise.resolve({ data: [] }),
+  ])
+  const opNec = new Map(((necs as { id: string; operacion: string }[]) || []).map((n) => [n.id, n.operacion]))
+  const opAct = new Map(((acts as { id: string; operacion: string | null }[]) || []).map((a) => [a.id, a.operacion]))
+  const rentas = new Set(C.filter((c) => (c.necesidad_id ? opNec.get(c.necesidad_id) === 'renta' : opAct.get(c.activo_id) === 'renta')).map((c) => c.id))
+
   for (const c of C) {
     const nombre = nombreDe.get(c.activo_id) ?? 'la propiedad'
     const enlace = { texto: 'Abrir la conversación', ruta: `/conexion/${c.id}` }
@@ -43,11 +53,14 @@ export async function GET(req: NextRequest) {
       await admin.from('conexiones').update({ como_te_fue_enviado_at: ahora }).eq('id', c.id)
       cuenta.comoTeFue++
     }
-    const dias = seguimientoPendiente(c)
+    // V9 (§22.5): en renta, a los 30 y 60 días y preguntando "¿ya rentaste?".
+    const op = rentas.has(c.id) ? 'renta' : 'compra'
+    const dias = seguimientoPendiente(c, Date.now(), op)
     if (dias) {
+      const verbo = op === 'renta' ? 'rentaste' : 'compraste'
       await avisarUsuario(admin, c.comprador_id, {
-        asunto: `¿Ya compraste? · ${nombre}`, titulo: '¿Ya compraste?',
-        lineas: [`Hace ${dias} días pediste ver ${nombre}. ¿Ya compraste esta, otra, o sigues buscando?`], enlace,
+        asunto: `¿Ya ${verbo}? · ${nombre}`, titulo: `¿Ya ${verbo}?`,
+        lineas: [`Hace ${dias} días pediste ver ${nombre}. ¿Ya ${verbo} esta, otra, o sigues buscando?`], enlace,
       }, { esDemo: c.es_demo })
       // Si el cron se saltó un umbral, no se repite: cuenta todos los ya vencidos.
       await admin.from('conexiones').update({ seguimientos_enviados: DIAS_SEGUIMIENTO.indexOf(dias) + 1 }).eq('id', c.id)

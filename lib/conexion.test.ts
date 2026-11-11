@@ -70,3 +70,20 @@ test('recordatorio un día antes y "¿cómo te fue?" al día siguiente', () => {
   assert.equal(tocaComoTeFue(v, AHORA), false)
   assert.equal(tocaComoTeFue(v, AHORA + 40 * H), true)
 })
+
+// ── V9 §22.5: conexión en renta ─────────────────────────────────────────────────────────────
+import { validarSolicitudRenta, textoSolicitud, textoFase, DIAS_SEGUIMIENTO_RENTA } from './conexion.ts'
+
+test('renta: solicitud de renta, textos y seguimiento a 30 y 60 días', () => {
+  assert.deepEqual(validarSolicitudRenta('', {}), { error: 'Escribe la renta que ofreces' })
+  assert.deepEqual(validarSolicitudRenta('33,000', {}), { error: 'Elige el plazo del contrato' })
+  const v = validarSolicitudRenta('33,000', { plazo_contrato: '1_anio', garantia: 'poliza', fecha_entrada: 'inventada' })
+  assert.ok(!('error' in v) && v.monto === 33000 && v.solicitud.fecha_entrada === null)
+  assert.equal(textoSolicitud({ plazo_contrato: '2_3_anios', garantia: 'aval', fecha_entrada: '1_mes' }), 'contrato de 2 a 3 años · aval con propiedad · entrada en un mes')
+  assert.equal(textoFase('oferta', 'renta'), 'Solicitud de renta enviada')
+  assert.equal(textoFase('oferta'), 'Intención de oferta enviada')
+  assert.deepEqual(DIAS_SEGUIMIENTO_RENTA, [30, 60])
+  const base = { estado: 'activa', cierre_reportado_at: null, cierre_confirmado_at: null, created_at: new Date(Date.now() - 95 * 86400_000).toISOString() }
+  assert.equal(seguimientoPendiente({ ...base, seguimientos_enviados: 2 }, Date.now(), 'renta'), null)
+  assert.equal(seguimientoPendiente({ ...base, seguimientos_enviados: 2 }), 90)
+})

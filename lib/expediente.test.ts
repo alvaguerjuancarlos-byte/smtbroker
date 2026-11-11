@@ -1,7 +1,7 @@
 // Uso: node --test lib/expediente.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { documentosFaltantes, listoParaCertificar, tieneEscritura, tieneDocumentacion } from './expediente.ts'
+import { documentosFaltantes, listoParaCertificar, tieneEscritura, tieneDocumentacion , alcancePara } from './expediente.ts'
 
 // Lo que hoy tienen las 15 propiedades de la base (defaults del formulario, 2026-10-07).
 const recienCreado = { escritura_publica: null, gravamenes_conocidos: 'ninguno', uso_suelo_declarado: 'no_determinado' }
@@ -38,4 +38,11 @@ test('documentada (niveles): folio real o escritura declarada; escritura "no" no
   assert.equal(tieneDocumentacion({ folio_real: '123', escritura_publica: null }), true)
   assert.equal(tieneDocumentacion({ folio_real: '  ', escritura_publica: 'si' }), true)
   assert.equal(tieneDocumentacion({ folio_real: null, escritura_publica: 'no' }), false)
+})
+
+test('V9 §22.6: la certificación de renta pide menos', () => {
+  const r = documentosFaltantes({ tipo: 'Departamento' }, 'renta').map((f) => f.campo)
+  assert.deepEqual(r, ['escritura_publica', 'clave_catastral'])
+  assert.ok(documentosFaltantes({ tipo: 'Local comercial' }, 'renta').some((f) => f.campo === 'uso_suelo_declarado'))
+  assert.equal(alcancePara('renta'), 'renta'); assert.equal(alcancePara('ambas'), 'venta'); assert.equal(alcancePara(null), 'venta')
 })
