@@ -104,7 +104,9 @@ try {
   ok(r.status === 403, `una propiedad ajena se rechaza (${r.status} ${r.j.error})`)
 
   // 3. Broker propone desde la pestaña Necesidades (UI).
-  const pb = await b.newPage(); await pb.setViewport({ width: 1280, height: 900 })
+  // Ventana aislada: si comparte navegador con el comprador, su sesión reemplaza la del comprador.
+  const ctxBroker = await b.createBrowserContext()
+  const pb = await ctxBroker.newPage(); await pb.setViewport({ width: 1280, height: 900 })
   await pb.goto(BASE + '/login', { waitUntil: 'networkidle2' })
   await pb.type('input[type="email"]', correoBroker); await pb.type('input[type="password"]', PASS)
   await Promise.all([pb.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {}), pb.keyboard.press('Enter')])
