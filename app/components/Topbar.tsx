@@ -47,15 +47,15 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
   const nav = rol ? NAV_POR_ROL[rol] : []
 
   return (
-    <header className="bg-navy-900/90 backdrop-blur-sm border-b border-white/10 sticky top-0 z-20">
+    <header className="tema-oscuro bg-superficie border-b border-linea sticky top-0 z-20">
       <div className="px-4 md:px-6 py-3 flex items-center gap-3 md:gap-5">
         <Link href={home} className="flex items-center gap-2.5 shrink-0 group">
           <svg width="26" height="26" viewBox="0 0 30 30" fill="none" className="shrink-0">
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <span className="font-display font-semibold text-[16px] text-paper tracking-tight group-hover:text-gold-400 transition-colors">
-            SMT<span className="text-gold-400 group-hover:text-paper transition-colors">BROKER</span>
+          <span className="font-display font-semibold text-[18px] text-tinta tracking-tight group-hover:text-acento transition-colors">
+            SMT<span className="text-acento group-hover:text-tinta transition-colors">BROKER</span>
           </span>
         </Link>
 
@@ -64,8 +64,8 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
             const active = pathname === n.href
             return (
               <Link key={n.href} href={n.href}
-                className={`font-plex-mono text-[11.5px] tracking-[0.03em] px-2.5 py-1.5 transition-colors ${
-                  active ? 'text-gold-400 bg-gold-500/10' : 'text-slate hover:text-paper'
+                className={`font-sans text-[14px] px-2.5 py-1.5 transition-colors ${
+                  active ? 'text-acento bg-gold-500/10' : 'text-tenue hover:text-tinta'
                 }`}>
                 {n.label}
               </Link>
@@ -76,15 +76,15 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
         <div className="ml-auto flex items-center gap-2 md:gap-3">
           {userName && (
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-navy-700 border border-gold-500/30 flex items-center justify-center shrink-0">
-                <span className="font-plex-mono text-[11px] font-medium text-gold-400">{initial}</span>
+              <div className="w-7 h-7 rounded-full bg-sutil border border-gold-500/30 flex items-center justify-center shrink-0">
+                <span className="font-sans text-[14px] font-medium text-acento">{initial}</span>
               </div>
-              <span className="hidden sm:inline text-[13px] text-paper-dim">{userName}</span>
+              <span className="hidden sm:inline text-[16px] text-tinta-2">{userName}</span>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 font-plex-mono text-[11px] tracking-[0.04em] text-slate hover:text-gold-400 border border-white/15 hover:border-gold-500 px-2.5 md:px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-2.5 md:px-3 py-1.5 transition-colors rounded-lg"
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M5 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -101,8 +101,8 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
             const active = pathname === n.href
             return (
               <Link key={n.href} href={n.href}
-                className={`font-plex-mono text-[11px] tracking-[0.03em] px-2.5 py-1.5 whitespace-nowrap transition-colors ${
-                  active ? 'text-gold-400 bg-gold-500/10' : 'text-slate hover:text-paper'
+                className={`font-sans text-[14px] px-2.5 py-1.5 whitespace-nowrap transition-colors ${
+                  active ? 'text-acento bg-gold-500/10' : 'text-tenue hover:text-tinta'
                 }`}>
                 {n.label}
               </Link>

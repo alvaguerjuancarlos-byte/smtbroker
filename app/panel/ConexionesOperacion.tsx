@@ -38,20 +38,20 @@ export default function ConexionesOperacion() {
 
   if (!filas) return null
   return (
-    <div className="bg-navy-800 border border-white/10 p-5 md:p-6 flex flex-col gap-3">
+    <div className="bg-tarjeta border border-linea p-5 md:p-6 flex flex-col gap-3 rounded-xl">
       <div>
-        <h2 className="font-display text-[17px] font-medium text-paper">Conexiones</h2>
-        <p className="text-[12.5px] text-slate mt-1">Compradores que pidieron ver una propiedad. Las de brokers verificados que cumplen la ficha se validan solas; aquí quedan las demás y las alertas de seguimiento.</p>
+        <h2 className="font-display text-[19px] font-medium text-tinta">Conexiones</h2>
+        <p className="text-[15px] text-tenue mt-1">Compradores que pidieron ver una propiedad. Las de brokers verificados que cumplen la ficha se validan solas; aquí quedan las demás y las alertas de seguimiento.</p>
       </div>
-      {filas.length === 0 ? <p className="text-[13px] text-paper-dim">Nada por revisar.</p> : filas.map((f) => (
-        <div key={f.id} className="border-t border-white/10 pt-3 flex flex-col gap-1.5">
-          <a href={`/conexion/${f.id}`} className="text-[14px] text-paper hover:underline">{f.comprador} → {f.activo?.nombre ?? 'Propiedad'} <span className="text-slate">({f.contraparte})</span></a>
-          <p className="text-[12px] text-slate">{f.activo?.municipio} · {f.origen === 'particular' ? 'De un particular' : f.origen === 'red' ? 'De la red, no cumple toda la ficha' : 'Propuesta de broker'} · {f.textoFase}</p>
-          {f.alerta && <p className="text-[12.5px] text-[#f3a3a3]">⚠ {f.alerta}</p>}
+      {filas.length === 0 ? <p className="text-[16px] text-tinta-2">Nada por revisar.</p> : filas.map((f) => (
+        <div key={f.id} className="border-t border-linea pt-3 flex flex-col gap-1.5">
+          <a href={`/conexion/${f.id}`} className="text-[17px] text-tinta hover:underline">{f.comprador} → {f.activo?.nombre ?? 'Propiedad'} <span className="text-tenue">({f.contraparte})</span></a>
+          <p className="text-[15px] text-tenue">{f.activo?.municipio} · {f.origen === 'particular' ? 'De un particular' : f.origen === 'red' ? 'De la red, no cumple toda la ficha' : 'Propuesta de broker'} · {f.textoFase}</p>
+          {f.alerta && <p className="text-[15px] text-error">⚠ {f.alerta}</p>}
           {f.fase === 'por_validar' && (
             <div className="flex gap-2">
-              <button onClick={() => accion(f.id, 'validar')} disabled={!!ocupado} className="font-plex-mono text-[11px] px-3 py-1.5 bg-gold-500 text-navy-950 disabled:opacity-50">Validar</button>
-              <button onClick={() => accion(f.id, 'rechazar')} disabled={!!ocupado} className="font-plex-mono text-[11px] px-3 py-1.5 border border-white/15 text-paper-dim disabled:opacity-50">Rechazar</button>
+              <button onClick={() => accion(f.id, 'validar')} disabled={!!ocupado} className="font-sans text-[14px] px-3 py-1.5 bg-gold-500 text-navy-950 disabled:opacity-50 rounded-lg">Validar</button>
+              <button onClick={() => accion(f.id, 'rechazar')} disabled={!!ocupado} className="font-sans text-[14px] px-3 py-1.5 border border-linea text-tinta-2 disabled:opacity-50 rounded-lg">Rechazar</button>
             </div>
           )}
         </div>

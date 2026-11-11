@@ -11,6 +11,7 @@
 //   - Un anuncio de portal (opción 2, 10-nov-2026) se analiza igual, marcado "De portal · no
 //     certificada", con su liga original; en vez de "Quiero verla", se invita al anunciante a certificar.
 // Con dos o más, el comparativo lado a lado (§20.4). Todo sale de app/api/analisis.
+import { EncabezadoPantalla } from '../components/Banda'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -22,22 +23,22 @@ type Resultado = ResultadoAnalisis & { topeMensual?: string; certificacionPedida
 interface Fila { id: string; activo_id: string | null; anuncio_id: string | null; resultado: Resultado; created_at: string }
 const clave = (f: Fila) => (f.activo_id ?? f.anuncio_id)!
 
-const verde = '#7fd1b9'
+const verde = 'var(--c-verde)'
 const GRID_BG = {
   backgroundImage:
-    'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+    'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
   backgroundSize: '56px 56px',
 }
 const SEMAFORO = {
-  arriba: { texto: 'Arriba del mercado', color: '#f3a3a3' },
+  arriba: { texto: 'Arriba del mercado', color: 'var(--c-rojo)' },
   en_linea: { texto: 'En línea con el mercado', color: verde },
-  abajo: { texto: 'Abajo del mercado', color: '#d9b45a' },
+  abajo: { texto: 'Abajo del mercado', color: 'var(--c-oro)' },
 } as const
 const ICONO = { cumple: '✓', no_cumple: '✕', por_confirmar: '?' } as const
-const COLOR_CRITERIO = { cumple: verde, no_cumple: '#f3a3a3', por_confirmar: '#8a93a3' } as const
+const COLOR_CRITERIO = { cumple: verde, no_cumple: 'var(--c-rojo)', por_confirmar: 'var(--c-gris)' } as const
 
-const etiqueta = 'font-plex-mono text-[11px] tracking-[0.08em] uppercase text-slate'
-const bloque = 'border-t border-white/10 pt-3 flex flex-col gap-1.5'
+const etiqueta = 'font-sans text-[14px] text-tenue'
+const bloque = 'border-t border-linea pt-3 flex flex-col gap-1.5'
 const pesos = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 
 export default function AnalisisPage() {
@@ -94,34 +95,33 @@ export default function AnalisisPage() {
   const comparar = (filas ?? []).length >= 2
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative flex flex-col flex-1">
         <Topbar rol="inversionista" />
-        <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
-          <div className="w-full max-w-[760px] mx-auto flex flex-col gap-4">
-            <a href="/inicio" className="font-plex-mono text-[12px] text-gold-400 w-fit">← Mi bandeja</a>
-            <div className="flex flex-col gap-1.5">
-              <h1 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Tu análisis</h1>
-              <p className="text-[14px] text-paper-dim">Precio contra mercado, plusvalía y si cumple lo que buscas. Quien ofrece la propiedad no se entera de que la analizaste.</p>
-            </div>
-            {error && <p className="text-[13px] text-[#f3a3a3]">{error}</p>}
-            {filas === null ? <p className="text-slate text-[13px] font-plex-mono">Cargando…</p>
+        <main className="flex-1 px-4 md:px-6 pb-10">
+          <div className="w-full max-w-[980px] mx-auto flex flex-col gap-4">
+            <EncabezadoPantalla ancho="max-w-[980px]" titulo="Tu análisis"
+              subtitulo="Precio contra mercado, plusvalía y si cumple lo que buscas. Quien ofrece la propiedad no se entera de que la analizaste.">
+              <a href="/inicio" className="font-sans text-[16px] text-tinta-2 hover:text-tinta w-fit -order-1">← Mi bandeja</a>
+            </EncabezadoPantalla>
+            {error && <p className="text-[16px] text-error">{error}</p>}
+            {filas === null ? <p className="text-tenue text-[16px] font-sans">Cargando…</p>
               : filas.length === 0 ? (
-                <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-2">
-                  <p className="text-[14.5px]">Todavía no analizas ninguna propiedad.</p>
-                  <a href="/inicio" className="font-plex-mono text-[12px]" style={{ color: verde }}>Marca &quot;Me interesa&quot; en tu bandeja →</a>
+                <div className="bg-tarjeta border border-linea p-5 flex flex-col gap-2 rounded-xl">
+                  <p className="text-[17px]">Todavía no analizas ninguna propiedad.</p>
+                  <a href="/inicio" className="font-sans text-[15px]" style={{ color: verde }}>Marca &quot;Me interesa&quot; en tu bandeja →</a>
                 </div>
               ) : null}
 
             {comparar && filas && (
-              <div className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col gap-2">
+              <div className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col gap-2 rounded-xl">
                 <span className={etiqueta}>Comparativo · {filas.length} de 5</span>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[12.5px] border-collapse min-w-[520px]">
+                  <table className="w-full text-[15px] border-collapse min-w-[520px]">
                     <thead>
                       <tr>
-                        <th className="text-left font-normal text-slate py-1.5 pr-3" />
+                        <th className="text-left font-normal text-tenue py-1.5 pr-3" />
                         {filas.map((f) => <th key={f.id} className="text-left font-medium py-1.5 pr-3 align-bottom"><a href={`#${clave(f)}`} className="hover:underline">{f.resultado.activo.nombre}</a></th>)}
                       </tr>
                     </thead>
@@ -135,8 +135,8 @@ export default function AnalisisPage() {
                         ['Rendimiento por renta', (r: Resultado) => r.porTipo?.renta?.rendimiento ? `${r.porTipo.renta.rendimiento.capRatePct} %` : '—'],
                         ['Legal', (r: Resultado) => r.legal.certificada ? 'Certificada' : 'Sin revisar'],
                       ] as [string, (r: Resultado) => string][]).map(([l, f]) => (
-                        <tr key={l} className="border-t border-white/10">
-                          <td className="text-slate py-2 pr-3 whitespace-nowrap">{l}</td>
+                        <tr key={l} className="border-t border-linea">
+                          <td className="text-tenue py-2 pr-3 whitespace-nowrap">{l}</td>
                           {filas.map((x) => <td key={x.id} className="py-2 pr-3">{f(x.resultado)}</td>)}
                         </tr>
                       ))}
@@ -151,22 +151,22 @@ export default function AnalisisPage() {
               const sem = r.mercado.semaforo
               const p = r.mercado.precio
               return (
-                <div key={f.id} id={clave(f)} className="bg-navy-800 border p-4 md:p-5 flex flex-col gap-3 scroll-mt-32" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
+                <div key={f.id} id={clave(f)} className="bg-tarjeta border p-4 md:p-5 flex flex-col gap-3 scroll-mt-32 rounded-xl" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
                   <div className="flex flex-col gap-0.5">
-                    {r.origen && <span className="font-plex-mono text-[10.5px] tracking-[0.06em] uppercase text-[#8a93a3]">De portal ({r.origen.portal}) · no certificada{r.origen.lectura === 'capturado' ? ' · datos que escribiste' : ''}</span>}
-                    <h2 className="font-display text-[21px] font-medium leading-tight">{r.activo.nombre}</h2>
-                    <span className="text-[12.5px] text-slate">
+                    {r.origen && <span className="font-sans text-[13px] text-[#8a93a3]">De portal ({r.origen.portal}) · no certificada{r.origen.lectura === 'capturado' ? ' · datos que escribiste' : ''}</span>}
+                    <h2 className="font-display text-[23px] font-medium leading-tight">{r.activo.nombre}</h2>
+                    <span className="text-[15px] text-tenue">
                       {[r.activo.precio_total ? millones(r.activo.precio_total) : null, r.activo.superficie ? `${r.activo.superficie.toLocaleString('es-MX')} m²` : null, [r.activo.colonia, r.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
                     </span>
-                    {r.origen && <a href={r.origen.url} target="_blank" rel="noopener noreferrer" className="font-plex-mono text-[12px] w-fit" style={{ color: verde }}>Ver el anuncio original →</a>}
+                    {r.origen && <a href={r.origen.url} target="_blank" rel="noopener noreferrer" className="font-sans text-[15px] w-fit" style={{ color: verde }}>Ver el anuncio original →</a>}
                   </div>
 
                   <div className={bloque}>
                     <span className={etiqueta}>Precio contra mercado</span>
-                    {sem.estado && <span className="font-display text-[19px]" style={{ color: SEMAFORO[sem.estado].color }}>{SEMAFORO[sem.estado].texto}</span>}
-                    <p className="text-[13.5px] text-paper-dim">{sem.texto}</p>
-                    {sem.margenNegociacionMXN != null && <p className="text-[13px]">Margen de negociación de referencia: <b>{pesos(sem.margenNegociacionMXN)}</b></p>}
-                    {p.precioPromedioM2Zona != null && <p className="text-[12.5px] text-slate">Precio/m² de la zona (mediana): {pesos(p.precioPromedioM2Zona)}</p>}
+                    {sem.estado && <span className="font-display text-[21px]" style={{ color: SEMAFORO[sem.estado].color }}>{SEMAFORO[sem.estado].texto}</span>}
+                    <p className="text-[16px] text-tinta-2">{sem.texto}</p>
+                    {sem.margenNegociacionMXN != null && <p className="text-[16px]">Margen de negociación de referencia: <b>{pesos(sem.margenNegociacionMXN)}</b></p>}
+                    {p.precioPromedioM2Zona != null && <p className="text-[15px] text-tenue">Precio/m² de la zona (mediana): {pesos(p.precioPromedioM2Zona)}</p>}
                   </div>
 
                   {r.plusvalia && (
@@ -174,14 +174,14 @@ export default function AnalisisPage() {
                       <span className={etiqueta}>Plusvalía · proyección</span>
                       <div className="grid grid-cols-2 gap-2">
                         {r.plusvalia.horizontes.map((h) => (
-                          <div key={h.anios} className="bg-navy-950/60 px-3 py-2.5">
-                            <p className="font-plex-mono text-[10px] text-slate uppercase">En {h.anios} años</p>
-                            <p className="font-display text-[20px]" style={{ color: '#d9b45a' }}>+{h.pct} %</p>
-                            <p className="text-[11px] text-slate">rango {h.min} % a {h.max} %</p>
+                          <div key={h.anios} className="bg-fondo/60 px-3 py-2.5">
+                            <p className="font-sans text-[13px] text-tenue">En {h.anios} años</p>
+                            <p className="font-display text-[22px]" style={{ color: 'var(--c-oro)' }}>+{h.pct} %</p>
+                            <p className="text-[14px] text-tenue">rango {h.min} % a {h.max} %</p>
                           </div>
                         ))}
                       </div>
-                      <p className="text-[12px] text-slate">≈{r.plusvalia.tasaAnual} % anual compuesto. {r.plusvalia.nota} Fuente: {r.plusvalia.fuente}.{r.plusvalia.regional ? ` Contexto: ${r.plusvalia.regional.fuente}, ${r.plusvalia.regional.anual} % el último año.` : ''}</p>
+                      <p className="text-[15px] text-tenue">≈{r.plusvalia.tasaAnual} % anual compuesto. {r.plusvalia.nota} Fuente: {r.plusvalia.fuente}.{r.plusvalia.regional ? ` Contexto: ${r.plusvalia.regional.fuente}, ${r.plusvalia.regional.anual} % el último año.` : ''}</p>
                     </div>
                   )}
 
@@ -189,9 +189,9 @@ export default function AnalisisPage() {
                     <div className={bloque}>
                       <span className={etiqueta}>¿Cumple lo que buscas? · {r.cumplimiento.cumple} de {r.cumplimiento.verificables}</span>
                       {r.cumplimiento.criterios.map((c) => (
-                        <p key={c.criterio} className="text-[13px] flex gap-2">
+                        <p key={c.criterio} className="text-[16px] flex gap-2">
                           <span className="w-4 shrink-0 text-center" style={{ color: COLOR_CRITERIO[c.estado] }}>{ICONO[c.estado]}</span>
-                          <span><b className="font-medium">{c.criterio}:</b> <span className="text-paper-dim">{c.detalle}</span></span>
+                          <span><b className="font-medium">{c.criterio}:</b> <span className="text-tinta-2">{c.detalle}</span></span>
                         </p>
                       ))}
                     </div>
@@ -201,40 +201,40 @@ export default function AnalisisPage() {
                     <div className={bloque}>
                       <span className={etiqueta}>Para tu decisión</span>
                       {r.porTipo.costoTotal && (
-                        <p className="text-[13px]"><b className="font-medium">Costo total de compra:</b> {pesos(r.porTipo.costoTotal.totalMin)} a {pesos(r.porTipo.costoTotal.totalMax)}. <span className="text-slate">{r.porTipo.costoTotal.nota}</span></p>
+                        <p className="text-[16px]"><b className="font-medium">Costo total de compra:</b> {pesos(r.porTipo.costoTotal.totalMin)} a {pesos(r.porTipo.costoTotal.totalMax)}. <span className="text-tenue">{r.porTipo.costoTotal.nota}</span></p>
                       )}
                       {r.porTipo.mensualidad && (
-                        <p className="text-[13px]"><b className="font-medium">Mensualidad estimada:</b> {pesos(r.porTipo.mensualidad.mensualidad)} (enganche {pesos(r.porTipo.mensualidad.enganche)}). <span className="text-slate">{r.porTipo.mensualidad.supuestos}</span></p>
+                        <p className="text-[16px]"><b className="font-medium">Mensualidad estimada:</b> {pesos(r.porTipo.mensualidad.mensualidad)} (enganche {pesos(r.porTipo.mensualidad.enganche)}). <span className="text-tenue">{r.porTipo.mensualidad.supuestos}</span></p>
                       )}
                       {r.porTipo.usoSuelo && (
                         r.porTipo.usoSuelo.disponible
-                          ? <p className="text-[13px]"><b className="font-medium">Uso de suelo:</b> {[r.porTipo.usoSuelo.uso, r.porTipo.usoSuelo.descripcion].filter(Boolean).join(' · ')}{r.porTipo.usoSuelo.cus != null ? ` · CUS ${r.porTipo.usoSuelo.cus}` : ''}{r.porTipo.usoSuelo.nivelesMax != null ? ` · hasta ${r.porTipo.usoSuelo.nivelesMax} niveles` : ''}. <span className="text-slate">Fuente: {r.porTipo.usoSuelo.fuente}.</span></p>
-                          : <p className="text-[13px]"><b className="font-medium">Uso de suelo:</b> <span className="text-paper-dim">{r.porTipo.usoSuelo.texto}</span></p>
+                          ? <p className="text-[16px]"><b className="font-medium">Uso de suelo:</b> {[r.porTipo.usoSuelo.uso, r.porTipo.usoSuelo.descripcion].filter(Boolean).join(' · ')}{r.porTipo.usoSuelo.cus != null ? ` · CUS ${r.porTipo.usoSuelo.cus}` : ''}{r.porTipo.usoSuelo.nivelesMax != null ? ` · hasta ${r.porTipo.usoSuelo.nivelesMax} niveles` : ''}. <span className="text-tenue">Fuente: {r.porTipo.usoSuelo.fuente}.</span></p>
+                          : <p className="text-[16px]"><b className="font-medium">Uso de suelo:</b> <span className="text-tinta-2">{r.porTipo.usoSuelo.texto}</span></p>
                       )}
-                      {/terreno/i.test(r.activo.tipo) && <p className="text-[12.5px] text-slate">¿Qué conviene construir aquí? SMT Land analiza el mejor proyecto para este terreno.</p>}
+                      {/terreno/i.test(r.activo.tipo) && <p className="text-[15px] text-tenue">¿Qué conviene construir aquí? SMT Land analiza el mejor proyecto para este terreno.</p>}
                       {r.porTipo.renta && (
                         r.porTipo.renta.rendimiento
-                          ? <p className="text-[13px]"><b className="font-medium">Si la rentas:</b> {pesos(r.porTipo.renta.rendimiento.rentaMensual)} al mes de referencia → <b>{r.porTipo.renta.rendimiento.capRatePct} % anual</b> (recuperas la inversión en ~{r.porTipo.renta.rendimiento.aniosRecuperar} años). <span className="text-slate">Estimación con {r.porTipo.renta.precio.comparablesUsados} comparables de renta.</span>
-                              {r.porTipo.renta.rendimiento.capRatePct > 15 && <span style={{ color: '#d9b45a' }}> Ojo: un rendimiento tan alto suele indicar que el precio está muy abajo del mercado o que las rentas encontradas no son comparables. Revísalo antes de decidir.</span>}</p>
-                          : <p className="text-[13px]"><b className="font-medium">Si la rentas:</b> <span className="text-paper-dim">{r.porTipo.renta.texto}</span></p>
+                          ? <p className="text-[16px]"><b className="font-medium">Si la rentas:</b> {pesos(r.porTipo.renta.rendimiento.rentaMensual)} al mes de referencia → <b>{r.porTipo.renta.rendimiento.capRatePct} % anual</b> (recuperas la inversión en ~{r.porTipo.renta.rendimiento.aniosRecuperar} años). <span className="text-tenue">Estimación con {r.porTipo.renta.precio.comparablesUsados} comparables de renta.</span>
+                              {r.porTipo.renta.rendimiento.capRatePct > 15 && <span style={{ color: 'var(--c-oro)' }}> Ojo: un rendimiento tan alto suele indicar que el precio está muy abajo del mercado o que las rentas encontradas no son comparables. Revísalo antes de decidir.</span>}</p>
+                          : <p className="text-[16px]"><b className="font-medium">Si la rentas:</b> <span className="text-tinta-2">{r.porTipo.renta.texto}</span></p>
                       )}
                     </div>
                   )}
-                  {r.topeMensual && <p className="text-[12.5px] text-slate">{r.topeMensual}</p>}
+                  {r.topeMensual && <p className="text-[15px] text-tenue">{r.topeMensual}</p>}
 
                   <div className={bloque}>
                     <span className={etiqueta}>Legal</span>
                     {r.legal.certificada ? (
                       <>
-                        <span className="text-[14px]" style={{ color: verde }}>✓ Certificada por SMTBROKER</span>
-                        {'resumen' in r.legal && r.legal.resumen && <p className="text-[13px] text-paper-dim">{r.legal.resumen}</p>}
+                        <span className="text-[17px]" style={{ color: verde }}>✓ Certificada por SMTBROKER</span>
+                        {'resumen' in r.legal && r.legal.resumen && <p className="text-[16px] text-tinta-2">{r.legal.resumen}</p>}
                       </>
                     ) : (
                       <>
-                        <span className="text-[14px] text-paper-dim">{r.origen ? 'Anuncio de portal: no revisado legalmente' : 'No revisada legalmente'}</span>
+                        <span className="text-[17px] text-tinta-2">{r.origen ? 'Anuncio de portal: no revisado legalmente' : 'No revisada legalmente'}</span>
                         {r.certificacionPedidaAt
-                          ? <p className="text-[12.5px] text-slate">{r.origen ? 'Pediste que el anunciante la certifique. SMTBROKER lo invita una sola vez; si acepta, te avisamos y podrás verla con las reglas de siempre.' : 'Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.'}</p>
-                          : <button onClick={() => accion(f, 'certificar')} disabled={!!ocupado} className="w-fit px-3 py-2 text-[12.5px] font-plex-mono border disabled:opacity-60" style={{ borderColor: verde, color: verde }}>
+                          ? <p className="text-[15px] text-tenue">{r.origen ? 'Pediste que el anunciante la certifique. SMTBROKER lo invita una sola vez; si acepta, te avisamos y podrás verla con las reglas de siempre.' : 'Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.'}</p>
+                          : <button onClick={() => accion(f, 'certificar')} disabled={!!ocupado} className="w-fit px-3 py-2 text-[15px] font-sans border disabled:opacity-60 rounded-lg" style={{ borderColor: verde, color: verde }}>
                               {ocupado === f.id + 'certificar' ? 'Enviando…' : r.origen ? 'Pedir que el anunciante la certifique' : 'Pedir que se certifique'}
                             </button>}
                       </>
@@ -243,24 +243,24 @@ export default function AnalisisPage() {
 
                   <div className={bloque}>
                     <span className={etiqueta}>Qué tan sólido es · {r.solidez.nivel}</span>
-                    <p className="text-[12.5px] text-slate">
+                    <p className="text-[15px] text-tenue">
                       {r.solidez.comparablesVenta} comparables de venta{r.solidez.comparablesRenta != null ? ` y ${r.solidez.comparablesRenta} de renta` : ''} de tamaño parecido · datos del {new Date(r.solidez.fechaDatos).toLocaleDateString('es-MX')}
                       {r.solidez.fuentes.length > 0 ? ` · fuentes: ${r.solidez.fuentes.join(', ')}` : ''}
                     </p>
                   </div>
 
                   {f.activo_id && <div className={bloque}>
-                    <button onClick={() => quieroVerla(f)} disabled={!!ocupado} className="w-full font-plex-mono text-[13px] font-medium px-4 py-3 text-navy-950 disabled:opacity-60" style={{ background: verde }}>
+                    <button onClick={() => quieroVerla(f)} disabled={!!ocupado} className="w-full font-sans text-[16px] font-medium px-4 py-3 text-white disabled:opacity-60" style={{ background: verde }}>
                       {ocupado === f.id + 'ver' ? 'Conectando…' : 'Quiero verla'}
                     </button>
-                    <p className="text-[12px] text-slate">Te conectamos con quien la ofrece para conversar y agendar la visita. Solo entonces sabrá tu nombre.</p>
+                    <p className="text-[15px] text-tenue">Te conectamos con quien la ofrece para conversar y agendar la visita. Solo entonces sabrá tu nombre.</p>
                   </div>}
 
                   <div className="flex gap-4 flex-wrap pt-1">
-                    <button onClick={() => accion(f, 'actualizar')} disabled={!!ocupado} className="font-plex-mono text-[12px] disabled:opacity-60" style={{ color: verde }}>
+                    <button onClick={() => accion(f, 'actualizar')} disabled={!!ocupado} className="font-sans text-[15px] disabled:opacity-60" style={{ color: verde }}>
                       {ocupado === f.id + 'actualizar' ? 'Actualizando… (hasta 1 min)' : 'Actualizar análisis'}
                     </button>
-                    <button onClick={() => accion(f, 'quitar')} disabled={!!ocupado} className="font-plex-mono text-[12px] text-slate hover:text-paper disabled:opacity-60">Quitar del comparativo</button>
+                    <button onClick={() => accion(f, 'quitar')} disabled={!!ocupado} className="font-sans text-[15px] text-tenue hover:text-tinta disabled:opacity-60">Quitar del comparativo</button>
                   </div>
                 </div>
               )

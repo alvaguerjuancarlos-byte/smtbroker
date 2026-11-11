@@ -17,6 +17,7 @@ import { statusCfg, formatDate, ESTADOS_ACTIVO } from '@/lib/estadoActivo'
 import { calcularNivel, NIVELES, ORDEN_NIVEL } from '@/lib/nivelesBroker'
 import { tieneDocumentacion } from '@/lib/expediente'
 import Topbar from '../components/Topbar'
+import Banda, { PestanasBanda } from '../components/Banda'
 import PanelNecesidades from './PanelNecesidades'
 import ListaConexiones from '../components/ListaConexiones'
 import { Field, inputCls } from '../components/FormField'
@@ -65,10 +66,10 @@ interface ContactoConexion { nombre: string; correo: string | null; esBroker: bo
 function LineaContacto({ c }: { c?: ContactoConexion }) {
   if (!c) return null
   return (
-    <p className="text-[12.5px] text-paper mt-1.5">
+    <p className="text-[15px] text-tinta mt-1.5">
       Contacto: {c.nombre}{c.esBroker ? ' (broker)' : ' (va por su cuenta)'}
-      {c.correo && <> · <a href={`mailto:${c.correo}`} className="text-gold-400 hover:text-gold-100">{c.correo}</a></>}
-{c.telefono && <> · <a href={`https://wa.me/52${c.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {c.telefono}</a></>}
+      {c.correo && <> · <a href={`mailto:${c.correo}`} className="text-acento hover:text-acento-2">{c.correo}</a></>}
+{c.telefono && <> · <a href={`https://wa.me/52${c.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-acento hover:text-acento-2">WhatsApp {c.telefono}</a></>}
     </p>
   )
 }
@@ -112,11 +113,11 @@ interface Oportunidad {
 
 function BotonConectar({ estado, ocupado, onClick }: { estado: string | null; ocupado: boolean; onClick: () => void }) {
   if (estado) {
-    return <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">{ETIQUETA_SOLICITUD[estado] ?? estado}</span>
+    return <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2.5 py-1 shrink-0 rounded-lg">{ETIQUETA_SOLICITUD[estado] ?? estado}</span>
   }
   return (
     <button disabled={ocupado} onClick={onClick}
-      className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0">
+      className="font-sans text-[14px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0 rounded-lg">
       Me interesa conectar
     </button>
   )
@@ -339,38 +340,37 @@ export default function PortalBrokerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
       <div className="relative flex flex-col flex-1">
       <Topbar userName={userName} rol="broker" />
 
-      <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
-        <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6">
-
+      <Banda sinPie>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="font-display text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
-              <p className="text-[14px] text-slate mt-1.5">
-                Tu portafolio y lo que buscan tus clientes, en un solo lugar · <span className="text-gold-400">Nivel {nivel.actual.nombre}{pionero ? ' · ★ Pionero' : ''}</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-[34px] md:text-[44px] font-medium text-tinta leading-tight">Hola, {firstName}</h1>
+                <span className="text-[15px] font-semibold text-navy-950 bg-gold-500 px-3 py-1 rounded-full">Nivel {nivel.actual.nombre}{pionero ? ' · ★ Pionero' : ''}</span>
+              </div>
+              <p className="text-[19px] text-tinta-2 mt-2">Tu portafolio y lo que buscan tus clientes, en un solo lugar.</p>
             </div>
             <button
               onClick={() => router.push('/activo/nuevo')}
-              className="flex items-center gap-2 bg-gold-500 text-navy-950 font-plex-mono text-[11.5px] tracking-[0.03em] px-4 md:px-5 py-2.5 md:py-3 hover:bg-gold-400 transition-colors w-fit"
+              className="flex items-center gap-2 bg-gold-500 text-navy-950 font-sans text-[17px] font-semibold px-5 py-3 hover:bg-gold-400 transition-colors w-fit rounded-lg"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="#070f1c" strokeWidth="1.8" strokeLinecap="round"/>
@@ -378,66 +378,58 @@ export default function PortalBrokerPage() {
               Cargar propiedad
             </button>
           </div>
+          <PestanasBanda activa={pestana} onCambiar={abrirPestana} items={[
+            { id: 'portafolio', label: 'Mi portafolio', n: activos.length },
+            { id: 'necesidades', label: 'Necesidades', n: null },
+            { id: 'conexiones', label: 'Conexiones', n: null },
+            { id: 'oportunidades', label: 'Oportunidades', n: oportunidades.filter(o => o.estado === 'ofrecida').length },
+            { id: 'clientes', label: 'Mis clientes', n: clientes.length },
+            { id: 'matches', label: 'Matches', n: matches ? matches.paraMisClientes.length + matches.paraMiPortafolio.length : null },
+            { id: 'desempeno', label: 'Mi desempeño', n: null },
+          ] as { id: Pestana; label: string; n: number | null }[]} />
+      </Banda>
 
-          {/* Pestañas */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
-            {([
-              { id: 'portafolio', label: 'Mi portafolio', n: activos.length },
-              { id: 'necesidades', label: 'Necesidades', n: null },
-              { id: 'conexiones', label: 'Conexiones', n: null },
-              { id: 'oportunidades', label: 'Oportunidades', n: oportunidades.filter(o => o.estado === 'ofrecida').length },
-              { id: 'clientes',   label: 'Mis clientes',  n: clientes.length },
-              { id: 'matches',    label: 'Matches',       n: matches ? matches.paraMisClientes.length + matches.paraMiPortafolio.length : null },
-              { id: 'desempeno',  label: 'Mi desempeño',  n: null },
-            ] as { id: Pestana; label: string; n: number | null }[]).map(t => (
-              <button key={t.id} onClick={() => abrirPestana(t.id)}
-                className={`flex items-center justify-center gap-2 px-3 py-3 border transition-colors ${
-                  pestana === t.id ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-navy-800 border-white/10 text-paper-dim hover:border-gold-500/40'
-                }`}>
-                <span className="text-[12px] md:text-[13px] font-medium">{t.label}</span>
-                {t.n !== null && <span className="font-plex-mono text-[10.5px] opacity-70">{t.n}</span>}
-              </button>
-            ))}
-          </div>
+      <main className="flex-1 px-4 md:px-8 py-7 md:py-9">
+        <div className="w-full max-w-[1180px] mx-auto flex flex-col gap-6">
 
           {/* Mi portafolio */}
           {pestana === 'portafolio' && (
             activos.length === 0 ? (
-              <div className="bg-navy-800 border border-white/10 px-8 py-14 flex flex-col items-center gap-3 text-center">
-                <p className="text-[14px] font-medium text-paper">Tu portafolio está vacío</p>
-                <p className="text-[13px] text-slate max-w-[380px] leading-relaxed">
+              <div className="bg-tarjeta border border-linea px-8 py-14 flex flex-col items-center gap-3 text-center rounded-xl">
+                <p className="text-[17px] font-medium text-tinta">Tu portafolio está vacío</p>
+                <p className="text-[16px] text-tenue max-w-[380px] leading-relaxed">
                   Carga las propiedades que representas. Cada una recibe un diagnóstico legal y de mercado, y queda como inventario certificado.
                 </p>
                 <button onClick={() => router.push('/activo/nuevo')}
-                  className="mt-2 text-[13px] font-medium text-gold-400 hover:text-gold-100 transition-colors">
+                  className="mt-2 text-[16px] font-medium text-acento hover:text-acento-2 transition-colors">
                   Cargar propiedad →
                 </button>
               </div>
             ) : (
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 {activos.map((a, i) => {
                   const { label, chip } = statusCfg(a.status)
                   return (
                     <div key={a.id} onClick={() => router.push(`/activo/${a.id}`)}
-                      className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors cursor-pointer`}>
+                      className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-linea' : ''} hover:bg-sutil transition-colors cursor-pointer`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-paper truncate">
+                        <p className="text-[17px] font-medium text-tinta truncate">
                           {a.nombre}
-                          {certificadas.has(a.id) && <span className="ml-2 font-plex-mono text-[10px] text-gold-400 border border-gold-500/40 px-1.5 py-0.5 align-middle">★ Certificada</span>}
+                          {certificadas.has(a.id) && <span className="ml-2 font-sans text-[13px] text-acento border border-gold-500/40 px-1.5 py-0.5 align-middle rounded-lg">★ Certificada</span>}
                         </p>
-                        <p className="text-[11px] text-slate mt-0.5 truncate">
+                        <p className="text-[14px] text-tenue mt-0.5 truncate">
                           {a.tipo} · {a.municipio}, {a.estado}
                           {a.propietario_nombre ? ` · Propietario: ${a.propietario_nombre}` : ''} · {formatDate(a.created_at)}
                         </p>
                       </div>
                       {a.status !== 'cerrado' && (
                         <button onClick={e => { e.stopPropagation(); setErrorCierre(''); setCierreDe(a) }}
-                          className="hidden sm:inline font-plex-mono text-[10.5px] text-gold-400 hover:text-gold-100 border border-gold-500/30 hover:border-gold-500 px-2.5 py-1 shrink-0 transition-colors">
+                          className="hidden sm:inline font-sans text-[13px] text-acento hover:text-acento-2 border border-gold-500/30 hover:border-gold-500 px-2.5 py-1 shrink-0 transition-colors rounded-lg">
                           Reportar cierre
                         </button>
                       )}
-                      <span className={`font-plex-mono text-[10px] font-medium px-2.5 py-1 border shrink-0 ${chip}`}>{label}</span>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-slate-dim shrink-0">
+                      <span className={`font-sans text-[13px] font-medium px-2.5 py-1 border shrink-0 ${chip} rounded-lg`}>{label}</span>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-tenue-2 shrink-0">
                         <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
                     </div>
@@ -449,8 +441,8 @@ export default function PortalBrokerPage() {
 
           {/* Reportar cierre */}
           {pestana === 'portafolio' && cierreDe && (
-            <form onSubmit={reportarCierre} className="bg-navy-800 border border-gold-500/30 p-4 md:p-6 flex flex-col gap-4">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Reportar cierre · {cierreDe.nombre}</p>
+            <form onSubmit={reportarCierre} className="bg-tarjeta border border-gold-500/30 p-4 md:p-6 flex flex-col gap-4 rounded-xl">
+              <p className="font-sans text-[14px] text-tenue">Reportar cierre · {cierreDe.nombre}</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field label="Precio de cierre (MXN)" required>
                   <input type="number" min="0" value={formCierre.precio} onChange={e => setFormCierre(f => ({ ...f, precio: e.target.value }))}
@@ -462,19 +454,19 @@ export default function PortalBrokerPage() {
                 </Field>
                 <Field label="¿Quién compró?" required>
                   <select value={formCierre.origen} onChange={e => setFormCierre(f => ({ ...f, origen: e.target.value }))} className={inputCls(false, 'oscuro')}>
-                    {ORIGENES.map(o => <option key={o.v} value={o.v} className="bg-navy-900">{o.l}</option>)}
+                    {ORIGENES.map(o => <option key={o.v} value={o.v} className="bg-superficie">{o.l}</option>)}
                   </select>
                 </Field>
               </div>
-              <p className="text-[12px] text-slate">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Verificado SMT.</p>
-              {errorCierre && <p className="text-[12px] text-[#f3a3a3]">{errorCierre}</p>}
+              <p className="text-[15px] text-tenue">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Verificado SMT.</p>
+              {errorCierre && <p className="text-[15px] text-error">{errorCierre}</p>}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setCierreDe(null)}
-                  className="px-5 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                  className="px-5 py-2.5 border border-linea text-tinta-2 font-sans text-[15px] hover:border-linea-fuerte transition-colors rounded-lg">
                   Cancelar
                 </button>
                 <button type="submit"
-                  className="px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors">
+                  className="px-5 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors rounded-lg">
                   Reportar cierre
                 </button>
               </div>
@@ -485,38 +477,38 @@ export default function PortalBrokerPage() {
           {pestana === 'clientes' && (
             <div className="flex flex-col gap-4">
               <div className="flex items-start gap-2.5 bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
-                <p className="text-[12.5px] text-paper-dim leading-relaxed">
-                  Registra lo que busca cada cliente con un alias. <b className="text-paper">No guardamos su teléfono ni su correo</b>: tus clientes siguen siendo tuyos.
+                <p className="text-[15px] text-tinta-2 leading-relaxed">
+                  Registra lo que busca cada cliente con un alias. <b className="text-tinta">No guardamos su teléfono ni su correo</b>: tus clientes siguen siendo tuyos.
                 </p>
               </div>
 
               {/* V7: compradores que llegaron directo a la plataforma y te eligieron */}
               {oportunidades.some(o => o.tipo === 'comprador' && o.estado === 'aceptada') && (
                 <div className="flex flex-col gap-2">
-                  <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Compradores que te eligieron</p>
+                  <p className="font-sans text-[14px] text-tenue">Compradores que te eligieron</p>
                   {oportunidades.filter(o => o.tipo === 'comprador' && o.estado === 'aceptada').map(o => (
-                    <div key={o.id} className="bg-navy-800 border border-white/10 p-4 flex flex-col gap-1">
-                      <p className="text-[14px] font-medium text-paper">{o.comprador?.contacto?.nombre ?? 'Comprador'}</p>
-                      {o.comprador?.contacto?.correo && <p className="text-[12.5px] text-gold-400">{o.comprador.contacto.correo}</p>}
-                      <p className="text-[12px] text-slate">
+                    <div key={o.id} className="bg-tarjeta border border-linea p-4 flex flex-col gap-1 rounded-xl">
+                      <p className="text-[17px] font-medium text-tinta">{o.comprador?.contacto?.nombre ?? 'Comprador'}</p>
+                      {o.comprador?.contacto?.correo && <p className="text-[15px] text-acento">{o.comprador.contacto.correo}</p>}
+                      <p className="text-[15px] text-tenue">
                         {[o.comprador?.tipo, o.comprador?.zona, o.comprador?.presupuesto].filter(Boolean).join(' · ') || 'Sin criterios'}
                       </p>
                     </div>
                   ))}
-                  <p className="text-[11.5px] text-slate">Sus matches aparecen en la pestaña Matches, como los de tus clientes.</p>
+                  <p className="text-[14px] text-tenue">Sus matches aparecen en la pestaña Matches, como los de tus clientes.</p>
                 </div>
               )}
 
               {editandoId === null && (
                 <button onClick={() => abrirCliente(null)}
-                  className="font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors w-fit">
+                  className="font-sans text-[15px] text-acento hover:text-acento-2 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors w-fit rounded-lg">
                   + Registrar cliente
                 </button>
               )}
 
               {editandoId !== null && (
-                <form onSubmit={guardarCliente} className="bg-navy-800 border border-gold-500/30 p-4 md:p-6 flex flex-col gap-4">
-                  <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">
+                <form onSubmit={guardarCliente} className="bg-tarjeta border border-gold-500/30 p-4 md:p-6 flex flex-col gap-4 rounded-xl">
+                  <p className="font-sans text-[14px] text-tenue">
                     {editandoId === 'nuevo' ? 'Nuevo cliente' : 'Editar cliente'}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -526,8 +518,8 @@ export default function PortalBrokerPage() {
                     </Field>
                     <Field label="Presupuesto">
                       <select value={form.presupuesto} onChange={e => setForm(f => ({ ...f, presupuesto: e.target.value }))} className={inputCls(false, 'oscuro')}>
-                        <option value="" className="bg-navy-900">Selecciona…</option>
-                        {PRESUPUESTOS.map(p => <option key={p} className="bg-navy-900">{p}</option>)}
+                        <option value="" className="bg-superficie">Selecciona…</option>
+                        {PRESUPUESTOS.map(p => <option key={p} className="bg-superficie">{p}</option>)}
                       </select>
                     </Field>
                     <Field label="Zona">
@@ -546,24 +538,24 @@ export default function PortalBrokerPage() {
                   {editandoId === 'nuevo' && (
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={consentimiento} onChange={e => setConsentimiento(e.target.checked)} className="mt-0.5 accent-[#c9a227]" />
-                      <span className="text-[13px] text-paper-dim leading-relaxed">
+                      <span className="text-[16px] text-tinta-2 leading-relaxed">
                         Mi cliente me autorizó a registrar lo que busca en SMTBROKER.
                       </span>
                     </label>
                   )}
-                  {errorCliente && <p className="text-[12px] text-[#f3a3a3]">{errorCliente}</p>}
+                  {errorCliente && <p className="text-[15px] text-error">{errorCliente}</p>}
                   <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={() => setEditandoId(null)}
-                      className="px-5 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                      className="px-5 py-2.5 border border-linea text-tinta-2 font-sans text-[15px] hover:border-linea-fuerte transition-colors rounded-lg">
                       Cancelar
                     </button>
                     <button type="submit" disabled={guardando}
-                      className="px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors disabled:opacity-60">
+                      className="px-5 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg">
                       {guardando ? 'Guardando…' : 'Guardar'}
                     </button>
                     {editandoId !== 'nuevo' && (
                       <button type="button" onClick={() => borrarCliente(editandoId)}
-                        className="ml-auto px-5 py-2.5 border border-red-900/60 text-[#f3a3a3] font-plex-mono text-[12px] hover:bg-red-950/30 transition-colors">
+                        className="ml-auto px-5 py-2.5 border border-error-linea text-error font-sans text-[15px] hover:bg-error-suave transition-colors rounded-lg">
                         Eliminar
                       </button>
                     )}
@@ -573,20 +565,20 @@ export default function PortalBrokerPage() {
 
               {clientes.length === 0 ? (
                 editandoId === null && (
-                  <div className="bg-navy-800 border border-white/10 px-8 py-10 text-center">
-                    <p className="text-[13px] text-slate">Aún no registras clientes.</p>
+                  <div className="bg-tarjeta border border-linea px-8 py-10 text-center rounded-xl">
+                    <p className="text-[16px] text-tenue">Aún no registras clientes.</p>
                   </div>
                 )
               ) : (
-                <div className="bg-navy-800 border border-white/10 overflow-hidden">
+                <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                   {clientes.map((c, i) => (
                     <div key={c.id} onClick={() => abrirCliente(c)}
-                      className={`px-4 md:px-6 py-4 ${i !== clientes.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors cursor-pointer`}>
+                      className={`px-4 md:px-6 py-4 ${i !== clientes.length - 1 ? 'border-b border-linea' : ''} hover:bg-sutil transition-colors cursor-pointer`}>
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-[14px] font-medium text-paper truncate">{c.alias_cliente}</p>
-                        <span className="text-[11px] text-slate shrink-0">{formatDate(c.created_at)}</span>
+                        <p className="text-[17px] font-medium text-tinta truncate">{c.alias_cliente}</p>
+                        <span className="text-[14px] text-tenue shrink-0">{formatDate(c.created_at)}</span>
                       </div>
-                      <p className="text-[12px] text-slate mt-0.5">
+                      <p className="text-[15px] text-tenue mt-0.5">
                         {[c.tipo_activo_interes, c.zona, c.presupuesto].filter(Boolean).join(' · ') || 'Sin criterios todavía'}
                       </p>
                     </div>
@@ -595,7 +587,7 @@ export default function PortalBrokerPage() {
               )}
 
               <button onClick={() => abrirPestana('matches')}
-                className="text-[13px] font-medium text-gold-400 hover:text-gold-100 transition-colors w-fit">
+                className="text-[16px] font-medium text-acento hover:text-acento-2 transition-colors w-fit">
                 Ver propiedades que coinciden con tus clientes →
               </button>
             </div>
@@ -605,30 +597,30 @@ export default function PortalBrokerPage() {
           {pestana === 'matches' && (
             <div className="flex flex-col gap-5">
               <div className="flex items-start gap-2.5 bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
-                <p className="text-[12.5px] text-paper-dim leading-relaxed">
-                  Coincidencias por tipo de propiedad, zona y presupuesto. <b className="text-paper">Operación MindBridge valida cada conexión</b> antes de ponerlos en contacto. Nunca mostramos quién es el cliente o el broker de la otra parte.
+                <p className="text-[15px] text-tinta-2 leading-relaxed">
+                  Coincidencias por tipo de propiedad, zona y presupuesto. <b className="text-tinta">Operación MindBridge valida cada conexión</b> antes de ponerlos en contacto. Nunca mostramos quién es el cliente o el broker de la otra parte.
                 </p>
               </div>
-              {errorMatches && <p className="text-[13px] text-[#f3a3a3]">{errorMatches}</p>}
-              {!matches && !errorMatches && <p className="text-[13px] text-slate font-plex-mono">Buscando coincidencias…</p>}
+              {errorMatches && <p className="text-[16px] text-error">{errorMatches}</p>}
+              {!matches && !errorMatches && <p className="text-[16px] text-tenue font-sans">Buscando coincidencias…</p>}
               {matches && (
                 <>
                   <div>
-                    <h2 className="font-display text-[17px] font-medium text-paper mb-3">Para tus clientes</h2>
+                    <h2 className="font-display text-[19px] font-medium text-tinta mb-3">Para tus clientes</h2>
                     {matches.paraMisClientes.length === 0 ? (
-                      <p className="text-[13px] text-slate">Sin coincidencias por ahora para lo que buscan tus clientes.</p>
+                      <p className="text-[16px] text-tenue">Sin coincidencias por ahora para lo que buscan tus clientes.</p>
                     ) : (
-                      <div className="bg-navy-800 border border-white/10 overflow-hidden">
+                      <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                         {matches.paraMisClientes.map((m, i) => (
                           <div key={m.perfilId + m.activoId}
-                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMisClientes.length - 1 ? 'border-b border-white/10' : ''}`}>
-                            <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMisClientes.length - 1 ? 'border-b border-linea' : ''}`}>
+                            <span className="font-display text-[24px] font-medium text-acento w-12 shrink-0">{m.score}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[14px] text-paper"><b>{m.cliente}</b> → {m.activo.nombre}</p>
-                              <p className="text-[11.5px] text-slate mt-0.5">
+                              <p className="text-[17px] text-tinta"><b>{m.cliente}</b> → {m.activo.nombre}</p>
+                              <p className="text-[14px] text-tenue mt-0.5">
                                 {m.activo.tipo} · {m.activo.municipio}{m.activo.precio_total ? ` · ${mxn(m.activo.precio_total)}` : ''} · {m.representacion}
                               </p>
-                              <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                              <p className="text-[14px] text-tinta-2 mt-1">{m.razones.join(' · ')}</p>
                               <LineaContacto c={m.contacto} />
                             </div>
                             <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
@@ -639,21 +631,21 @@ export default function PortalBrokerPage() {
                     )}
                   </div>
                   <div>
-                    <h2 className="font-display text-[17px] font-medium text-paper mb-3">Para tu portafolio</h2>
+                    <h2 className="font-display text-[19px] font-medium text-tinta mb-3">Para tu portafolio</h2>
                     {matches.paraMiPortafolio.length === 0 ? (
-                      <p className="text-[13px] text-slate">Sin compradores registrados que coincidan con tus propiedades por ahora.</p>
+                      <p className="text-[16px] text-tenue">Sin compradores registrados que coincidan con tus propiedades por ahora.</p>
                     ) : (
-                      <div className="bg-navy-800 border border-white/10 overflow-hidden">
+                      <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                         {matches.paraMiPortafolio.map((m, i) => (
                           <div key={m.activoId + m.perfilId}
-                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMiPortafolio.length - 1 ? 'border-b border-white/10' : ''}`}>
-                            <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{m.score}</span>
+                            className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== matches.paraMiPortafolio.length - 1 ? 'border-b border-linea' : ''}`}>
+                            <span className="font-display text-[24px] font-medium text-acento w-12 shrink-0">{m.score}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[14px] text-paper"><b>{m.activo}</b> ← {m.contraparte}</p>
-                              <p className="text-[11.5px] text-slate mt-0.5">
+                              <p className="text-[17px] text-tinta"><b>{m.activo}</b> ← {m.contraparte}</p>
+                              <p className="text-[14px] text-tenue mt-0.5">
                                 Busca: {[m.criterios.tipo, m.criterios.zona, m.criterios.presupuesto].filter(Boolean).join(' · ')}
                               </p>
-                              <p className="text-[11.5px] text-paper-dim mt-1">{m.razones.join(' · ')}</p>
+                              <p className="text-[14px] text-tinta-2 mt-1">{m.razones.join(' · ')}</p>
                               <LineaContacto c={m.contacto} />
                             </div>
                             <BotonConectar estado={m.solicitud} ocupado={solicitando === `${m.activoId}:${m.perfilId}`}
@@ -680,67 +672,67 @@ export default function PortalBrokerPage() {
           {/* Oportunidades: propietarios y compradores que te eligieron para representarlos (V6.3 §15, V7) */}
           {pestana === 'oportunidades' && (
             <div className="flex flex-col gap-3">
-              <p className="text-[13px] text-paper-dim">
+              <p className="text-[16px] text-tinta-2">
                 Propietarios y compradores de tu zona que eligieron a un broker verificado. Tu nivel te hace visible: más nivel, más oportunidades.
               </p>
-              {errorOportunidad && <p className="text-[12px] text-[#f3a3a3]">{errorOportunidad}</p>}
+              {errorOportunidad && <p className="text-[15px] text-error">{errorOportunidad}</p>}
               {oportunidades.length === 0 ? (
-                <div className="bg-navy-800 border border-white/10 p-6 text-center">
-                  <p className="text-[13px] text-slate">Todavía no recibes oportunidades. Propietarios y compradores ven a los brokers Plata, Oro y Platino de su municipio.</p>
+                <div className="bg-tarjeta border border-linea p-6 text-center rounded-xl">
+                  <p className="text-[16px] text-tenue">Todavía no recibes oportunidades. Propietarios y compradores ven a los brokers Plata, Oro y Platino de su municipio.</p>
                 </div>
               ) : oportunidades.map(o => o.tipo === 'comprador' ? (
-                <div key={o.id} className={`bg-navy-800 border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-white/10 opacity-70'}`}>
+                <div key={o.id} className={`bg-tarjeta border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-linea opacity-70'} rounded-xl`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[14.5px] font-medium text-paper">{o.comprador?.contacto?.nombre ?? 'Un comprador te eligió'}</p>
-                      <p className="text-[12px] text-slate mt-0.5">
+                      <p className="text-[17px] font-medium text-tinta">{o.comprador?.contacto?.nombre ?? 'Un comprador te eligió'}</p>
+                      <p className="text-[15px] text-tenue mt-0.5">
                         Busca {o.comprador?.tipo || 'propiedad'} en {o.comprador?.zona || 'tu zona'}
                         {o.comprador?.presupuesto ? ` · ${o.comprador.presupuesto}` : ''} · {formatDate(o.created_at)}
                       </p>
                     </div>
-                    <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2 py-1 shrink-0">
+                    <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2 py-1 shrink-0 rounded-lg">
                       {o.estado === 'ofrecida' ? 'Nuevo comprador' : o.estado === 'aceptada' ? 'Aceptado' : 'Rechazado'}
                     </span>
                   </div>
-                  {o.comprador?.queBusca && <p className="text-[12.5px] text-paper-dim">{o.comprador.queBusca}</p>}
-                  <p className="text-[12px] text-slate">
+                  {o.comprador?.queBusca && <p className="text-[15px] text-tinta-2">{o.comprador.queBusca}</p>}
+                  <p className="text-[15px] text-tenue">
                     {o.estado === 'aceptada'
-                      ? <>Lo representas. {o.comprador?.contacto?.correo && <>Contacto: <span className="text-gold-400">{o.comprador.contacto.correo}</span></>}</>
+                      ? <>Lo representas. {o.comprador?.contacto?.correo && <>Contacto: <span className="text-acento">{o.comprador.contacto.correo}</span></>}</>
                       : 'Llegó directo a la plataforma. Si lo aceptas, recibes su nombre y correo y lo representas en sus conexiones.'}
                   </p>
                   {o.estado === 'ofrecida' && (
                     <div className="flex gap-2 mt-1">
                       <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'aceptar')}
-                        className="font-plex-mono text-[12px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50">
+                        className="font-sans text-[15px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50 rounded-lg">
                         {respondiendo === o.id ? 'Enviando…' : 'Aceptar y representar'}
                       </button>
                       <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'rechazar')}
-                        className="font-plex-mono text-[12px] px-4 py-2 border border-white/15 text-slate hover:text-paper disabled:opacity-50">
+                        className="font-sans text-[15px] px-4 py-2 border border-linea text-tenue hover:text-tinta disabled:opacity-50 rounded-lg">
                         Rechazar
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div key={o.id} className={`bg-navy-800 border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-white/10 opacity-70'}`}>
+                <div key={o.id} className={`bg-tarjeta border p-4 md:p-5 flex flex-col gap-2 ${o.estado === 'ofrecida' ? 'border-gold-500/40' : 'border-linea opacity-70'} rounded-xl`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[14.5px] font-medium text-paper">{o.activo?.nombre ?? 'Propiedad'}</p>
-                      <p className="text-[12px] text-slate mt-0.5">
+                      <p className="text-[17px] font-medium text-tinta">{o.activo?.nombre ?? 'Propiedad'}</p>
+                      <p className="text-[15px] text-tenue mt-0.5">
                         {o.activo?.tipo} · {[o.activo?.colonia, o.activo?.municipio].filter(Boolean).join(', ')}
                         {o.activo?.superficie ? ` · ${o.activo.superficie} m²` : ''} · {formatDate(o.created_at)}
                       </p>
                     </div>
-                    <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2 py-1 shrink-0">
+                    <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2 py-1 shrink-0 rounded-lg">
                       {o.estado === 'ofrecida' ? 'Nueva' : o.estado === 'aceptada' ? 'Aceptada' : 'Rechazada'}
                     </span>
                   </div>
-                  <p className="text-[12.5px] text-paper-dim">
+                  <p className="text-[15px] text-tinta-2">
                     Precio de lista {o.activo?.precio_total ? mxn(o.activo.precio_total) : '—'}
                     {o.diagnostico?.precioSalidaRecomendadoMXN ? ` · precio de salida recomendado ${mxn(o.diagnostico.precioSalidaRecomendadoMXN)}` : ''}
                     {o.diagnostico?.comparables ? ` (${o.diagnostico.comparables} comparables)` : ''}
                   </p>
-                  <p className="text-[12px] text-slate">
+                  <p className="text-[15px] text-tenue">
                     {o.diagnostico?.documentosFaltantes.length
                       ? `Para certificar le falta: ${o.diagnostico.documentosFaltantes.join(', ').toLowerCase()}.`
                       : 'Expediente completo: lista para certificar.'}
@@ -748,11 +740,11 @@ export default function PortalBrokerPage() {
                   {o.estado === 'ofrecida' && (
                     <div className="flex gap-2 mt-1">
                       <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'aceptar')}
-                        className="font-plex-mono text-[12px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50">
+                        className="font-sans text-[15px] px-4 py-2 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50 rounded-lg">
                         {respondiendo === o.id ? 'Enviando…' : 'Aceptar y representar'}
                       </button>
                       <button disabled={respondiendo === o.id} onClick={() => responderOportunidad(o.id, 'rechazar')}
-                        className="font-plex-mono text-[12px] px-4 py-2 border border-white/15 text-slate hover:text-paper disabled:opacity-50">
+                        className="font-sans text-[15px] px-4 py-2 border border-linea text-tenue hover:text-tinta disabled:opacity-50 rounded-lg">
                         Rechazar
                       </button>
                     </div>
@@ -765,11 +757,11 @@ export default function PortalBrokerPage() {
           {/* Mi desempeño */}
           {pestana === 'desempeno' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-navy-800 border border-gold-500/30 p-5">
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Broker Verificado SMT</p>
-                <p className="font-display text-[24px] font-medium text-gold-400 mt-1">Nivel {nivel.actual.nombre}</p>
+              <div className="bg-tarjeta border border-gold-500/30 p-5 rounded-xl">
+                <p className="font-sans text-[13px] text-tenue">Broker Verificado SMT</p>
+                <p className="font-display text-[28px] font-medium text-acento mt-1">Nivel {nivel.actual.nombre}</p>
                 {pionero && (
-                  <p className="text-[12.5px] text-gold-400 mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
+                  <p className="text-[15px] text-acento mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>
                 )}
 
                 {/* Escalera de niveles (gamificación, 2026-10-07): dónde estás y qué sigue. */}
@@ -778,8 +770,8 @@ export default function PortalBrokerPage() {
                     const logrado = ORDEN_NIVEL[n.id] <= ORDEN_NIVEL[nivel.actual.id]
                     const actual = n.id === nivel.actual.id
                     return (
-                      <div key={n.id} className={`px-2 py-2 text-center border ${actual ? 'bg-gold-500 border-gold-500 text-navy-950' : logrado ? 'border-gold-500/50 text-gold-400' : 'border-white/10 text-slate'}`}>
-                        <p className="font-plex-mono text-[10.5px] uppercase tracking-wide">{logrado && !actual ? '✓ ' : ''}{n.nombre}</p>
+                      <div key={n.id} className={`px-2 py-2 text-center border ${actual ? 'bg-gold-500 border-gold-500 text-navy-950' : logrado ? 'border-gold-500/50 text-acento' : 'border-linea text-tenue'} rounded-lg`}>
+                        <p className="font-sans text-[13px]">{logrado && !actual ? '✓ ' : ''}{n.nombre}</p>
                       </div>
                     )
                   })}
@@ -787,19 +779,19 @@ export default function PortalBrokerPage() {
 
                 {nivel.siguiente ? (
                   <div className="mt-4">
-                    <p className="text-[13px] text-paper-dim mb-2.5">Para subir a <b className="text-paper">{nivel.siguiente.nombre}</b>:</p>
+                    <p className="text-[16px] text-tinta-2 mb-2.5">Para subir a <b className="text-tinta">{nivel.siguiente.nombre}</b>:</p>
                     <div className="flex flex-col gap-2.5">
                       {nivel.siguiente.metas(metricas).map(m => {
                         const listo = m.actual >= m.meta
                         return (
                           <div key={m.etiqueta}>
-                            <div className="flex justify-between text-[12px] mb-1">
-                              <span className={listo ? 'text-[#6bdb9a]' : 'text-paper-dim'}>{listo ? '✓ ' : ''}{m.etiqueta}</span>
+                            <div className="flex justify-between text-[15px] mb-1">
+                              <span className={listo ? 'text-exito' : 'text-tinta-2'}>{listo ? '✓ ' : ''}{m.etiqueta}</span>
                               {/* El número real (p. ej. «7 / 3»); solo la barra se topa al 100 %. */}
-                              <span className="font-plex-mono text-paper">{m.actual} / {m.meta}</span>
+                              <span className="font-sans text-tinta">{m.actual} / {m.meta}</span>
                             </div>
-                            <div className="h-1.5 bg-white/10 overflow-hidden">
-                              <div className={`h-full ${listo ? 'bg-[#3fbe72]' : 'bg-gold-500'}`} style={{ width: `${Math.min(100, (m.actual / m.meta) * 100)}%` }} />
+                            <div className="h-1.5 bg-sutil overflow-hidden">
+                              <div className={`h-full ${listo ? 'bg-[#3fbe72]' : 'bg-gold-500'} rounded-lg`} style={{ width: `${Math.min(100, (m.actual / m.meta) * 100)}%` }} />
                             </div>
                           </div>
                         )
@@ -807,9 +799,9 @@ export default function PortalBrokerPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[13px] text-paper-dim mt-3">Estás en el nivel más alto: Platino.</p>
+                  <p className="text-[16px] text-tinta-2 mt-3">Estás en el nivel más alto: Platino.</p>
                 )}
-                <p className="text-[11.5px] text-slate mt-3">Tu nivel da prioridad a tus matches ante Operación. Umbrales provisionales.</p>
+                <p className="text-[14px] text-tenue mt-3">Tu nivel da prioridad a tus matches ante Operación. Umbrales provisionales.</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
@@ -817,43 +809,43 @@ export default function PortalBrokerPage() {
                   { label: 'Clientes', value: clientes.length },
                   { label: 'Cierres verificados', value: cierresVerificados },
                 ].map(m => (
-                  <div key={m.label} className="bg-navy-800 border border-white/10 p-5">
-                    <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">{m.label}</p>
-                    <p className="font-display text-[28px] font-medium text-paper mt-1">{m.value}</p>
+                  <div key={m.label} className="bg-tarjeta border border-linea p-5 rounded-xl">
+                    <p className="font-sans text-[13px] text-tenue">{m.label}</p>
+                    <p className="font-display text-[32px] font-medium text-tinta mt-1">{m.value}</p>
                   </div>
                 ))}
               </div>
-              <div className="bg-navy-800 border border-white/10 p-5">
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em] mb-3">Propiedades por fase</p>
+              <div className="bg-tarjeta border border-linea p-5 rounded-xl">
+                <p className="font-sans text-[13px] text-tenue mb-3">Propiedades por fase</p>
                 <div className="flex flex-col gap-2">
                   {porEstado.map(({ s, n }) => {
                     const { label, chip } = statusCfg(s)
                     return (
                       <div key={s} className="flex items-center gap-3">
-                        <span className={`font-plex-mono text-[10px] font-medium px-2.5 py-1 border w-[120px] text-center ${chip}`}>{label}</span>
-                        <div className="flex-1 h-1.5 bg-white/5">
+                        <span className={`font-sans text-[13px] font-medium px-2.5 py-1 border w-[120px] text-center ${chip} rounded-lg`}>{label}</span>
+                        <div className="flex-1 h-1.5 bg-sutil">
                           <div className="h-full bg-gold-500/70" style={{ width: activos.length ? `${(n / activos.length) * 100}%` : '0%' }} />
                         </div>
-                        <span className="font-plex-mono text-[12px] text-paper-dim w-6 text-right">{n}</span>
+                        <span className="font-sans text-[15px] text-tinta-2 w-6 text-right">{n}</span>
                       </div>
                     )
                   })}
                 </div>
               </div>
-              <div className="bg-navy-800 border border-white/10 p-5">
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em] mb-3">Cierres reportados</p>
+              <div className="bg-tarjeta border border-linea p-5 rounded-xl">
+                <p className="font-sans text-[13px] text-tenue mb-3">Cierres reportados</p>
                 {cierres.length === 0 ? (
-                  <p className="text-[13px] text-slate">Aún no reportas cierres. Usa &quot;Reportar cierre&quot; en Mi portafolio.</p>
+                  <p className="text-[16px] text-tenue">Aún no reportas cierres. Usa &quot;Reportar cierre&quot; en Mi portafolio.</p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {cierres.map(c => (
-                      <div key={c.id} className="flex items-center justify-between gap-3 text-[13px]">
-                        <span className="text-paper truncate">{nombreActivo(c.activo_id)}</span>
-                        <span className="text-slate shrink-0">{mxn(c.precio_cierre)} · {formatDate(c.fecha_cierre)}</span>
-                        <span className={`font-plex-mono text-[10px] px-2 py-0.5 border shrink-0 ${
-                          c.estado === 'verificado' ? 'border-gold-500/40 text-gold-400'
-                            : c.estado === 'rechazado' ? 'border-red-900/60 text-[#f3a3a3]' : 'border-white/15 text-slate'
-                        }`}>
+                      <div key={c.id} className="flex items-center justify-between gap-3 text-[16px]">
+                        <span className="text-tinta truncate">{nombreActivo(c.activo_id)}</span>
+                        <span className="text-tenue shrink-0">{mxn(c.precio_cierre)} · {formatDate(c.fecha_cierre)}</span>
+                        <span className={`font-sans text-[13px] px-2 py-0.5 border shrink-0 ${
+                          c.estado === 'verificado' ? 'border-gold-500/40 text-acento'
+                            : c.estado === 'rechazado' ? 'border-error-linea text-error' : 'border-linea text-tenue'
+                        } rounded-lg`}>
                           {c.estado === 'pendiente' ? 'Por verificar' : c.estado === 'verificado' ? 'Verificado' : 'Rechazado'}
                         </span>
                       </div>

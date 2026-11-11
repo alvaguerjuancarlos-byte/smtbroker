@@ -52,13 +52,13 @@ interface Activo {
   superficie_construccion_m2: number | null
 }
 
-function MetricRow({ label, value, valueClass = 'text-paper' }: {
+function MetricRow({ label, value, valueClass = 'text-tinta' }: {
   label: string; value: string; valueClass?: string
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/10 last:border-0">
-      <p className="text-[13px] text-paper-dim">{label}</p>
-      <p className={`text-[13px] font-medium ${valueClass}`}>{value}</p>
+    <div className="flex items-center justify-between py-3 border-b border-linea last:border-0">
+      <p className="text-[16px] text-tinta-2">{label}</p>
+      <p className={`text-[16px] font-medium ${valueClass}`}>{value}</p>
     </div>
   )
 }
@@ -67,7 +67,7 @@ function ScoreGauge({ score }: { score: number }) {
   const r = 54
   const circ = Math.PI * r
   const dash = (score / 100) * circ
-  const color = score >= 70 ? '#ddc06a' : score >= 50 ? '#D97706' : '#e05a5a'
+  const color = score >= 70 ? 'var(--c-acento)' : score >= 50 ? '#D97706' : '#e05a5a'
   const label = score >= 70 ? 'Valoración Sólida' : score >= 50 ? 'Revisar Precio' : 'Riesgo Elevado'
   return (
     <div className="flex flex-col items-center">
@@ -78,11 +78,11 @@ function ScoreGauge({ score }: { score: number }) {
             strokeDasharray={`${dash} ${circ}`} style={{ transition: 'stroke-dasharray 1s ease' }}/>
         </svg>
         <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-1">
-          <span className="font-display text-[30px] font-medium leading-none" style={{ color }}>{score}</span>
-          <span className="text-[11px] text-slate">/ 100</span>
+          <span className="font-display text-[36px] font-medium leading-none" style={{ color }}>{score}</span>
+          <span className="text-[14px] text-tenue">/ 100</span>
         </div>
       </div>
-      <span className="font-plex-mono text-[11px] font-medium mt-2" style={{ color }}>{label}</span>
+      <span className="font-sans text-[14px] font-medium mt-2" style={{ color }}>{label}</span>
     </div>
   )
 }
@@ -217,8 +217,8 @@ export default function ActivoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando activo…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando activo…</p>
       </div>
     )
   }
@@ -241,9 +241,9 @@ export default function ActivoPage() {
             ? { badge: 'Diagnóstico rápido listo', cta: 'Diagnóstico rápido listo · Para certificar te falta: ' + faltan.join(', '), ctaDesc: 'Puedes avanzar a marketing ya; la certificación legal suma confianza para el comprador.', tono: 'warn' }
             : { badge: 'Diagnóstico rápido listo', cta: 'Diagnóstico rápido listo · Expediente completo', ctaDesc: 'Ya puedes solicitar la certificación legal o avanzar a marketing.', tono: 'ok' }
   const tonoBadgeCls = {
-    ok: 'border-gold-500/40 text-gold-400 bg-gold-500/10',
-    warn: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
-    bad: 'border-red-900/60 text-[#f3a3a3] bg-red-950/20',
+    ok: 'border-gold-500/40 text-acento bg-gold-500/10',
+    warn: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10',
+    bad: 'border-error-linea text-error bg-error-suave',
   }[estadoDiag.tono]
 
   // Hasta que el Agente de Mercado responda, se usa el precio de lista como mejor estimación
@@ -262,12 +262,12 @@ export default function ActivoPage() {
   const fmtOrDash = (n: number | null) => n != null ? formatMXN(n) : '—'
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
@@ -280,7 +280,7 @@ export default function ActivoPage() {
           {/* Breadcrumb */}
           <div>
             <button onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
+              className="flex items-center gap-1.5 text-[16px] text-tenue hover:text-tinta mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
@@ -288,20 +288,20 @@ export default function ActivoPage() {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">{activo.nombre}</h1>
-                <p className="text-[14px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
+                <h1 className="font-display text-[28px] md:text-[32px] font-medium text-tinta">{activo.nombre}</h1>
+                <p className="text-[17px] text-tenue mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
                 {(fechaDiagnostico || actualizando) && (
-                  <p className="font-plex-mono text-[11px] text-slate mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="font-sans text-[14px] text-tenue mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                     {actualizando ? 'Actualizando diagnóstico…' : `Diagnóstico del ${formatFechaHora(fechaDiagnostico as string)}`}
                     {!actualizando && !agentesCorriendo && (
-                      <button onClick={actualizarDiagnostico} className="text-gold-400 hover:text-gold-100 underline underline-offset-2 transition-colors">
+                      <button onClick={actualizarDiagnostico} className="text-acento hover:text-acento-2 underline underline-offset-2 transition-colors">
                         Actualizar diagnóstico
                       </button>
                     )}
                   </p>
                 )}
               </div>
-              <span className={`font-plex-mono text-[10.5px] font-medium px-3 py-1.5 border self-start shrink-0 ${tonoBadgeCls}`}>
+              <span className={`font-sans text-[13px] font-medium px-3 py-1.5 border self-start shrink-0 ${tonoBadgeCls} rounded-lg`}>
                 {estadoDiag.badge}
               </span>
             </div>
@@ -321,65 +321,65 @@ export default function ActivoPage() {
                   f.active
                     ? 'bg-gold-500 border-gold-500 text-navy-950'
                     : f.href
-                      ? 'bg-navy-800 border-white/10 text-paper hover:border-gold-500/50'
-                      : 'bg-navy-800 border-white/10 text-slate-dim cursor-not-allowed'
-                }`}>
-                <span className={`font-plex-mono text-[10px] font-medium px-1.5 py-0.5 shrink-0 ${f.active ? 'bg-navy-950/20 text-navy-950' : 'bg-white/5 text-slate'}`}>
+                      ? 'bg-tarjeta border-linea text-tinta hover:border-gold-500/50'
+                      : 'bg-tarjeta border-linea text-tenue-2 cursor-not-allowed'
+                } rounded-xl`}>
+                <span className={`font-sans text-[13px] font-medium px-1.5 py-0.5 shrink-0 ${f.active ? 'bg-fondo/20 text-navy-950' : 'bg-sutil text-tenue'}`}>
                   {f.fase}
                 </span>
-                <span className="text-[12px] md:text-[13px] font-medium truncate">{f.label}</span>
+                <span className="text-[15px] md:text-[16px] font-medium truncate">{f.label}</span>
               </button>
             ))}
           </div>
 
           {/* Hero banner */}
-          <div className="bg-navy-900 border border-gold-500/20 p-5 md:p-7">
+          <div className="bg-superficie border border-gold-500/20 p-5 md:p-7 rounded-xl">
             <div className="mb-4 md:mb-5">
-              <span className="inline-flex items-center gap-1.5 font-plex-mono text-[10px] font-medium tracking-[0.1em] uppercase bg-gold-500 text-navy-950 px-3 py-1 mb-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-navy-950 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 font-sans text-[13px] font-medium bg-gold-500 text-navy-950 px-3 py-1 mb-3 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-fondo animate-pulse" />
                 {agentesCorriendo ? 'Analizando' : 'Análisis Completado'}
               </span>
-              <h2 className="font-display text-[18px] md:text-[22px] font-medium text-paper leading-tight">{activo.nombre}</h2>
-              <p className="text-[13px] text-slate mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
+              <h2 className="font-display text-[20px] md:text-[24px] font-medium text-tinta leading-tight">{activo.nombre}</h2>
+              <p className="text-[16px] text-tenue mt-1">{activo.tipo} · {activo.municipio}, {activo.estado}</p>
             </div>
-            <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-5 border-t border-white/10">
+            <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-5 border-t border-linea">
               <div>
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Precio salida</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{fmtOrDash(precioSalida)}</p>
-                <p className="text-[10px] text-slate">{mercadoListo ? 'recomendado' : 'cargando…'}</p>
+                <p className="font-sans text-[13px] text-tenue mb-1">Precio salida</p>
+                <p className="font-sans text-[18px] md:text-[21px] font-medium text-exito leading-tight">{fmtOrDash(precioSalida)}</p>
+                <p className="text-[13px] text-tenue">{mercadoListo ? 'recomendado' : 'cargando…'}</p>
               </div>
               <div>
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Precio / m²</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-paper leading-tight">{fmtOrDash(precioM2)}</p>
-                <p className="text-[10px] text-slate">zona</p>
+                <p className="font-sans text-[13px] text-tenue mb-1">Precio / m²</p>
+                <p className="font-sans text-[18px] md:text-[21px] font-medium text-tinta leading-tight">{fmtOrDash(precioM2)}</p>
+                <p className="text-[13px] text-tenue">zona</p>
               </div>
               <div>
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-1">Score</p>
-                <p className="font-plex-mono text-[15px] md:text-[19px] font-medium text-[#6bdb9a] leading-tight">{scoreConf ?? '—'}</p>
-                <p className="text-[10px] text-slate">/ 100</p>
+                <p className="font-sans text-[13px] text-tenue mb-1">Score</p>
+                <p className="font-sans text-[18px] md:text-[21px] font-medium text-exito leading-tight">{scoreConf ?? '—'}</p>
+                <p className="text-[13px] text-tenue">/ 100</p>
               </div>
             </div>
           </div>
 
           {/* Estrategia recomendada */}
           <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 p-6">
-            <p className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.1em] uppercase mb-1">Estrategia recomendada</p>
-            <h3 className="font-display text-[18px] font-medium text-paper mb-2">
+            <p className="font-sans text-[14px] font-medium text-acento mb-1">Estrategia recomendada</p>
+            <h3 className="font-display text-[20px] font-medium text-tinta mb-2">
               Venta directa a inversionista · Precio de salida {fmtOrDash(precioSalida)}
             </h3>
             {mercadoError ? (
-              <p className="text-[14px] text-paper-dim leading-relaxed">No se pudo generar la estrategia de mercado ({mercadoError}).</p>
+              <p className="text-[17px] text-tinta-2 leading-relaxed">No se pudo generar la estrategia de mercado ({mercadoError}).</p>
             ) : !mercadoListo ? (
-              <p className="text-[14px] text-paper-dim leading-relaxed">Buscando comparables reales y calculando rango de mercado…</p>
+              <p className="text-[17px] text-tinta-2 leading-relaxed">Buscando comparables reales y calculando rango de mercado…</p>
             ) : (
-              <p className="text-[14px] text-paper-dim leading-relaxed">{mercado!.interpretacion}</p>
+              <p className="text-[17px] text-tinta-2 leading-relaxed">{mercado!.interpretacion}</p>
             )}
           </div>
 
           {/* Mapa de ubicación */}
           {activo.lat && activo.lng && (
             <div>
-              <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Ubicación del Activo</h2>
+              <h2 className="font-sans text-[14px] font-medium text-tenue mb-4">Ubicación del Activo</h2>
               <MapView lat={activo.lat} lng={activo.lng} label={activo.nombre} />
             </div>
           )}
@@ -388,9 +388,9 @@ export default function ActivoPage() {
               app/api/diagnostico-rapido y app/api/certificaciones. */}
           <div id="expediente" className="scroll-mt-6">
             <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
-              <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase">Uso de suelo y expediente legal</h2>
+              <h2 className="font-sans text-[14px] font-medium text-tenue">Uso de suelo y expediente legal</h2>
               {cert === 'certificada' && (
-                <button onClick={() => router.push(`/activo/${id}/reporte`)} className="font-plex-mono text-[11px] text-gold-400 hover:text-gold-100 underline underline-offset-2">
+                <button onClick={() => router.push(`/activo/${id}/reporte`)} className="font-sans text-[14px] text-acento hover:text-acento-2 underline underline-offset-2">
                   Ver reporte de transparencia
                 </button>
               )}
@@ -409,7 +409,7 @@ export default function ActivoPage() {
               suelo vía GIS/búsqueda real, título/RPP basado en documentación declarada). */}
           {cert === 'certificada' && (
           <div>
-            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Dictamen legal · Certificación</h2>
+            <h2 className="font-sans text-[14px] font-medium text-tenue mb-4">Dictamen legal · Certificación</h2>
             <DiagnosticoLegal
               legal={legal}
               error={legalError}
@@ -432,40 +432,40 @@ export default function ActivoPage() {
           {/* Análisis de Mercado — Agente de Mercado real (comparables de reventa vía búsqueda
               real, plusvalía SHF y absorción SNIIV reales). Ver app/api/agentes/mercado. */}
           <div>
-            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Análisis de Mercado · Agente de Comparables</h2>
+            <h2 className="font-sans text-[14px] font-medium text-tenue mb-4">Análisis de Mercado · Agente de Comparables</h2>
             {mercadoError ? (
-              <div className="bg-navy-800 border border-red-900/40 p-5 text-[13px] text-paper-dim">
+              <div className="bg-tarjeta border border-error-linea p-5 text-[16px] text-tinta-2 rounded-xl">
                 No se pudo generar el análisis de mercado ({mercadoError}).
               </div>
             ) : !mercado ? (
-              <div className="bg-navy-800 border border-white/10 p-5 flex items-center gap-3">
+              <div className="bg-tarjeta border border-linea p-5 flex items-center gap-3 rounded-xl">
                 <span className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
-                <p className="text-[13px] text-slate font-plex-mono">Buscando comparables reales y calculando rango de mercado…</p>
+                <p className="text-[16px] text-tenue font-sans">Buscando comparables reales y calculando rango de mercado…</p>
               </div>
             ) : (
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
               <div className="flex items-center gap-3 mb-4 md:mb-5">
-                <span className={`inline-flex items-center gap-1.5 font-plex-mono text-[11px] font-medium px-3 py-1.5 border ${mercado.demandaLabel ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/10 text-slate'}`}>
-                  <span className={`w-2 h-2 rounded-full ${mercado.demandaLabel ? 'bg-gold-500' : 'bg-slate'}`} />
+                <span className={`inline-flex items-center gap-1.5 font-sans text-[14px] font-medium px-3 py-1.5 border ${mercado.demandaLabel ? 'border-gold-500/40 text-acento bg-gold-500/10' : 'border-linea text-tenue'} rounded-lg`}>
+                  <span className={`w-2 h-2 rounded-full ${mercado.demandaLabel ? 'bg-gold-500' : 'bg-tenue'}`} />
                   {mercado.demandaLabel ? `Demanda ${mercado.demandaLabel}` : 'Demanda sin determinar'}
                 </span>
-                <span className="text-[12px] text-paper-dim">{activo.municipio}, {activo.estado}</span>
+                <span className="text-[15px] text-tinta-2">{activo.municipio}, {activo.estado}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 mb-4 md:mb-5">
                 <div>
                   <MetricRow label="Comparables reales encontrados" value={`${mercado.comparablesAnalizados} propiedades`} />
                   <MetricRow label="Precio promedio zona" value={mercado.precioPromedioM2Zona ? formatMXN(mercado.precioPromedioM2Zona) + '/m²' : 'Sin dato'} />
-                  <MetricRow label="Plusvalía 3 años (SHF)" value={mercado.plusvalia3AniosTexto} valueClass="text-gold-400 font-medium" />
+                  <MetricRow label="Plusvalía 3 años (SHF)" value={mercado.plusvalia3AniosTexto} valueClass="text-acento font-medium" />
                 </div>
                 <div>
                   <MetricRow label="Absorción (SNIIV)" value={mercado.absorcionTexto} />
                   <MetricRow label="Rango de precio detectado" value={precioMin && precioMax ? `${formatMXN(precioMin)} – ${formatMXN(precioMax)}` : 'Sin suficientes comparables'} />
-                  <MetricRow label="Demanda estimada" value={mercado.demandaLabel || 'Sin base para estimar'} valueClass={mercado.demandaLabel ? 'text-gold-400 font-medium' : ''} />
+                  <MetricRow label="Demanda estimada" value={mercado.demandaLabel || 'Sin base para estimar'} valueClass={mercado.demandaLabel ? 'text-acento font-medium' : ''} />
                 </div>
               </div>
-              <div className="border border-white/10 bg-white/[0.02] px-4 py-3">
-                <p className="font-plex-mono text-[10.5px] font-medium text-gold-400 uppercase tracking-wide mb-1">Precio de salida recomendado</p>
-                <p className="text-[13px] font-medium text-paper">
+              <div className="border border-linea bg-sutil px-4 py-3 rounded-lg">
+                <p className="font-sans text-[13px] font-medium text-acento mb-1">Precio de salida recomendado</p>
+                <p className="text-[16px] font-medium text-tinta">
                   {fmtOrDash(precioSalida)}{mercado.percentilPosicionamiento != null ? ` · posicionamiento en percentil ${mercado.percentilPosicionamiento} del mercado local` : ''}
                 </p>
               </div>
@@ -475,16 +475,16 @@ export default function ActivoPage() {
 
           {/* Score de confianza */}
           <div>
-            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-4">Score de Confianza en la Valoración</h2>
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
+            <h2 className="font-sans text-[14px] font-medium text-tenue mb-4">Score de Confianza en la Valoración</h2>
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
               <div className="flex flex-col md:flex-row md:items-start md:gap-8">
                 <div className="flex justify-center md:justify-start mb-4 md:mb-0">
                   <ScoreGauge score={scoreConf ?? 0} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[13px] md:text-[14px] text-paper-dim leading-relaxed mb-4">
+                  <p className="text-[16px] md:text-[17px] text-tinta-2 leading-relaxed mb-4">
                     {mercado
-                      ? <>El Score de Confianza mide la precisión de la valoración en función de la disponibilidad de comparables reales, calidad de la documentación y condiciones del mercado local. Un puntaje de <strong className="text-paper">{scoreConf}/100</strong> {scoreConf! >= 70 ? <>indica una <strong className="text-gold-400">valoración confiable</strong></> : scoreConf! >= 50 ? 'indica una valoración razonable, con margen de error mayor al ideal' : <>indica una <strong className="text-[#e8b568]">valoración poco confiable</strong> — faltan comparables o datos reales de respaldo</>}.</>
+                      ? <>El Score de Confianza mide la precisión de la valoración en función de la disponibilidad de comparables reales, calidad de la documentación y condiciones del mercado local. Un puntaje de <strong className="text-tinta">{scoreConf}/100</strong> {scoreConf! >= 70 ? <>indica una <strong className="text-acento">valoración confiable</strong></> : scoreConf! >= 50 ? 'indica una valoración razonable, con margen de error mayor al ideal' : <>indica una <strong className="text-aviso">valoración poco confiable</strong> — faltan comparables o datos reales de respaldo</>}.</>
                       : 'Calculando score de confianza…'}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -493,14 +493,14 @@ export default function ActivoPage() {
                       { label: 'Documentación legal',    score: mercado?.scoreComponentes.documentacionLegal ?? 0 },
                       { label: 'Condición del activo',   score: mercado?.scoreComponentes.condicionActivo ?? 0 },
                     ].map(d => {
-                      const color = d.score >= 70 ? '#ddc06a' : d.score >= 40 ? '#D97706' : '#e05a5a'
+                      const color = d.score >= 70 ? 'var(--c-acento)' : d.score >= 40 ? '#D97706' : '#e05a5a'
                       return (
-                      <div key={d.label} className="bg-navy-950/60 border border-white/5 p-3">
-                        <p className="text-[10px] text-slate mb-2">{d.label}</p>
-                        <div className="h-1 bg-white/10 overflow-hidden mb-1">
+                      <div key={d.label} className="bg-fondo/60 border border-linea p-3">
+                        <p className="text-[13px] text-tenue mb-2">{d.label}</p>
+                        <div className="h-1 bg-sutil overflow-hidden mb-1">
                           <div className="h-full" style={{ width: `${d.score}%`, backgroundColor: color }} />
                         </div>
-                        <p className="font-plex-mono text-[12px] font-medium" style={{ color }}>{d.score}/100</p>
+                        <p className="font-sans text-[15px] font-medium" style={{ color }}>{d.score}/100</p>
                       </div>
                       )
                     })}
@@ -511,14 +511,14 @@ export default function ActivoPage() {
           </div>
 
           {/* CTA */}
-          <div className={`p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-2 ${estadoDiag.tono === 'bad' ? 'bg-red-950/20 border-[#e05a5a]' : 'bg-gold-500/[0.06] border-gold-500'}`}>
+          <div className={`p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-2 ${estadoDiag.tono === 'bad' ? 'bg-error-suave border-[#e05a5a]' : 'bg-gold-500/[0.06] border-gold-500'}`}>
             <div>
-              <p className={`text-[15px] font-medium mb-1 ${estadoDiag.tono === 'bad' ? 'text-[#f3a3a3]' : 'text-gold-400'}`}>{estadoDiag.cta}</p>
-              <p className="text-[13px] text-paper-dim">{estadoDiag.ctaDesc}</p>
+              <p className={`text-[18px] font-medium mb-1 ${estadoDiag.tono === 'bad' ? 'text-error' : 'text-acento'}`}>{estadoDiag.cta}</p>
+              <p className="text-[16px] text-tinta-2">{estadoDiag.ctaDesc}</p>
             </div>
             <button
               onClick={() => router.push(`/activo/${id}/marketing`)}
-              className="flex items-center justify-center gap-2 bg-gold-500 text-navy-950 px-6 py-3.5 font-plex-mono text-[13px] tracking-[0.02em] hover:bg-gold-400 transition-colors shrink-0"
+              className="flex items-center justify-center gap-2 bg-gold-500 text-navy-950 px-6 py-3.5 font-sans text-[16px] hover:bg-gold-400 transition-colors shrink-0 rounded-lg"
             >
               Ir a Marketing
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

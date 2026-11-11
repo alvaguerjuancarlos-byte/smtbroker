@@ -1,6 +1,7 @@
 'use client'
 
 // Panel de quien vende (ver app/inicio/page.tsx). Trabaja sobre su propiedad más reciente.
+import { EncabezadoPantalla } from '../components/Banda'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -14,9 +15,9 @@ type Precio = { salida: number | null; frase: string | null } | 'calculando' | '
 type Ficha = { titular: string; puntos: string[]; whatsapp: string | null } | 'preparando' | 'error' | null
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-const tarjeta = 'bg-navy-800 border p-4 md:p-5 flex flex-col gap-2'
-const etiqueta = 'font-plex-mono text-[11px] tracking-[0.08em] uppercase'
-const boton = 'font-plex-mono text-[13px] font-medium px-4 py-3 text-center transition-colors'
+const tarjeta = 'bg-tarjeta border p-4 md:p-5 flex flex-col gap-2 rounded-xl'
+const etiqueta = 'font-sans text-[14px]'
+const boton = 'font-sans text-[16px] font-medium px-4 py-3 text-center transition-colors'
 
 export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string; nombre: string; conBroker: boolean }) {
   const [activos, setActivos] = useState<Activo[]>([])
@@ -90,19 +91,19 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
   if (activo === undefined) return null
   if (activo === null) {
     return (
-      <div className={`${tarjeta} border-white/10`}>
-        <p className="text-[15px]">Aún no registras una propiedad.</p>
-        <Link href="/activo/nuevo" className="text-gold-400 underline underline-offset-2 text-[13px]">Registrar mi propiedad</Link>
+      <div className={`${tarjeta} border-linea`}>
+        <p className="text-[18px]">Aún no registras una propiedad.</p>
+        <Link href="/activo/nuevo" className="text-acento underline underline-offset-2 text-[16px]">Registrar mi propiedad</Link>
       </div>
     )
   }
 
   const lugar = activo.colonia || activo.municipio
   const tarjetaBroker = !activo.broker_id && (
-    <div className={`${tarjeta} ${conBroker ? 'border-gold-500' : 'border-white/10'}`}>
-      <span className={`${etiqueta} ${conBroker ? 'text-gold-400' : 'text-slate'}`}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres llegar a toda la red?'}</span>
-      <p className="text-[14px]">Un broker verificado presenta tu propiedad a los compradores de todos los brokers y te acompaña hasta el cierre.</p>
-      <a href={`/activo/${activo.id}#elegir-broker`} className={conBroker ? `${boton} bg-gold-500 text-navy-950 hover:bg-gold-400` : 'font-plex-mono text-[12px] text-gold-400'}>
+    <div className={`${tarjeta} ${conBroker ? 'border-gold-500' : 'border-linea'}`}>
+      <span className={`${etiqueta} ${conBroker ? 'text-acento' : 'text-tenue'}`}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres llegar a toda la red?'}</span>
+      <p className="text-[17px]">Un broker verificado presenta tu propiedad a los compradores de todos los brokers y te acompaña hasta el cierre.</p>
+      <a href={`/activo/${activo.id}#elegir-broker`} className={conBroker ? `${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg` : 'font-sans text-[15px] text-acento'}>
         {conBroker ? 'Ver brokers de mi zona' : 'Ver brokers de mi zona →'}
       </a>
     </div>
@@ -110,100 +111,99 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
 
   return (
     <>
-      <div className="flex flex-col gap-1.5 mb-1">
-        <h1 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Listo{nombre ? `, ${nombre}` : ''}.</h1>
-        <p className="text-[14.5px] text-paper-dim">Smart Bróker ya está analizando tu propiedad: <span className="text-paper">{activo.nombre}</span>{lugar && !activo.nombre.includes(lugar) ? `, ${lugar}` : ''}. Esto es lo que preparamos para ti:</p>
+      <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
+        subtitulo={<>Smart Bróker ya está analizando tu propiedad: <span className="text-tinta">{activo.nombre}</span>{lugar && !activo.nombre.includes(lugar) ? `, ${lugar}` : ''}. Esto es lo que preparamos para ti:</>}>
         {activos.length > 1 && (
-          <label className="flex items-center gap-2 text-[12.5px] text-slate mt-1">
+          <label className="flex items-center gap-2 text-[15px] text-tenue mt-1">
             Ver otra propiedad:
             <select value={activo.id} onChange={(e) => setActivo(activos.find((x) => x.id === e.target.value) ?? activo)}
-              className="bg-navy-800 border border-white/15 text-paper text-[13px] px-2 py-1.5">
+              className="bg-tarjeta border border-linea text-tinta text-[16px] px-2 py-1.5 rounded-xl">
               {activos.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
             </select>
           </label>
         )}
-      </div>
+      </EncabezadoPantalla>
 
       {conBroker && tarjetaBroker}
 
       <div className={`${tarjeta} border-gold-500`}>
         <div className="flex items-center justify-between gap-2">
-          <span className={`${etiqueta} text-gold-400`}>Tu precio realista de mercado</span>
-          {typeof precio === 'object' && precio.salida && <span className="font-plex-mono text-[10px] text-navy-950 bg-gold-500 px-1.5 py-0.5">LISTO</span>}
+          <span className={`${etiqueta} text-acento`}>Tu precio realista de mercado</span>
+          {typeof precio === 'object' && precio.salida && <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-1.5 py-0.5 rounded-lg">LISTO</span>}
         </div>
         {precio === 'calculando' ? (
           <div className="flex items-center gap-3 py-1">
             <span className="w-2.5 h-2.5 rounded-full bg-gold-500 animate-pulse shrink-0" />
-            <p className="text-[14px] text-paper-dim">Analizando el mercado de tu zona… Te avisamos por correo cuando esté listo.</p>
+            <p className="text-[17px] text-tinta-2">Analizando el mercado de tu zona… Te avisamos por correo cuando esté listo.</p>
           </div>
         ) : precio === 'error' || !precio.salida ? (
-          <p className="text-[14px] text-paper-dim">Tu análisis de mercado queda en tu propiedad. <a href={`/activo/${activo.id}`} className="text-gold-400 underline underline-offset-2">Verlo</a></p>
+          <p className="text-[17px] text-tinta-2">Tu análisis de mercado queda en tu propiedad. <a href={`/activo/${activo.id}`} className="text-acento underline underline-offset-2">Verlo</a></p>
         ) : (
           <>
-            <span className="font-display text-[28px] font-medium">{mxn(precio.salida)}</span>
-            {precio.frase && <p className="text-[13px] text-paper-dim">{precio.frase}</p>}
-            <a href={`/activo/${activo.id}`} className="font-plex-mono text-[12px] text-gold-400">Ver análisis completo →</a>
+            <span className="font-display text-[32px] font-medium">{mxn(precio.salida)}</span>
+            {precio.frase && <p className="text-[16px] text-tinta-2">{precio.frase}</p>}
+            <a href={`/activo/${activo.id}`} className="font-sans text-[15px] text-acento">Ver análisis completo →</a>
           </>
         )}
       </div>
 
-      <div className={`${tarjeta} border-white/10`}>
-        <span className={`${etiqueta} text-gold-400`}>Certifica tu propiedad</span>
+      <div className={`${tarjeta} border-linea`}>
+        <span className={`${etiqueta} text-acento`}>Certifica tu propiedad</span>
         {cert === 'certificada' ? (
-          <p className="text-[14px]">Tu propiedad está certificada. <a href={`/activo/${activo.id}/reporte`} className="text-gold-400 underline underline-offset-2">Ver reporte</a></p>
+          <p className="text-[17px]">Tu propiedad está certificada. <a href={`/activo/${activo.id}/reporte`} className="text-acento underline underline-offset-2">Ver reporte</a></p>
         ) : cert === 'solicitada' || cert === 'pagada' ? (
-          <p className="text-[14px]">Tu certificación está en revisión. Te avisamos al terminar.</p>
+          <p className="text-[17px]">Tu certificación está en revisión. Te avisamos al terminar.</p>
         ) : (
           <>
-            <p className="text-[14px]">Las propiedades certificadas generan más confianza y se venden más rápido. <span className="text-paper-dim">La plataforma se encarga de la certificación por ti.</span></p>
-            <p className="text-[12.5px] text-slate">Te pediremos escritura, folio real y predial.</p>
-            <a href={`/activo/${activo.id}#expediente`} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400`}>Certificar mi propiedad</a>
+            <p className="text-[17px]">Las propiedades certificadas generan más confianza y se venden más rápido. <span className="text-tinta-2">La plataforma se encarga de la certificación por ti.</span></p>
+            <p className="text-[15px] text-tenue">Te pediremos escritura, folio real y predial.</p>
+            <a href={`/activo/${activo.id}#expediente`} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Certificar mi propiedad</a>
           </>
         )}
       </div>
 
-      <div className={`${tarjeta} border-white/10`}>
+      <div className={`${tarjeta} border-linea`}>
         {activo.publicada_at ? (
           <>
-            <span className={`${etiqueta} text-gold-400`}>Tu página está publicada</span>
-            <p className="text-[14px]">La ven los compradores que coinciden y todos los brokers de Smart Bróker. Compártela también por tus canales.</p>
+            <span className={`${etiqueta} text-acento`}>Tu página está publicada</span>
+            <p className="text-[17px]">La ven los compradores que coinciden y todos los brokers de Smart Bróker. Compártela también por tus canales.</p>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/p/${activo.id}`); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }}
-                className="font-plex-mono text-[12px] px-3 py-2.5 bg-gold-500 text-navy-950 hover:bg-gold-400">{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
+                className="font-sans text-[15px] px-3 py-2.5 bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg">{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
               <a href={`https://wa.me/?text=${encodeURIComponent(`${typeof ficha === 'object' && ficha?.whatsapp ? ficha.whatsapp + ' ' : ''}${typeof window !== 'undefined' ? window.location.origin : ''}/p/${activo.id}`)}`}
-                target="_blank" rel="noopener noreferrer" className="font-plex-mono text-[12px] px-3 py-2.5 border border-[#3fbe72]/50 text-[#6bdb9a] hover:border-[#3fbe72]">Compartir por WhatsApp</a>
-              <a href={`/activo/${activo.id}/leads`} className="font-plex-mono text-[12px] px-3 py-2.5 border border-white/15 hover:border-white/30">Ver interesados</a>
+                target="_blank" rel="noopener noreferrer" className="font-sans text-[15px] px-3 py-2.5 border border-[#3fbe72]/50 text-exito hover:border-[#3fbe72] rounded-lg">Compartir por WhatsApp</a>
+              <a href={`/activo/${activo.id}/leads`} className="font-sans text-[15px] px-3 py-2.5 border border-linea hover:border-linea-fuerte rounded-lg">Ver interesados</a>
             </div>
           </>
         ) : ficha === 'preparando' || (ficha === null && precio === 'calculando') ? (
           <>
-            <span className={`${etiqueta} text-slate`}>Tu página de venta</span>
+            <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
             <div className="flex items-center gap-3 py-1">
               <span className="w-2.5 h-2.5 rounded-full bg-gold-500 animate-pulse shrink-0" />
-              <p className="text-[14px] text-paper-dim">{ficha === 'preparando' ? 'Escribiendo tu ficha de venta y armando tu página…' : 'Tu ficha y tu página se preparan en cuanto esté tu precio.'}</p>
+              <p className="text-[17px] text-tinta-2">{ficha === 'preparando' ? 'Escribiendo tu ficha de venta y armando tu página…' : 'Tu ficha y tu página se preparan en cuanto esté tu precio.'}</p>
             </div>
           </>
         ) : typeof ficha === 'object' && ficha ? (
           <>
             <div className="flex items-center justify-between gap-2">
-              <span className={`${etiqueta} text-gold-400`}>Tu página de venta está lista</span>
-              <span className="font-plex-mono text-[10px] text-navy-950 bg-gold-500 px-1.5 py-0.5">LISTA</span>
+              <span className={`${etiqueta} text-acento`}>Tu página de venta está lista</span>
+              <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-1.5 py-0.5 rounded-lg">LISTA</span>
             </div>
-            <div className="border border-white/10 bg-navy-950/50 p-3 flex flex-col gap-1.5">
-              <p className="font-display text-[16px] font-medium">{ficha.titular}</p>
-              {ficha.puntos.map((p) => <p key={p} className="text-[12.5px] text-paper-dim">✓ {p}</p>)}
+            <div className="border border-linea bg-fondo/50 p-3 flex flex-col gap-1.5">
+              <p className="font-display text-[18px] font-medium">{ficha.titular}</p>
+              {ficha.puntos.map((p) => <p key={p} className="text-[15px] text-tinta-2">✓ {p}</p>)}
             </div>
-            <p className="text-[13px] text-paper-dim">Al publicarla, la ven los compradores que coinciden y todos los brokers de Smart Bróker.</p>
+            <p className="text-[16px] text-tinta-2">Al publicarla, la ven los compradores que coinciden y todos los brokers de Smart Bróker.</p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={publicar} disabled={publicando} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60`}>{publicando ? 'Publicando…' : 'Publicar'}</button>
-              <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-white/15 hover:border-white/30`}>Revisar y editar</a>
+              <button onClick={publicar} disabled={publicando} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60 rounded-lg`}>{publicando ? 'Publicando…' : 'Publicar'}</button>
+              <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Revisar y editar</a>
             </div>
           </>
         ) : (
           <>
-            <span className={`${etiqueta} text-slate`}>Tu página de venta</span>
-            <p className="text-[14px]">Escribimos tu ficha de venta y armamos tu página para que la publiques.</p>
-            <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-white/15 hover:border-white/30`}>Preparar mi página</a>
+            <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
+            <p className="text-[17px]">Escribimos tu ficha de venta y armamos tu página para que la publiques.</p>
+            <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Preparar mi página</a>
           </>
         )}
       </div>

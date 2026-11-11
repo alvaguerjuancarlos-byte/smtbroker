@@ -7,6 +7,7 @@
 // La cuenta se pide AL FINAL, cuando el cliente ya vio sus primeros resultados (§19.5, regla 1).
 // Con sesión (un comprador que crea otra búsqueda, /buscar) se salta la cuenta y se guarda directo.
 import { useState } from 'react'
+import { BandaPaso, Avance } from '../components/Banda'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
@@ -23,13 +24,14 @@ interface Resultados {
   portales: { url: string; titulo: string; fuente: string }[]
 }
 
-const verde = '#7fd1b9'
+const verde = 'var(--c-verde)'
 const cls = inputCls(false, 'oscuro')
-const boton = 'font-plex-mono text-[13px] font-medium px-4 py-3.5 text-center transition-colors disabled:opacity-60'
+const boton = 'font-sans text-[16px] font-medium px-4 py-3.5 text-center transition-colors disabled:opacity-60'
 const soloDigitos = (v: string) => v.replace(/\D/g, '')
 const conComas = (v: string) => (v ? Number(v).toLocaleString('es-MX') : '')
 
-export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPasos }: {
+export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPasos, barra }: {
+  barra?: React.ReactNode
   conSesion: boolean
   onAtras: () => void
   /** Pasos previos del recorrido (el "¿qué quieres hacer?"), para numerar la barra. */
@@ -102,41 +104,30 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     router.push('/inicio')
   }
 
-  const chip = (on: boolean) => `px-3 py-2.5 text-[13px] border transition-colors ${on ? 'text-paper' : 'border-white/15 text-paper-dim hover:border-white/30'}`
-  const estiloOn = (on: boolean) => (on ? { borderColor: verde, background: 'rgba(127,209,185,0.12)' } : undefined)
+  const chip = (on: boolean) => `px-3 py-2.5 text-[16px] border transition-colors ${on ? 'text-tinta' : 'border-linea text-tinta-2 hover:border-linea-fuerte'} rounded-lg`
+  const estiloOn = (on: boolean) => (on ? { borderColor: verde, background: 'var(--c-verde-suave)' } : undefined)
+  // Cada paso abre con la banda azul (nuevo look, estilo C): barra, regresar, avance y título.
   const titulo = (t: string, sub?: string) => (
-    <div className="flex flex-col gap-2">
-      <h1 className="font-display text-[28px] font-medium leading-tight">{t}</h1>
-      {sub && <p className="text-[14px] text-paper-dim">{sub}</p>}
-    </div>
+    <BandaPaso barra={barra} titulo={t} subtitulo={sub}
+      atras={<button onClick={atras} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>}
+      avance={<Avance total={totalPasos} hechos={pasoBase + i + 1} color="var(--c-acento)" />}
+      etiqueta={`Paso ${pasoBase + i + 1} de ${totalPasos} · Buscar`} />
   )
   const continuar = (onClick: () => void, texto = 'Continuar →', deshabilitado = false) => (
-    <button type="button" onClick={onClick} disabled={deshabilitado || cargando} className={`${boton} text-navy-950`} style={{ background: verde }}>{texto}</button>
+    <button type="button" onClick={onClick} disabled={deshabilitado || cargando} className={`${boton} text-white`} style={{ background: verde }}>{texto}</button>
   )
   const enPlataforma = resultados?.plataforma.length ?? 0
   const total = enPlataforma + (resultados?.portales.length ?? 0)
 
   return (
     <>
-      <div className="flex items-center justify-between -mt-2">
-        <button onClick={atras} className="font-plex-mono text-[12px] text-gold-400 py-3">← Atrás</button>
-      </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex gap-1.5">
-          {Array.from({ length: totalPasos }, (_, k) => (
-            <div key={k} className="flex-1 h-1" style={{ background: k < pasoBase + i + 1 ? verde : '#24314a' }} />
-          ))}
-        </div>
-        <span className="font-plex-mono text-[11px] text-slate tracking-[0.08em]">PASO {pasoBase + i + 1} DE {totalPasos} · BUSCAR</span>
-      </div>
-
       {paso === 'tipo' && (
         <>
           {titulo('¿Qué tipo de propiedad buscas?')}
           <div className="grid grid-cols-2 gap-2.5">
             {TIPOS_NECESIDAD.map((t) => (
               <button key={t.id} onClick={() => { if (t.id !== tipo) setCar({}); setTipo(t.id); ir('caract') }}
-                className={`${chip(tipo === t.id)} py-4 text-[15px] text-left px-4 bg-navy-800`} style={estiloOn(tipo === t.id)}>{t.etiqueta}</button>
+                className={`${chip(tipo === t.id)} py-4 text-[18px] text-left px-4 bg-tarjeta rounded-xl`} style={estiloOn(tipo === t.id)}>{t.etiqueta}</button>
             ))}
           </div>
         </>
@@ -156,7 +147,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
             </div>
             {CARACTERISTICAS[tipo].filter((c) => c.tipo !== 'numero').map((c) => (
               <div key={c.clave} className="flex flex-col gap-2">
-                <span className="font-plex-mono text-[10.5px] font-medium text-slate uppercase tracking-[0.1em]">{c.etiqueta}</span>
+                <span className="font-sans text-[13px] font-medium text-tenue">{c.etiqueta}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {c.opciones!.map((o) => {
                     const v = car[c.clave]
@@ -198,18 +189,18 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
               <div className="flex gap-2">
                 <input value={ubic.colonia} onChange={(e) => setUbic((x) => ({ ...x, colonia: e.target.value }))} placeholder="Del Valle" className={cls}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarColonia() } }} />
-                <button type="button" onClick={agregarColonia} className="px-4 border border-white/15 text-[13px] text-paper-dim hover:border-white/30">Agregar</button>
+                <button type="button" onClick={agregarColonia} className="px-4 border border-linea text-[16px] text-tinta-2 hover:border-linea-fuerte">Agregar</button>
               </div>
             </Field>
             <div className="flex flex-wrap gap-1.5">
               {colonias.length === 0
-                ? <span className="text-[13px] text-slate">Sin colonias: buscamos en todo el municipio.</span>
+                ? <span className="text-[16px] text-tenue">Sin colonias: buscamos en todo el municipio.</span>
                 : colonias.map((c) => (
                   <button key={c} type="button" onClick={() => setColonias((x) => x.filter((y) => y !== c))} className={chip(true)} style={estiloOn(true)}>{c} ✕</button>
                 ))}
             </div>
           </div>
-          {error && <p className="text-[13px] text-[#f3a3a3]">{error}</p>}
+          {error && <p className="text-[16px] text-error">{error}</p>}
           {continuar(() => (ubic.municipio.trim().length < 3 ? setError('Escribe la ciudad o el municipio') : ir('presupuesto')))}
         </>
       )}
@@ -228,14 +219,14 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
             </div>
             {([['¿Cómo pagarías?', FORMAS_PAGO, formaPago, setFormaPago], ['¿Para cuándo?', PLAZOS, plazo, setPlazo], ['¿Para qué la quieres?', PROPOSITOS, proposito, setProposito]] as const).map(([l, ops, v, set]) => (
               <div key={l} className="flex flex-col gap-2">
-                <span className="font-plex-mono text-[10.5px] font-medium text-slate uppercase tracking-[0.1em]">{l}</span>
+                <span className="font-sans text-[13px] font-medium text-tenue">{l}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {ops.map((o) => <button key={o.id} type="button" className={chip(v === o.id)} style={estiloOn(v === o.id)} onClick={() => set(v === o.id ? null : o.id)}>{o.etiqueta}</button>)}
                 </div>
               </div>
             ))}
           </div>
-          {error && <p className="text-[13px] text-[#f3a3a3]">{error}</p>}
+          {error && <p className="text-[16px] text-error">{error}</p>}
           {continuar(buscar, cargando ? 'Buscando…' : 'Buscar →')}
         </>
       )}
@@ -248,33 +239,33 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
               : total > 0 ? 'Todavía no hay propiedades publicadas en la plataforma que cumplan. Te dejamos los listados de portales y, con tu necesidad en el panel, los brokers de la zona te traen opciones.'
                 : 'Todavía no hay coincidencias publicadas. Con tu necesidad en el panel, los brokers de la zona te traen opciones.')}
           {total > 0 && (
-            <div className="bg-navy-800 border border-white/10 p-4 flex flex-col gap-2.5">
+            <div className="bg-tarjeta border border-linea p-4 flex flex-col gap-2.5 rounded-xl">
               {resultados.plataforma.slice(0, 3).map((o) => (
                 <div key={o.activoId} className="flex flex-col">
-                  <span className="text-[14px]">{o.nombre}</span>
-                  <span className="text-[12px] text-slate">{o.precio_total ? millones(o.precio_total) : 'Sin precio'} · {o.certificada ? 'Certificada por SMTBROKER' : 'Particular'}</span>
+                  <span className="text-[17px]">{o.nombre}</span>
+                  <span className="text-[15px] text-tenue">{o.precio_total ? millones(o.precio_total) : 'Sin precio'} · {o.certificada ? 'Certificada por SMTBROKER' : 'Particular'}</span>
                 </div>
               ))}
               {resultados.portales.slice(0, 3).map((o) => (
                 <div key={o.url} className="flex flex-col">
-                  <span className="text-[14px] line-clamp-1">{o.titulo}</span>
-                  <span className="text-[12px] text-slate">De portal ({o.fuente}) · no certificada</span>
+                  <span className="text-[17px] line-clamp-1">{o.titulo}</span>
+                  <span className="text-[15px] text-tenue">De portal ({o.fuente}) · no certificada</span>
                 </div>
               ))}
             </div>
           )}
 
           <div className="flex flex-col gap-2.5">
-            <span className="font-plex-mono text-[10.5px] font-medium text-slate uppercase tracking-[0.1em]">¿Cómo quieres buscar?</span>
+            <span className="font-sans text-[13px] font-medium text-tenue">¿Cómo quieres buscar?</span>
             {([
               [directa, setDirecta, 'Búsqueda directa', 'Seguimos buscando en la plataforma y en portales, y te avisamos de lo nuevo.'],
               [brokers, setBrokers, 'Publicar a brokers verificados', 'Tu necesidad aparece, sin tu nombre, en el panel de los brokers de la zona. Te proponen propiedades de su cartera, incluso las que no están en portales.'],
             ] as const).map(([on, set, t, d]) => (
-              <button key={t} type="button" onClick={() => set(!on)} className="text-left bg-navy-800 border p-4 flex gap-3" style={{ borderColor: on ? verde : 'rgba(255,255,255,0.15)' }}>
-                <span className="w-5 h-5 shrink-0 border flex items-center justify-center text-[12px] text-navy-950 mt-0.5" style={{ borderColor: verde, background: on ? verde : 'transparent' }}>{on ? '✓' : ''}</span>
+              <button key={t} type="button" onClick={() => set(!on)} className="text-left bg-tarjeta border p-4 flex gap-3 rounded-xl" style={{ borderColor: on ? verde : 'var(--c-linea)' }}>
+                <span className="w-5 h-5 shrink-0 border flex items-center justify-center text-[15px] text-navy-950 mt-0.5" style={{ borderColor: verde, background: on ? verde : 'transparent' }}>{on ? '✓' : ''}</span>
                 <span className="flex flex-col gap-1">
-                  <span className="text-[15px] font-medium">{t}</span>
-                  <span className="text-[13px] text-paper-dim">{d}</span>
+                  <span className="text-[18px] font-medium">{t}</span>
+                  <span className="text-[16px] text-tinta-2">{d}</span>
                 </span>
               </button>
             ))}
@@ -282,17 +273,17 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
           {!conSesion && (
             <div className="flex flex-col gap-3.5">
-              <p className="text-[14px] text-paper-dim">Para guardar tu búsqueda y recibir las propuestas, crea tu cuenta:</p>
+              <p className="text-[17px] text-tinta-2">Para guardar tu búsqueda y recibir las propuestas, crea tu cuenta:</p>
               <Field label="Nombre" required tema="oscuro"><input value={cuenta.nombre} onChange={(e) => setCuenta((x) => ({ ...x, nombre: e.target.value }))} required autoComplete="name" className={cls} /></Field>
               <Field label="WhatsApp" required tema="oscuro"><input value={cuenta.telefono} onChange={(e) => setCuenta((x) => ({ ...x, telefono: e.target.value }))} required inputMode="tel" autoComplete="tel" placeholder="81 1234 5678" className={cls} /></Field>
               <Field label="Correo" required tema="oscuro"><input type="email" value={cuenta.email} onChange={(e) => setCuenta((x) => ({ ...x, email: e.target.value }))} required autoComplete="email" className={cls} /></Field>
               <Field label="Crea una contraseña" required tema="oscuro"><input type="password" value={cuenta.password} onChange={(e) => setCuenta((x) => ({ ...x, password: e.target.value }))} required minLength={8} autoComplete="new-password" placeholder="Mínimo 8 caracteres" className={cls} /></Field>
               <input value={trampa} onChange={(e) => setTrampa(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" name="sitio_web" />
-              <p className="text-[12px] text-slate">Los brokers no ven tu nombre ni tu WhatsApp hasta que tú pidas ver una propiedad. Usamos tu WhatsApp solo para avisarte de opciones nuevas. <a href="/aviso-privacidad" target="_blank" className="text-gold-400 underline underline-offset-2">Aviso de privacidad</a></p>
+              <p className="text-[15px] text-tenue">Los brokers no ven tu nombre ni tu WhatsApp hasta que tú pidas ver una propiedad. Usamos tu WhatsApp solo para avisarte de opciones nuevas. <a href="/aviso-privacidad" target="_blank" className="text-acento underline underline-offset-2">Aviso de privacidad</a></p>
             </div>
           )}
-          {error && <p className="text-[13px] text-[#f3a3a3]">{error}{yaExiste && <> · <a href="/login" className="text-gold-400 underline underline-offset-2">Iniciar sesión</a></>}</p>}
-          <button disabled={cargando || (!directa && !brokers)} className={`${boton} text-navy-950`} style={{ background: verde }}>
+          {error && <p className="text-[16px] text-error">{error}{yaExiste && <> · <a href="/login" className="text-acento underline underline-offset-2">Iniciar sesión</a></>}</p>}
+          <button disabled={cargando || (!directa && !brokers)} className={`${boton} text-white`} style={{ background: verde }}>
             {cargando ? 'Guardando…' : conSesion ? 'Guardar mi búsqueda' : 'Crear mi cuenta y buscar'}
           </button>
         </form>

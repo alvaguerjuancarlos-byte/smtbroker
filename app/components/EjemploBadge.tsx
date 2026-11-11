@@ -6,7 +6,7 @@
 // "Carlos Mendoza, c.mendoza@email.com, score 92" como un comprador real.
 export function EjemploBadge() {
   return (
-    <span className="font-plex-mono text-[9px] font-medium px-1.5 py-0.5 border border-dashed border-white/25 text-slate uppercase tracking-wide shrink-0">
+    <span className="font-sans text-[12px] font-medium px-1.5 py-0.5 border border-dashed border-linea-fuerte text-tenue shrink-0 rounded-lg">
       Datos de ejemplo
     </span>
   )

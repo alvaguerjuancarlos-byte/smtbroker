@@ -13,7 +13,7 @@ interface Fila {
   activo: { nombre: string; municipio: string; precio_total: number | null } | null; otraParte?: string
 }
 
-export default function ListaConexiones({ titulo, vacio, acento = '#7fd1b9', ocultarVacia = false }: {
+export default function ListaConexiones({ titulo, vacio, acento = 'var(--c-verde)', ocultarVacia = false }: {
   titulo: string; vacio: string; acento?: string; ocultarVacia?: boolean
 }) {
   const [filas, setFilas] = useState<Fila[] | null>(null)
@@ -30,13 +30,13 @@ export default function ListaConexiones({ titulo, vacio, acento = '#7fd1b9', ocu
 
   if (!filas || (ocultarVacia && filas.length === 0)) return null
   return (
-    <div className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col gap-2.5">
-      <span className="font-plex-mono text-[11px] tracking-[0.08em] uppercase text-slate">{titulo} · {filas.length}</span>
-      {filas.length === 0 ? <p className="text-[13.5px] text-paper-dim">{vacio}</p> : filas.map((f) => (
-        <a key={f.id} href={`/conexion/${f.id}`} className="border-t border-white/10 pt-2.5 flex flex-col gap-0.5 hover:opacity-90">
-          <span className="text-[14px]">{f.activo?.nombre ?? 'Propiedad'}{f.otraParte ? <span className="text-slate"> · {f.otraParte}</span> : null}</span>
-          <span className="text-[12px] text-slate">{[f.activo?.precio_total ? millones(f.activo.precio_total) : null, f.activo?.municipio, f.textoFase].filter(Boolean).join(' · ')}</span>
-          {f.pendiente && <span className="font-plex-mono text-[11.5px]" style={{ color: acento }}>→ {f.pendiente}</span>}
+    <div className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col gap-2.5 rounded-xl">
+      <span className="font-sans text-[14px] text-tenue">{titulo} · {filas.length}</span>
+      {filas.length === 0 ? <p className="text-[16px] text-tinta-2">{vacio}</p> : filas.map((f) => (
+        <a key={f.id} href={`/conexion/${f.id}`} className="border-t border-linea pt-2.5 flex flex-col gap-0.5 hover:opacity-90">
+          <span className="text-[17px]">{f.activo?.nombre ?? 'Propiedad'}{f.otraParte ? <span className="text-tenue"> · {f.otraParte}</span> : null}</span>
+          <span className="text-[15px] text-tenue">{[f.activo?.precio_total ? millones(f.activo.precio_total) : null, f.activo?.municipio, f.textoFase].filter(Boolean).join(' · ')}</span>
+          {f.pendiente && <span className="font-sans text-[14px]" style={{ color: acento }}>→ {f.pendiente}</span>}
         </a>
       ))}
     </div>

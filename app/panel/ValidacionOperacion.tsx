@@ -128,72 +128,72 @@ export default function ValidacionOperacion() {
     .sort((x, y) => (ORDEN_NIVEL[y.nivel?.id ?? 'aliado'] - ORDEN_NIVEL[x.nivel?.id ?? 'aliado']) || y.m.score - x.m.score)
   const cierresPendientes = cierres.filter(c => c.estado === 'pendiente')
 
-  const boton = 'font-plex-mono text-[11px] px-3 py-1.5 border transition-colors'
+  const boton = 'font-sans text-[14px] px-3 py-1.5 border transition-colors rounded-lg'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-navy-800 border border-white/10">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-display text-[17px] font-medium text-paper">Matches por validar</h2>
-          <span className="font-plex-mono text-[11px] text-slate">{pendientes.length}</span>
+      <div className="bg-tarjeta border border-linea rounded-xl">
+        <div className="px-5 py-4 border-b border-linea flex items-center justify-between">
+          <h2 className="font-display text-[19px] font-medium text-tinta">Matches por validar</h2>
+          <span className="font-sans text-[14px] text-tenue">{pendientes.length}</span>
         </div>
         {pendientes.length === 0 ? (
-          <p className="px-5 py-6 text-[13px] text-slate">Sin solicitudes de conexión pendientes.</p>
+          <p className="px-5 py-6 text-[16px] text-tenue">Sin solicitudes de conexión pendientes.</p>
         ) : pendientes.map(({ m, nivel }) => {
           const a = activo(m.activo_id)
           const bComprador = brokerComprador(m.perfil_id)
           const porSuCuenta = [!a?.broker_id && 'el vendedor', !bComprador && 'el comprador'].filter(Boolean).join(' y ')
           return (
-            <div key={m.id} className="px-5 py-4 border-b border-white/10 last:border-b-0 flex flex-col gap-2">
+            <div key={m.id} className="px-5 py-4 border-b border-linea last:border-b-0 flex flex-col gap-2">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-[13.5px] text-paper">
+                <p className="text-[16px] text-tinta">
                   <b>{a?.nombre ?? 'Propiedad'}</b> ({a?.municipio}) ↔ {describirPerfil(m.perfil_id)}
                 </p>
-                <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
+                <span className="font-display text-[20px] text-acento shrink-0">{m.score}</span>
               </div>
-              <p className="text-[11.5px] text-slate">
+              <p className="text-[14px] text-tenue">
                 Broker del vendedor: {a?.broker_id ? nombre(a.broker_id) : 'por su cuenta'}{nivel ? ` · Nivel ${nivel.nombre}` : ''}{esPionero(a?.broker_id) ? ' · ★ Pionero' : ''}
                 {' '}· Broker del comprador: {bComprador ? nombre(bComprador) : 'por su cuenta'} · Solicitó: {nombre(m.solicitado_por)}
               </p>
-              <p className="text-[11.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
+              <p className="text-[14px] text-tinta-2">{(m.razones || []).join(' · ')}</p>
               {m.estado === 'solicitado' && porSuCuenta && (
-                <p className="text-[11.5px] text-paper-dim">Va por su cuenta {porSuCuenta}: al poner en contacto recibe directo el contacto del otro lado y la sugerencia de elegir broker.</p>
+                <p className="text-[14px] text-tinta-2">Va por su cuenta {porSuCuenta}: al poner en contacto recibe directo el contacto del otro lado y la sugerencia de elegir broker.</p>
               )}
-              {errorMatch?.id === m.id && <p className="text-[11.5px] text-[#f3a3a3]">{errorMatch.texto}</p>}
+              {errorMatch?.id === m.id && <p className="text-[14px] text-error">{errorMatch.texto}</p>}
               <div className="flex flex-wrap gap-2">
                 {m.estado === 'solicitado' && (
                   <button onClick={() => actualizarMatch(m.id, 'en_contacto')}
-                    className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40`}>Poner en contacto</button>
+                    className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 rounded-lg`}>Poner en contacto</button>
                 )}
                 {m.estado === 'en_contacto' && (
                   <>
-                    <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1.5">En contacto</span>
-                    <button onClick={() => actualizarMatch(m.id, 'cerrado')} className={`${boton} border-gold-500/40 text-gold-400 hover:border-gold-500`}>Marcar cerrado</button>
+                    <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2.5 py-1.5 rounded-lg">En contacto</span>
+                    <button onClick={() => actualizarMatch(m.id, 'cerrado')} className={`${boton} border-gold-500/40 text-acento hover:border-gold-500`}>Marcar cerrado</button>
                   </>
                 )}
-                <button onClick={() => actualizarMatch(m.id, 'descartado')} className={`${boton} border-white/15 text-slate hover:text-paper`}>Descartar</button>
+                <button onClick={() => actualizarMatch(m.id, 'descartado')} className={`${boton} border-linea text-tenue hover:text-tinta`}>Descartar</button>
               </div>
             </div>
           )
         })}
       </div>
 
-      <div className="bg-navy-800 border border-white/10">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-display text-[17px] font-medium text-paper">Cierres por verificar</h2>
-          <span className="font-plex-mono text-[11px] text-slate">{cierresPendientes.length}</span>
+      <div className="bg-tarjeta border border-linea rounded-xl">
+        <div className="px-5 py-4 border-b border-linea flex items-center justify-between">
+          <h2 className="font-display text-[19px] font-medium text-tinta">Cierres por verificar</h2>
+          <span className="font-sans text-[14px] text-tenue">{cierresPendientes.length}</span>
         </div>
         {cierresPendientes.length === 0 ? (
-          <p className="px-5 py-6 text-[13px] text-slate">Sin cierres pendientes de verificar.</p>
+          <p className="px-5 py-6 text-[16px] text-tenue">Sin cierres pendientes de verificar.</p>
         ) : cierresPendientes.map(c => (
-          <div key={c.id} className="px-5 py-4 border-b border-white/10 last:border-b-0 flex flex-col gap-2">
-            <p className="text-[13.5px] text-paper"><b>{activo(c.activo_id)?.nombre ?? 'Propiedad'}</b> · {mxn(c.precio_cierre)}</p>
-            <p className="text-[11.5px] text-slate">
+          <div key={c.id} className="px-5 py-4 border-b border-linea last:border-b-0 flex flex-col gap-2">
+            <p className="text-[16px] text-tinta"><b>{activo(c.activo_id)?.nombre ?? 'Propiedad'}</b> · {mxn(c.precio_cierre)}</p>
+            <p className="text-[14px] text-tenue">
               Reportó {nombre(c.broker_id)} · {new Date(c.fecha_cierre + 'T12:00:00').toLocaleDateString('es-MX')} · {ORIGEN[c.origen_comprador] ?? c.origen_comprador}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => actualizarCierre(c.id, 'verificado')} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>Verificar</button>
-              <button onClick={() => actualizarCierre(c.id, 'rechazado')} className={`${boton} border-red-900/60 text-[#f3a3a3] hover:bg-red-950/30`}>Rechazar</button>
+              <button onClick={() => actualizarCierre(c.id, 'verificado')} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Verificar</button>
+              <button onClick={() => actualizarCierre(c.id, 'rechazado')} className={`${boton} border-error-linea text-error hover:bg-error-suave`}>Rechazar</button>
             </div>
           </div>
         ))}

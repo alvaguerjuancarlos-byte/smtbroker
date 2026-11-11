@@ -52,12 +52,12 @@ const ESTADO_LABEL: Record<Estado, string> = {
 
 // Chips en tema oscuro: borde + texto en el tono semántico sobre fondo casi transparente.
 const ESTADO_CHIP: Record<Estado, string> = {
-  nuevo: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10',
-  en_revision: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
-  contactado: 'border-white/15 text-slate bg-white/5',
-  interesado: 'border-gold-500/40 text-gold-400 bg-gold-500/10',
-  descartado: 'border-white/15 text-slate bg-white/5',
-  convertido: 'border-white/25 text-paper bg-white/10',
+  nuevo: 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10',
+  en_revision: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10',
+  contactado: 'border-linea text-tenue bg-sutil',
+  interesado: 'border-gold-500/40 text-acento bg-gold-500/10',
+  descartado: 'border-linea text-tenue bg-sutil',
+  convertido: 'border-linea-fuerte text-tinta bg-sutil',
 }
 
 // Transiciones válidas por estado — ver plan: "descartado" se permite desde cualquier estado
@@ -287,8 +287,8 @@ export default function ProspectosBrokerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando…</p>
       </div>
     )
   }
@@ -304,12 +304,12 @@ export default function ProspectosBrokerPage() {
     : prospectos.filter(p => ESTADOS_EN_COLA.includes(p.estado) || (p.score_filtrado ?? 0) >= UMBRAL_COLA)
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
@@ -321,46 +321,46 @@ export default function ProspectosBrokerPage() {
 
           <div>
             <button onClick={() => router.push('/panel')}
-              className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
+              className="flex items-center gap-1.5 text-[16px] text-tenue hover:text-tinta mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               Panel del ecosistema
             </button>
-            <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
-            <h1 className="font-display text-[24px] md:text-[30px] font-medium text-paper mt-1">Prospección de Brokers</h1>
-            <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Cola de revisión manual — ingesta automatizada desde AMPI ya activa</p>
+            <span className="font-sans text-[14px] font-medium text-acento">Operación MindBridge</span>
+            <h1 className="font-display text-[28px] md:text-[36px] font-medium text-tinta mt-1">Prospección de Brokers</h1>
+            <p className="text-[16px] md:text-[17px] text-tenue mt-1.5">Cola de revisión manual — ingesta automatizada desde AMPI ya activa</p>
           </div>
 
           <div className="bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
-            <p className="text-[12.5px] text-paper-dim">
-              <b className="text-gold-400">Sobre "Invitar a esta cuenta":</b> los prospectos de este módulo vienen de una fuente
+            <p className="text-[15px] text-tinta-2">
+              <b className="text-acento">Sobre "Invitar a esta cuenta":</b> los prospectos de este módulo vienen de una fuente
               distinta al titular (directorio público, alta manual desde LinkedIn, etc.), así que antes de invitar se te pedirá
               confirmar que se le puso a disposición el Aviso de Privacidad Simplificado — ver el{' '}
-              <a href="/aviso-privacidad" target="_blank" className="text-gold-400 underline">Aviso de Privacidad Integral</a>.
+              <a href="/aviso-privacidad" target="_blank" className="text-acento underline">Aviso de Privacidad Integral</a>.
             </p>
           </div>
 
           {/* Ingesta AMPI */}
-          <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+          <div className="bg-tarjeta border border-linea p-4 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between rounded-xl">
             <div>
-              <p className="text-[13px] font-medium text-paper">Directorio de socios AMPI Monterrey</p>
-              <p className="text-[12px] text-slate mt-0.5">Trae los socios públicos del directorio y los agrega a la cola como nuevos (se salta los que ya se importaron antes). No contacta a nadie.</p>
+              <p className="text-[16px] font-medium text-tinta">Directorio de socios AMPI Monterrey</p>
+              <p className="text-[15px] text-tenue mt-0.5">Trae los socios públicos del directorio y los agrega a la cola como nuevos (se salta los que ya se importaron antes). No contacta a nadie.</p>
             </div>
             <button onClick={importarAmpi} disabled={importando}
-              className="shrink-0 px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 whitespace-nowrap">
+              className="shrink-0 px-5 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 whitespace-nowrap rounded-lg">
               {importando ? 'Importando…' : 'Importar desde AMPI'}
             </button>
           </div>
           {resultadoImport && (
-            <div className={`px-4 py-3 text-[12.5px] border ${resultadoImport.tipo === 'ok' ? 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' : 'border-red-900/60 text-[#f3a3a3] bg-red-950/20'}`}>
+            <div className={`px-4 py-3 text-[15px] border ${resultadoImport.tipo === 'ok' ? 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10' : 'border-error-linea text-error bg-error-suave'} rounded-lg`}>
               {resultadoImport.mensaje}
             </div>
           )}
 
           {/* Alta manual */}
-          <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
-            <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em] mb-4">Alta manual de candidato</p>
+          <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
+            <p className="font-sans text-[14px] text-tenue mb-4">Alta manual de candidato</p>
             <form onSubmit={handleAlta} className="flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Nombre" required>
@@ -369,7 +369,7 @@ export default function ProspectosBrokerPage() {
                 </Field>
                 <Field label="Fuente" required>
                   <select value={alta.fuente} onChange={e => setAlta(a => ({ ...a, fuente: e.target.value as Fuente }))} className={inputCls(false, 'oscuro')}>
-                    {(Object.keys(FUENTE_LABEL) as Fuente[]).map(f => <option key={f} value={f} className="bg-navy-900">{FUENTE_LABEL[f]}</option>)}
+                    {(Object.keys(FUENTE_LABEL) as Fuente[]).map(f => <option key={f} value={f} className="bg-superficie">{FUENTE_LABEL[f]}</option>)}
                   </select>
                 </Field>
               </div>
@@ -397,9 +397,9 @@ export default function ProspectosBrokerPage() {
                     placeholder="+52 81 0000 0000" className={inputCls(false, 'oscuro')} />
                 </Field>
               </div>
-              {errorAlta && <p className="text-[12px] text-[#f3a3a3]">{errorAlta}</p>}
+              {errorAlta && <p className="text-[15px] text-error">{errorAlta}</p>}
               <button type="submit" disabled={guardando}
-                className="self-start px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60">
+                className="self-start px-5 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg">
                 {guardando ? 'Guardando…' : 'Agregar a la cola'}
               </button>
             </form>
@@ -408,12 +408,12 @@ export default function ProspectosBrokerPage() {
           {/* Cola de revisión */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-[17px] font-medium text-paper">Cola de revisión</h2>
+              <h2 className="font-display text-[19px] font-medium text-tinta">Cola de revisión</h2>
               <div className="flex items-center gap-1.5">
                 {(['cola', 'todos'] as const).map(f => (
                   <button key={f} onClick={() => setFiltro(f)}
                     title={f === 'cola' ? 'Nuevo, en revisión o contactado -- o cualquiera con score alto' : undefined}
-                    className={`font-plex-mono text-[10.5px] px-3 py-1.5 transition-colors ${filtro === f ? 'bg-gold-500 text-navy-950' : 'border border-white/15 text-slate hover:text-paper hover:border-white/30'}`}>
+                    className={`font-sans text-[13px] px-3 py-1.5 transition-colors ${filtro === f ? 'bg-gold-500 text-navy-950' : 'border border-linea text-tenue hover:text-tinta hover:border-linea-fuerte'} rounded-lg`}>
                     {f === 'cola' ? `En proceso + score ≥ ${UMBRAL_COLA}` : 'Todos'}
                   </button>
                 ))}
@@ -421,60 +421,60 @@ export default function ProspectosBrokerPage() {
             </div>
 
             {visibles.length === 0 ? (
-              <div className="bg-navy-800 border border-white/10 p-8 text-center">
-                <p className="text-[13px] text-slate">Sin prospectos que mostrar con este filtro.</p>
+              <div className="bg-tarjeta border border-linea p-8 text-center rounded-xl">
+                <p className="text-[16px] text-tenue">Sin prospectos que mostrar con este filtro.</p>
               </div>
             ) : (
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 <div className="overflow-x-auto">
                   <div className="min-w-[940px]">
-                    <div className="grid grid-cols-8 gap-2 px-4 md:px-6 py-3 border-b border-white/10 bg-white/[0.02]">
+                    <div className="grid grid-cols-8 gap-2 px-4 md:px-6 py-3 border-b border-linea bg-sutil">
                       {['Nombre', 'Contacto', 'Fuente', 'Zona', 'Score', 'Estado', 'Notas', 'Acción'].map(h => (
-                        <p key={h} className="font-plex-mono text-[10px] text-slate uppercase tracking-wide">{h}</p>
+                        <p key={h} className="font-sans text-[13px] text-tenue">{h}</p>
                       ))}
                     </div>
                     {visibles.map((p, i) => (
-                      <div key={p.id} className={`grid grid-cols-8 gap-2 items-center px-4 md:px-6 py-3 ${i !== visibles.length - 1 ? 'border-b border-white/10' : ''}`}>
-                        <p className="text-[13px] font-medium text-paper truncate">{p.nombre}</p>
-                        <p className="text-[12px] text-paper-dim truncate">{p.email || p.telefono || '—'}</p>
-                        <p className="text-[12px] text-paper-dim">{FUENTE_LABEL[p.fuente]}</p>
-                        <p className="text-[12px] text-paper-dim truncate">{p.zona || '—'}</p>
-                        <p className="font-plex-mono text-[13px] font-medium text-paper">{p.score_filtrado ?? '—'}</p>
-                        <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border w-fit ${ESTADO_CHIP[p.estado]}`}>{ESTADO_LABEL[p.estado]}</span>
+                      <div key={p.id} className={`grid grid-cols-8 gap-2 items-center px-4 md:px-6 py-3 ${i !== visibles.length - 1 ? 'border-b border-linea' : ''}`}>
+                        <p className="text-[16px] font-medium text-tinta truncate">{p.nombre}</p>
+                        <p className="text-[15px] text-tinta-2 truncate">{p.email || p.telefono || '—'}</p>
+                        <p className="text-[15px] text-tinta-2">{FUENTE_LABEL[p.fuente]}</p>
+                        <p className="text-[15px] text-tinta-2 truncate">{p.zona || '—'}</p>
+                        <p className="font-sans text-[16px] font-medium text-tinta">{p.score_filtrado ?? '—'}</p>
+                        <span className={`font-sans text-[13px] font-medium px-2 py-1 border w-fit ${ESTADO_CHIP[p.estado]} rounded-lg`}>{ESTADO_LABEL[p.estado]}</span>
                         <input
                           type="text"
                           defaultValue={p.notas || ''}
                           onBlur={e => guardarNotas(p.id, e.target.value)}
                           placeholder="Sin notas…"
-                          className="text-[12px] px-2 py-1.5 border border-white/15 bg-navy-950/60 text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 w-full"
+                          className="text-[15px] px-2 py-1.5 border border-linea bg-fondo/60 text-tinta placeholder-tenue-2 focus:outline-none focus:border-gold-500 w-full rounded-lg"
                         />
                         <div className="flex flex-wrap gap-1">
                           {TRANSICIONES[p.estado].map(next => (
                             <button key={next} onClick={() => cambiarEstado(p, next)}
-                              className="font-plex-mono text-[10px] px-2 py-1 border border-white/15 text-paper-dim hover:border-gold-500 hover:text-gold-400 transition-colors">
+                              className="font-sans text-[13px] px-2 py-1 border border-linea text-tinta-2 hover:border-gold-500 hover:text-acento transition-colors rounded-lg">
                               {ESTADO_LABEL[next]}
                             </button>
                           ))}
                           {p.estado === 'convertido' && (
                             inviteEstado[p.id]?.estado === 'ok' ? (
-                              <span className="text-[10px] text-gold-400">✓ Invitado</span>
+                              <span className="text-[13px] text-acento">✓ Invitado</span>
                             ) : inviteEstado[p.id]?.estado === 'enviando' ? (
-                              <span className="text-[10px] text-slate">Enviando…</span>
+                              <span className="text-[13px] text-tenue">Enviando…</span>
                             ) : p.email ? (
                               <div className="flex flex-col gap-1">
                                 <button onClick={() => setConfirmandoInvite(p)}
-                                  className="font-plex-mono text-[10px] px-2 py-1 border border-gold-500 text-gold-400 hover:bg-gold-500/10 transition-colors">
+                                  className="font-sans text-[13px] px-2 py-1 border border-gold-500 text-acento hover:bg-gold-500/10 transition-colors rounded-lg">
                                   Invitar a esta cuenta
                                 </button>
                                 {inviteEstado[p.id]?.estado === 'error' && (
-                                  <span className="text-[10px] text-[#f3a3a3]">{inviteEstado[p.id].mensaje}</span>
+                                  <span className="text-[13px] text-error">{inviteEstado[p.id].mensaje}</span>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-[10px] text-slate">Sin correo — no se puede invitar</span>
+                              <span className="text-[13px] text-tenue">Sin correo — no se puede invitar</span>
                             )
                           )}
-                          {p.estado !== 'convertido' && TRANSICIONES[p.estado].length === 0 && <span className="text-[11px] text-slate">—</span>}
+                          {p.estado !== 'convertido' && TRANSICIONES[p.estado].length === 0 && <span className="text-[14px] text-tenue">—</span>}
                         </div>
                       </div>
                     ))}
@@ -491,15 +491,15 @@ export default function ProspectosBrokerPage() {
       {confirmandoInvite && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50">
           <div className="relative w-full max-w-[440px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2 before:translate-y-2 before:-z-10">
-            <div className="bg-navy-800 border border-white/10 p-6">
-              <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-1">Antes de invitar</p>
-              <h3 className="font-display text-[18px] font-medium text-paper mb-4">{confirmandoInvite.nombre}</h3>
+            <div className="bg-tarjeta border border-linea p-6 rounded-xl">
+              <p className="font-sans text-[13px] text-tenue mb-1">Antes de invitar</p>
+              <h3 className="font-display text-[20px] font-medium text-tinta mb-4">{confirmandoInvite.nombre}</h3>
 
-              <div className="bg-white/[0.04] border border-white/10 px-3.5 py-3 mb-4">
+              <div className="bg-sutil border border-linea px-3.5 py-3 mb-4 rounded-lg">
                 <AvisoSimplificado contexto="prospeccion" tema="oscuro" />
               </div>
 
-              <p className="text-[12.5px] text-paper-dim mb-4">
+              <p className="text-[15px] text-tinta-2 mb-4">
                 Confirmas que este aviso ya se le puso o se le pondrá a disposición al momento de este primer contacto.
                 El correo de invitación lo genera Supabase con su plantilla de "Invite user" — si esa plantilla todavía
                 no incluye el texto del aviso, agrégalo ahí antes de usar este flujo en producción.
@@ -507,12 +507,12 @@ export default function ProspectosBrokerPage() {
 
               <div className="flex gap-2">
                 <button type="button" onClick={() => setConfirmandoInvite(null)}
-                  className="flex-1 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                  className="flex-1 py-2.5 border border-linea text-tinta-2 font-sans text-[15px] hover:border-linea-fuerte transition-colors">
                   Cancelar
                 </button>
                 <button type="button"
                   onClick={() => { invitarProspecto(confirmandoInvite); setConfirmandoInvite(null) }}
-                  className="flex-1 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors">
+                  className="flex-1 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors rounded-lg">
                   Confirmar y enviar invitación
                 </button>
               </div>
@@ -524,15 +524,15 @@ export default function ProspectosBrokerPage() {
       {convirtiendo && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50">
           <div className="relative w-full max-w-[440px] before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2 before:translate-y-2 before:-z-10">
-            <div className="bg-navy-800 border border-white/10 p-6">
-              <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-1">Marcar como convertido</p>
-              <h3 className="font-display text-[18px] font-medium text-paper mb-4">{convirtiendo.nombre}</h3>
+            <div className="bg-tarjeta border border-linea p-6 rounded-xl">
+              <p className="font-sans text-[13px] text-tenue mb-1">Marcar como convertido</p>
+              <h3 className="font-display text-[20px] font-medium text-tinta mb-4">{convirtiendo.nombre}</h3>
 
-              <p className="text-[12.5px] text-paper-dim mb-2">¿Tiene cédula/licencia vigente? <span className="text-slate">(no bloquea la conversión, solo se registra para dar seguimiento)</span></p>
+              <p className="text-[15px] text-tinta-2 mb-2">¿Tiene cédula/licencia vigente? <span className="text-tenue">(no bloquea la conversión, solo se registra para dar seguimiento)</span></p>
               <div className="flex gap-2 mb-4">
                 {(['si', 'no', 'no_se'] as TieneLicencia[]).map(op => (
                   <button key={op} type="button" onClick={() => setLicenciaForm(f => ({ ...f, tieneLicencia: op }))}
-                    className={`flex-1 font-plex-mono text-[11.5px] py-2 border transition-colors ${licenciaForm.tieneLicencia === op ? 'bg-gold-500 text-navy-950 border-gold-500' : 'border-white/15 text-paper-dim hover:border-gold-500'}`}>
+                    className={`flex-1 font-sans text-[14px] py-2 border transition-colors ${licenciaForm.tieneLicencia === op ? 'bg-gold-500 text-navy-950 border-gold-500' : 'border-linea text-tinta-2 hover:border-gold-500'} rounded-lg`}>
                     {op === 'si' ? 'Sí' : op === 'no' ? 'No' : 'No sé'}
                   </button>
                 ))}
@@ -545,11 +545,11 @@ export default function ProspectosBrokerPage() {
 
               <div className="flex gap-2 mt-5">
                 <button type="button" onClick={() => setConvirtiendo(null)} disabled={guardandoConversion}
-                  className="flex-1 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors disabled:opacity-60">
+                  className="flex-1 py-2.5 border border-linea text-tinta-2 font-sans text-[15px] hover:border-linea-fuerte transition-colors disabled:opacity-60">
                   Cancelar
                 </button>
                 <button type="button" onClick={confirmarConversion} disabled={guardandoConversion}
-                  className="flex-1 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors disabled:opacity-60">
+                  className="flex-1 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg">
                   {guardandoConversion ? 'Guardando…' : 'Confirmar conversión'}
                 </button>
               </div>

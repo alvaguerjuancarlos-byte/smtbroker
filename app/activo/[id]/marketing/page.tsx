@@ -30,14 +30,14 @@ interface Ficha {
 interface Foto { nombre: string; url: string }
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-const boton = 'font-plex-mono text-[12px] px-4 py-2.5 border transition-colors disabled:opacity-50'
+const boton = 'font-sans text-[15px] px-4 py-2.5 border transition-colors disabled:opacity-50 rounded-lg'
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 function Seccion({ titulo, children, derecha }: { titulo: string; children: React.ReactNode; derecha?: React.ReactNode }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-        <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase">{titulo}</h2>
+        <h2 className="font-sans text-[14px] font-medium text-tenue">{titulo}</h2>
         {derecha}
       </div>
       {children}
@@ -142,8 +142,8 @@ export default function MarketingPage() {
 
   if (loading || !activo) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando…</p>
       </div>
     )
   }
@@ -159,9 +159,9 @@ export default function MarketingPage() {
   const maxDia = Math.max(1, ...porDia.map(d => d.n))
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+        backgroundImage: 'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
         backgroundSize: '56px 56px',
       }} />
       <div className="relative flex flex-col flex-1">
@@ -171,16 +171,16 @@ export default function MarketingPage() {
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">
 
           <div>
-            <button onClick={() => router.push(`/activo/${id}`)} className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
+            <button onClick={() => router.push(`/activo/${id}`)} className="flex items-center gap-1.5 text-[16px] text-tenue hover:text-tinta mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               {activo.nombre}
             </button>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">Marketing</h1>
-                <p className="text-[14px] text-slate mt-1">Fase 02 · {activo.tipo} en {activo.municipio}, {activo.estado}</p>
+                <h1 className="font-display text-[28px] md:text-[32px] font-medium text-tinta">Marketing</h1>
+                <p className="text-[17px] text-tenue mt-1">Fase 02 · {activo.tipo} en {activo.municipio}, {activo.estado}</p>
               </div>
-              <span className={`font-plex-mono text-[10.5px] px-3 py-1.5 border self-start shrink-0 ${activo.publicada_at ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate'}`}>
+              <span className={`font-sans text-[13px] px-3 py-1.5 border self-start shrink-0 ${activo.publicada_at ? 'border-gold-500/40 text-acento bg-gold-500/10' : 'border-linea text-tenue'} rounded-lg`}>
                 {activo.publicada_at ? 'Página pública activa' : 'Sin publicar'}
               </span>
             </div>
@@ -194,105 +194,105 @@ export default function MarketingPage() {
               { fase: '03', label: 'Leads',       href: `/activo/${id}/leads`, active: false },
             ].map(f => (
               <button key={f.fase} onClick={() => f.href && router.push(f.href)} disabled={!f.href}
-                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 border text-left transition-all ${f.active ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-navy-800 border-white/10 text-paper hover:border-gold-500/50'}`}>
-                <span className={`font-plex-mono text-[10px] font-medium px-1.5 py-0.5 shrink-0 ${f.active ? 'bg-navy-950/20 text-navy-950' : 'bg-white/5 text-slate'}`}>{f.fase}</span>
-                <span className="text-[12px] md:text-[13px] font-medium truncate">{f.label}</span>
+                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 border text-left transition-all ${f.active ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-tarjeta border-linea text-tinta hover:border-gold-500/50'} rounded-xl`}>
+                <span className={`font-sans text-[13px] font-medium px-1.5 py-0.5 shrink-0 ${f.active ? 'bg-fondo/20 text-navy-950' : 'bg-sutil text-tenue'}`}>{f.fase}</span>
+                <span className="text-[15px] md:text-[16px] font-medium truncate">{f.label}</span>
               </button>
             ))}
           </div>
 
           {/* 1. Ficha de venta */}
           <Seccion titulo="Ficha de venta · Agente de Marketing" derecha={fichaEstado === 'lista' && (
-            <button onClick={generarFicha} className="font-plex-mono text-[11px] text-gold-400 hover:text-gold-100 underline underline-offset-2">Volver a generar</button>
+            <button onClick={generarFicha} className="font-sans text-[14px] text-acento hover:text-acento-2 underline underline-offset-2">Volver a generar</button>
           )}>
             {fichaEstado === 'cargando' ? null : fichaEstado === 'generando' ? (
-              <div className="bg-navy-800 border border-white/10 p-5 flex items-center gap-3">
+              <div className="bg-tarjeta border border-linea p-5 flex items-center gap-3 rounded-xl">
                 <span className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
-                <p className="text-[13px] text-slate font-plex-mono">Escribiendo la ficha a partir del diagnóstico…</p>
+                <p className="text-[16px] text-tenue font-sans">Escribiendo la ficha a partir del diagnóstico…</p>
               </div>
             ) : ficha ? (
-              <div className="bg-navy-800 border border-white/10 p-5 md:p-6 flex flex-col gap-4">
-                <h3 className="font-display text-[21px] font-medium text-paper">{ficha.titular}</h3>
-                {ficha.narrativa.split(/\n+/).map((p, i) => <p key={i} className="text-[14px] text-paper-dim leading-relaxed">{p}</p>)}
+              <div className="bg-tarjeta border border-linea p-5 md:p-6 flex flex-col gap-4 rounded-xl">
+                <h3 className="font-display text-[23px] font-medium text-tinta">{ficha.titular}</h3>
+                {ficha.narrativa.split(/\n+/).map((p, i) => <p key={i} className="text-[17px] text-tinta-2 leading-relaxed">{p}</p>)}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-wide mb-2">Puntos fuertes</p>
-                    <ul className="flex flex-col gap-1.5">{ficha.puntosFuertes.map(p => <li key={p} className="text-[13px] text-paper flex gap-2"><span className="text-gold-400">✓</span>{p}</li>)}</ul>
+                    <p className="font-sans text-[13px] text-acento mb-2">Puntos fuertes</p>
+                    <ul className="flex flex-col gap-1.5">{ficha.puntosFuertes.map(p => <li key={p} className="text-[16px] text-tinta flex gap-2"><span className="text-acento">✓</span>{p}</li>)}</ul>
                   </div>
                   <div>
-                    <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-wide mb-2">Argumentos para el comprador</p>
-                    <ul className="flex flex-col gap-1.5">{ficha.argumentosComprador.map(p => <li key={p} className="text-[13px] text-paper-dim flex gap-2"><span className="text-gold-400">→</span>{p}</li>)}</ul>
+                    <p className="font-sans text-[13px] text-acento mb-2">Argumentos para el comprador</p>
+                    <ul className="flex flex-col gap-1.5">{ficha.argumentosComprador.map(p => <li key={p} className="text-[16px] text-tinta-2 flex gap-2"><span className="text-acento">→</span>{p}</li>)}</ul>
                   </div>
                 </div>
-                {ficha.precioSugeridoMXN && <p className="text-[13px] text-paper-dim">Precio sugerido por el diagnóstico: <b className="text-paper">{mxn(ficha.precioSugeridoMXN)}</b></p>}
+                {ficha.precioSugeridoMXN && <p className="text-[16px] text-tinta-2">Precio sugerido por el diagnóstico: <b className="text-tinta">{mxn(ficha.precioSugeridoMXN)}</b></p>}
                 {!!ficha.notasBroker?.length && (
                   <div className="border border-dashed border-[#D97706]/40 bg-[#D97706]/[0.06] p-4">
-                    <p className="font-plex-mono text-[10.5px] text-[#e8b568] uppercase tracking-wide mb-2">Notas para ti · no se publican</p>
-                    <ul className="flex flex-col gap-1.5">{ficha.notasBroker.map(n => <li key={n} className="text-[13px] text-paper-dim flex gap-2"><span className="text-[#e8b568]">!</span>{n}</li>)}</ul>
+                    <p className="font-sans text-[13px] text-aviso mb-2">Notas para ti · no se publican</p>
+                    <ul className="flex flex-col gap-1.5">{ficha.notasBroker.map(n => <li key={n} className="text-[16px] text-tinta-2 flex gap-2"><span className="text-aviso">!</span>{n}</li>)}</ul>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-navy-900 border border-gold-500/20 p-5 md:p-6">
-                <p className="text-[14px] text-paper-dim">La ficha de venta se escribe con inteligencia artificial a partir del diagnóstico de la propiedad: titular, narrativa, puntos fuertes y argumentos para el comprador, sin inventar datos.</p>
-                <button onClick={generarFicha} className={`${boton} mt-3 bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>Generar ficha de venta</button>
+              <div className="bg-superficie border border-gold-500/20 p-5 md:p-6 rounded-xl">
+                <p className="text-[17px] text-tinta-2">La ficha de venta se escribe con inteligencia artificial a partir del diagnóstico de la propiedad: titular, narrativa, puntos fuertes y argumentos para el comprador, sin inventar datos.</p>
+                <button onClick={generarFicha} className={`${boton} mt-3 bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Generar ficha de venta</button>
               </div>
             )}
-            {fichaError && <p className="text-[12.5px] text-[#f3a3a3] mt-2">{fichaError}</p>}
+            {fichaError && <p className="text-[15px] text-error mt-2">{fichaError}</p>}
           </Seccion>
 
           {/* 2. Fotos */}
           <Seccion titulo={`Fotos · ${fotos.length} de ${MAX_FOTOS}`}>
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-5">
+            <div className="bg-tarjeta border border-linea p-4 md:p-5 rounded-xl">
               {fotos.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                   {fotos.map(f => (
                     <div key={f.nombre} className="relative group">
                       {/* eslint-disable-next-line @next/next/no-img-element -- fotos de Supabase Storage */}
-                      <img src={f.url} alt="" className="w-full h-[110px] object-cover border border-white/10" />
+                      <img src={f.url} alt="" className="w-full h-[110px] object-cover border border-linea" />
                       <button onClick={() => borrarFoto(f.nombre)}
-                        className="absolute top-1 right-1 bg-navy-950/80 text-[11px] text-paper px-2 py-0.5 opacity-80 hover:opacity-100">Quitar</button>
+                        className="absolute top-1 right-1 bg-fondo/80 text-[14px] text-tinta px-2 py-0.5 opacity-80 hover:opacity-100">Quitar</button>
                     </div>
                   ))}
                 </div>
               )}
               {fotos.length < MAX_FOTOS && (
-                <label className={`${boton} inline-block cursor-pointer border-gold-500/40 text-gold-400 hover:border-gold-500`}>
+                <label className={`${boton} inline-block cursor-pointer border-gold-500/40 text-acento hover:border-gold-500`}>
                   {subiendo ? 'Subiendo…' : 'Agregar fotos'}
                   <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" disabled={subiendo}
                     onChange={e => { subirFotos(e.target.files); e.target.value = '' }} />
                 </label>
               )}
-              <p className="text-[11.5px] text-slate mt-2">JPG, PNG o WebP, hasta 5 MB cada una. La primera es la portada de la página pública.</p>
-              {fotoError && <p className="text-[12px] text-[#f3a3a3] mt-1">{fotoError}</p>}
+              <p className="text-[14px] text-tenue mt-2">JPG, PNG o WebP, hasta 5 MB cada una. La primera es la portada de la página pública.</p>
+              {fotoError && <p className="text-[15px] text-error mt-1">{fotoError}</p>}
             </div>
           </Seccion>
 
           {/* 3. Página pública */}
           <Seccion titulo="Página pública con «Me interesa»">
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col gap-3">
+            <div className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col gap-3 rounded-xl">
               {activo.publicada_at ? (
                 <>
-                  <p className="text-[13px] text-paper-dim">Comparte este enlace en tus canales (WhatsApp, EasyBroker, redes). Quien presione «Me interesa» llega a tu pestaña de Leads, ya calificado.</p>
-                  <div className="flex items-center gap-2 bg-navy-950/60 border border-white/10 px-3 py-2">
-                    <span className="font-plex-mono text-[12px] text-paper truncate flex-1">{enlace}</span>
+                  <p className="text-[16px] text-tinta-2">Comparte este enlace en tus canales (WhatsApp, EasyBroker, redes). Quien presione «Me interesa» llega a tu pestaña de Leads, ya calificado.</p>
+                  <div className="flex items-center gap-2 bg-fondo/60 border border-linea px-3 py-2 rounded-lg">
+                    <span className="font-sans text-[15px] text-tinta truncate flex-1">{enlace}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => { navigator.clipboard.writeText(enlace); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }}
-                      className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
+                      className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
                     <a href={`https://wa.me/?text=${encodeURIComponent(textoWhatsApp)}`} target="_blank" rel="noopener noreferrer"
-                      className={`${boton} border-[#3fbe72]/50 text-[#6bdb9a] hover:border-[#3fbe72]`}>Compartir por WhatsApp</a>
-                    <a href={`/p/${id}`} target="_blank" rel="noopener noreferrer" className={`${boton} border-white/15 text-paper hover:border-gold-500/50`}>Ver página</a>
-                    <button onClick={() => cambiarPublicacion(false)} className={`${boton} border-white/15 text-slate hover:text-paper`}>Dejar de publicar</button>
+                      className={`${boton} border-[#3fbe72]/50 text-exito hover:border-[#3fbe72]`}>Compartir por WhatsApp</a>
+                    <a href={`/p/${id}`} target="_blank" rel="noopener noreferrer" className={`${boton} border-linea text-tinta hover:border-gold-500/50`}>Ver página</a>
+                    <button onClick={() => cambiarPublicacion(false)} className={`${boton} border-linea text-tenue hover:text-tinta`}>Dejar de publicar</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="text-[13px] text-paper-dim">
+                  <p className="text-[16px] text-tinta-2">
                     Publica una página de la propiedad con sus fotos, la ficha de venta y el botón «Me interesa». No muestra la dirección exacta, ni datos legales, ni quién es el dueño.
                     {!ficha && ' Te conviene generar primero la ficha de venta.'}
                   </p>
-                  <button onClick={() => cambiarPublicacion(true)} className={`${boton} self-start bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>Publicar página</button>
+                  <button onClick={() => cambiarPublicacion(true)} className={`${boton} self-start bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Publicar página</button>
                 </>
               )}
             </div>
@@ -301,21 +301,21 @@ export default function MarketingPage() {
           {/* 4. Métricas reales */}
           <Seccion titulo="Métricas reales · últimos 7 días">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-navy-800 border border-white/10 p-5">
-                <p className="text-[11px] text-slate uppercase tracking-wide mb-2">Visitas a la página</p>
-                <p className="font-display text-[28px] text-paper">{visitas.length}</p>
+              <div className="bg-tarjeta border border-linea p-5 rounded-xl">
+                <p className="text-[14px] text-tenue mb-2">Visitas a la página</p>
+                <p className="font-display text-[32px] text-tinta">{visitas.length}</p>
               </div>
-              <div className="bg-navy-800 border border-white/10 p-5">
-                <p className="text-[11px] text-slate uppercase tracking-wide mb-2">«Me interesa» (total)</p>
-                <p className="font-display text-[28px] text-gold-400">{leads}</p>
+              <div className="bg-tarjeta border border-linea p-5 rounded-xl">
+                <p className="text-[14px] text-tenue mb-2">«Me interesa» (total)</p>
+                <p className="font-display text-[32px] text-acento">{leads}</p>
               </div>
-              <div className="bg-navy-800 border border-white/10 p-5">
-                <p className="text-[11px] text-slate uppercase tracking-wide mb-2">Visitas por día</p>
+              <div className="bg-tarjeta border border-linea p-5 rounded-xl">
+                <p className="text-[14px] text-tenue mb-2">Visitas por día</p>
                 <div className="flex items-end gap-1.5 h-[52px]">
                   {porDia.map((d, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
                       <div className="w-full bg-gold-500/60" style={{ height: `${Math.max(2, (d.n / maxDia) * 40)}px` }} title={`${d.n} visitas`} />
-                      <span className="text-[9px] text-slate">{d.dia}</span>
+                      <span className="text-[12px] text-tenue">{d.dia}</span>
                     </div>
                   ))}
                 </div>
@@ -331,16 +331,16 @@ export default function MarketingPage() {
                 ['Campañas pagadas', 'Anuncios segmentados por perfil de comprador, medidos canal por canal.'],
                 ['Agente conversacional 24/7', 'Responde a los interesados, califica y agenda visitas.'],
               ].map(([t, d]) => (
-                <div key={t} className="bg-navy-800 border border-dashed border-white/15 p-5">
-                  <p className="text-[14px] font-medium text-paper mb-1">{t}</p>
-                  <p className="text-[12.5px] text-slate">{d}</p>
+                <div key={t} className="bg-tarjeta border border-dashed border-linea p-5 rounded-xl">
+                  <p className="text-[17px] font-medium text-tinta mb-1">{t}</p>
+                  <p className="text-[15px] text-tenue">{d}</p>
                 </div>
               ))}
             </div>
           </Seccion>
 
           <div className="flex justify-end">
-            <button onClick={() => router.push(`/activo/${id}/leads`)} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>Ir a Leads →</button>
+            <button onClick={() => router.push(`/activo/${id}/leads`)} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Ir a Leads →</button>
           </div>
         </div>
       </main>

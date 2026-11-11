@@ -72,16 +72,16 @@ const tiempoRelativo = (iso: string) => {
 // Chips de estado en tema oscuro: borde + texto en el tono semántico sobre fondo casi
 // transparente, en vez de bloques pastel sólidos (que no leen bien sobre navy).
 const faseCfg = (fase: string) => {
-  if (fase === 'valoracion') return { label: 'Valoración', chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10', dot: 'bg-[#D97706]' }
-  if (fase === 'marketing')  return { label: 'Marketing',  chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10', dot: 'bg-[#7b76ea]' }
-  if (fase === 'leads')      return { label: 'Leads',      chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10',    dot: 'bg-gold-500' }
-  if (fase === 'cerrado')    return { label: 'Cerrado',    chip: 'border-white/15 text-slate bg-white/5',              dot: 'bg-slate' }
-  return                            { label: 'Ingresado',  chip: 'border-white/15 text-slate bg-white/5',              dot: 'bg-slate' }
+  if (fase === 'valoracion') return { label: 'Valoración', chip: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10', dot: 'bg-[#D97706]' }
+  if (fase === 'marketing')  return { label: 'Marketing',  chip: 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10', dot: 'bg-[#7b76ea]' }
+  if (fase === 'leads')      return { label: 'Leads',      chip: 'border-gold-500/40 text-acento bg-gold-500/10',    dot: 'bg-gold-500' }
+  if (fase === 'cerrado')    return { label: 'Cerrado',    chip: 'border-linea text-tenue bg-sutil',              dot: 'bg-tenue' }
+  return                            { label: 'Ingresado',  chip: 'border-linea text-tenue bg-sutil',              dot: 'bg-tenue' }
 }
 
 const actividadCfg = (tipo: 'activo' | 'registro') => {
-  if (tipo === 'activo') return { color: 'bg-gold-500/10', icon: '#ddc06a' }
-  return { color: 'bg-[#4F46E5]/10', icon: '#a5a1f5' }
+  if (tipo === 'activo') return { color: 'bg-gold-500/10', icon: 'var(--c-acento)' }
+  return { color: 'bg-[#4F46E5]/10', icon: 'var(--c-violeta)' }
 }
 
 // ─── Componentes ──────────────────────────────────────────────────────────────
@@ -99,11 +99,11 @@ function PipelineBar({ activos }: { activos: Activo[] }) {
   const total = activos.length
 
   return (
-    <div className="bg-navy-800 border border-white/10 p-6">
-      <p className="font-display text-[16px] font-medium text-paper mb-1">Pipeline de activos</p>
-      <p className="text-[12px] text-slate mb-5">{total} activo{total !== 1 ? 's' : ''} en el ecosistema</p>
+    <div className="bg-tarjeta border border-linea p-6 rounded-xl">
+      <p className="font-display text-[18px] font-medium text-tinta mb-1">Pipeline de activos</p>
+      <p className="text-[15px] text-tenue mb-5">{total} activo{total !== 1 ? 's' : ''} en el ecosistema</p>
       {total === 0 ? (
-        <p className="text-[12px] text-slate">Todavía no hay activos registrados.</p>
+        <p className="text-[15px] text-tenue">Todavía no hay activos registrados.</p>
       ) : (
         <>
           <div className="flex h-3 overflow-hidden gap-0.5 mb-4">
@@ -116,8 +116,8 @@ function PipelineBar({ activos }: { activos: Activo[] }) {
               <div key={f.key} className="flex items-center gap-2">
                 <span className="w-2 h-2 shrink-0" style={{ backgroundColor: f.color }} />
                 <div>
-                  <p className="font-plex-mono text-[13px] font-medium text-paper">{f.count}</p>
-                  <p className="text-[10px] text-slate">{f.label}</p>
+                  <p className="font-sans text-[16px] font-medium text-tinta">{f.count}</p>
+                  <p className="text-[13px] text-tenue">{f.label}</p>
                 </div>
               </div>
             ))}
@@ -131,10 +131,10 @@ function PipelineBar({ activos }: { activos: Activo[] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const rolLabel = (rol: string) => {
-  if (rol === 'propietario')   return { label: etiquetaRol(rol), chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
-  if (rol === 'inversionista') return { label: etiquetaRol(rol), chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
-  if (rol === 'broker')        return { label: etiquetaRol(rol), chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
-  return                              { label: rol,             chip: 'border-white/15 text-slate bg-white/5' }
+  if (rol === 'propietario')   return { label: etiquetaRol(rol), chip: 'border-gold-500/40 text-acento bg-gold-500/10' }
+  if (rol === 'inversionista') return { label: etiquetaRol(rol), chip: 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10' }
+  if (rol === 'broker')        return { label: etiquetaRol(rol), chip: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10' }
+  return                              { label: rol,             chip: 'border-linea text-tenue bg-sutil' }
 }
 
 export default function PanelPage() {
@@ -253,8 +253,8 @@ export default function PanelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando panel…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando panel…</p>
       </div>
     )
   }
@@ -313,12 +313,12 @@ export default function PanelPage() {
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 6)
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
@@ -331,13 +331,13 @@ export default function PanelPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <span className="font-plex-mono text-[11px] font-medium text-gold-400 tracking-[0.18em] uppercase">Operación MindBridge</span>
-              <h1 className="font-display text-[24px] md:text-[30px] font-medium text-paper mt-1">Panel del Ecosistema</h1>
-              <p className="text-[13px] md:text-[14px] text-slate mt-1.5">Consola interna: activos, brokers, propietarios y compradores de la plataforma</p>
+              <span className="font-sans text-[14px] font-medium text-acento">Operación MindBridge</span>
+              <h1 className="font-display text-[28px] md:text-[36px] font-medium text-tinta mt-1">Panel del Ecosistema</h1>
+              <p className="text-[16px] md:text-[17px] text-tenue mt-1.5">Consola interna: activos, brokers, propietarios y compradores de la plataforma</p>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <button onClick={() => router.push('/panel/prospectos-broker')}
-                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] px-3 md:px-4 py-2.5 border border-white/15 hover:border-gold-500 transition-colors text-paper-dim hover:text-gold-400">
+                className="flex items-center gap-2 font-sans text-[14px] px-3 md:px-4 py-2.5 border border-linea hover:border-gold-500 transition-colors text-tinta-2 hover:text-acento rounded-lg">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.6"/>
                   <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.6"/>
@@ -346,7 +346,7 @@ export default function PanelPage() {
                 Prospección de brokers
               </button>
               <button onClick={compartirEnlace}
-                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] px-3 md:px-4 py-2.5 border border-white/15 hover:border-gold-500 transition-colors text-paper-dim hover:text-gold-400">
+                className="flex items-center gap-2 font-sans text-[14px] px-3 md:px-4 py-2.5 border border-linea hover:border-gold-500 transition-colors text-tinta-2 hover:text-acento rounded-lg">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M8.59 13.51a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                   <path d="M15.41 10.49a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
@@ -354,7 +354,7 @@ export default function PanelPage() {
                 {copiedLink ? '¡Copiado!' : 'Compartir'}
               </button>
               <button onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-2 font-plex-mono text-[11.5px] tracking-[0.03em] text-slate hover:text-gold-400 border border-white/15 hover:border-gold-500 px-3 md:px-4 py-2.5 transition-colors">
+                className="flex items-center gap-2 font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3 md:px-4 py-2.5 transition-colors rounded-lg">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.6" fill="none"/>
                 </svg>
@@ -368,61 +368,61 @@ export default function PanelPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="font-display text-[17px] font-medium text-paper">Solicitudes de registro</h2>
+                  <h2 className="font-display text-[19px] font-medium text-tinta">Solicitudes de registro</h2>
                   {pendientes.length > 0 && (
-                    <span className="font-plex-mono text-[10.5px] font-medium px-2 py-0.5 border border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10">
+                    <span className="font-sans text-[13px] font-medium px-2 py-0.5 border border-[#D97706]/40 text-aviso bg-[#D97706]/10 rounded-lg">
                       {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
-                <span className="text-[12px] text-slate">{solicitudes.length} en total</span>
+                <span className="text-[15px] text-tenue">{solicitudes.length} en total</span>
               </div>
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 {solicitudes.map((s, i) => {
                   const { label, chip } = rolLabel(s.rol)
                   const isPendiente = s.status === 'pendiente'
                   return (
-                    <div key={s.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 md:px-6 py-4 ${i !== solicitudes.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <div key={s.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 md:px-6 py-4 ${i !== solicitudes.length - 1 ? 'border-b border-linea' : ''}`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-9 h-9 bg-navy-950/60 border border-white/10 flex items-center justify-center shrink-0">
-                          <span className="font-plex-mono text-[13px] font-medium text-paper-dim">{s.nombre.charAt(0).toUpperCase()}</span>
+                        <div className="w-9 h-9 bg-fondo/60 border border-linea flex items-center justify-center shrink-0">
+                          <span className="font-sans text-[16px] font-medium text-tinta-2">{s.nombre.charAt(0).toUpperCase()}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-paper truncate">{s.nombre}</p>
-                          <p className="text-[11px] text-slate mt-0.5 truncate">{s.email} {s.telefono ? `· ${s.telefono}` : ''}</p>
+                          <p className="text-[17px] font-medium text-tinta truncate">{s.nombre}</p>
+                          <p className="text-[14px] text-tenue mt-0.5 truncate">{s.email} {s.telefono ? `· ${s.telefono}` : ''}</p>
                         </div>
-                        <span className={`font-plex-mono text-[10.5px] font-medium px-2.5 py-1 border shrink-0 ${chip}`}>{label}</span>
+                        <span className={`font-sans text-[13px] font-medium px-2.5 py-1 border shrink-0 ${chip} rounded-lg`}>{label}</span>
                       </div>
                       {isPendiente ? (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={() => actualizarStatus(s.id, 'aprobada')}
-                            className="font-plex-mono text-[11.5px] font-medium px-3 py-1.5 bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors">
+                            className="font-sans text-[14px] font-medium px-3 py-1.5 bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors rounded-lg">
                             Aprobar
                           </button>
                           <button
                             onClick={() => actualizarStatus(s.id, 'rechazada')}
-                            className="font-plex-mono text-[11.5px] px-3 py-1.5 border border-white/15 text-slate hover:text-paper hover:border-white/30 transition-colors">
+                            className="font-sans text-[14px] px-3 py-1.5 border border-linea text-tenue hover:text-tinta hover:border-linea-fuerte transition-colors rounded-lg">
                             Rechazar
                           </button>
                         </div>
                       ) : (
                         <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
-                          <span className={`font-plex-mono text-[10.5px] font-medium px-2.5 py-1 border self-start sm:self-auto ${s.status === 'aprobada' ? 'border-gold-500/40 text-gold-400 bg-gold-500/10' : 'border-white/15 text-slate bg-white/5'}`}>
+                          <span className={`font-sans text-[13px] font-medium px-2.5 py-1 border self-start sm:self-auto ${s.status === 'aprobada' ? 'border-gold-500/40 text-acento bg-gold-500/10' : 'border-linea text-tenue bg-sutil'} rounded-lg`}>
                             {s.status === 'aprobada' ? 'Aprobada' : 'Rechazada'}
                           </span>
                           {s.status === 'aprobada' && inviteEstado[s.id] && (
                             inviteEstado[s.id].estado === 'enviando' ? (
-                              <span className="text-[10px] text-slate">Enviando invitación…</span>
+                              <span className="text-[13px] text-tenue">Enviando invitación…</span>
                             ) : inviteEstado[s.id].estado === 'ok' ? (
-                              <span className="text-[10px] text-gold-400">✓ Invitación enviada</span>
+                              <span className="text-[13px] text-acento">✓ Invitación enviada</span>
                             ) : (
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-[#f3a3a3]">{inviteEstado[s.id].mensaje}</span>
+                                <span className="text-[13px] text-error">{inviteEstado[s.id].mensaje}</span>
                                 {inviteEstado[s.id].mensaje !== 'Ya existe una cuenta con este correo.' && (
                                   <button
                                     onClick={() => enviarInvitacion(s.id, s.email, s.nombre, s.rol)}
-                                    className="text-[10px] font-medium text-gold-400 hover:text-gold-100 underline">
+                                    className="text-[13px] font-medium text-acento hover:text-acento-2 underline">
                                     Reintentar
                                   </button>
                                 )}
@@ -452,19 +452,19 @@ export default function PanelPage() {
 
           {/* Métricas globales — ya vienen de activos/usuarios reales de Supabase. */}
           <div>
-            <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.14em] mb-3">Métricas globales</p>
+            <p className="font-sans text-[14px] text-tenue mb-3">Métricas globales</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
             {[
-              { label: 'En proceso',     value: String(enProceso),                     sub: 'sin cerrar',      color: 'text-paper' },
-              { label: 'Cerrados',       value: String(cerrados),                      sub: 'este ciclo',       color: 'text-gold-400' },
-              { label: 'Volumen',        value: formatMXN(volumenTotal),               sub: 'valor portafolio', color: 'text-[#a5a1f5]' },
-              { label: 'Brokers',        value: String(brokersAliados.length),         sub: 'activos',          color: 'text-[#e8b568]' },
-              { label: 'Compradores', value: String(inversionistasRegistrados.length), sub: 'registrados',   color: 'text-paper' },
+              { label: 'En proceso',     value: String(enProceso),                     sub: 'sin cerrar',      color: 'text-tinta' },
+              { label: 'Cerrados',       value: String(cerrados),                      sub: 'este ciclo',       color: 'text-acento' },
+              { label: 'Volumen',        value: formatMXN(volumenTotal),               sub: 'valor portafolio', color: 'text-violeta' },
+              { label: 'Brokers',        value: String(brokersAliados.length),         sub: 'activos',          color: 'text-aviso' },
+              { label: 'Compradores', value: String(inversionistasRegistrados.length), sub: 'registrados',   color: 'text-tinta' },
             ].map(m => (
-              <div key={m.label} className="bg-navy-800 border border-white/10 p-4 md:p-5">
-                <p className="font-plex-mono text-[10px] text-slate uppercase tracking-wide mb-2">{m.label}</p>
-                <p className={`font-display text-[17px] md:text-[19px] font-medium leading-tight ${m.color}`}>{m.value}</p>
-                <p className="text-[10px] text-slate mt-0.5">{m.sub}</p>
+              <div key={m.label} className="bg-tarjeta border border-linea p-4 md:p-5 rounded-xl">
+                <p className="font-sans text-[13px] text-tenue mb-2">{m.label}</p>
+                <p className={`font-display text-[19px] md:text-[21px] font-medium leading-tight ${m.color}`}>{m.value}</p>
+                <p className="text-[13px] text-tenue mt-0.5">{m.sub}</p>
               </div>
             ))}
           </div>
@@ -477,10 +477,10 @@ export default function PanelPage() {
             </div>
 
             {/* Actividad reciente */}
-            <div className="bg-navy-800 border border-white/10 p-5 flex flex-col gap-1">
-              <p className="font-display text-[14px] font-medium text-paper mb-3">Actividad reciente</p>
+            <div className="bg-tarjeta border border-linea p-5 flex flex-col gap-1 rounded-xl">
+              <p className="font-display text-[17px] font-medium text-tinta mb-3">Actividad reciente</p>
               {actividad.length === 0 ? (
-                <p className="text-[11px] text-slate">Sin actividad todavía.</p>
+                <p className="text-[14px] text-tenue">Sin actividad todavía.</p>
               ) : (
                 <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 160 }}>
                   {actividad.map((a, i) => {
@@ -491,8 +491,8 @@ export default function PanelPage() {
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.icon }} />
                         </div>
                         <div>
-                          <p className="text-[11px] text-paper-dim leading-snug">{a.texto}</p>
-                          <p className="text-[10px] text-slate mt-0.5">{tiempoRelativo(a.fecha)}</p>
+                          <p className="text-[14px] text-tinta-2 leading-snug">{a.texto}</p>
+                          <p className="text-[13px] text-tenue mt-0.5">{tiempoRelativo(a.fecha)}</p>
                         </div>
                       </div>
                     )
@@ -505,15 +505,15 @@ export default function PanelPage() {
           {/* Activos del ecosistema */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="font-display text-[17px] font-medium text-paper">Activos del ecosistema</h2>
+              <h2 className="font-display text-[19px] font-medium text-tinta">Activos del ecosistema</h2>
               <div className="flex items-center flex-wrap gap-1.5">
                 {['todos', 'valoracion', 'marketing', 'leads', 'cerrado'].map(f => (
                   <button key={f} onClick={() => setFiltroFase(f)}
-                    className={`font-plex-mono text-[10.5px] px-3 py-1.5 capitalize transition-colors ${
+                    className={`font-sans text-[13px] px-3 py-1.5 capitalize transition-colors ${
                       filtroFase === f
                         ? 'bg-gold-500 text-navy-950'
-                        : 'border border-white/15 text-slate hover:text-paper hover:border-white/30'
-                    }`}>
+                        : 'border border-linea text-tenue hover:text-tinta hover:border-linea-fuerte'
+                    } rounded-lg`}>
                     {f === 'todos' ? 'Todos' : faseCfg(f).label}
                   </button>
                 ))}
@@ -521,16 +521,16 @@ export default function PanelPage() {
             </div>
 
             {activosFiltrados.length === 0 ? (
-              <div className="bg-navy-800 border border-white/10 p-8 text-center">
-                <p className="text-[13px] text-slate">Sin activos que mostrar con este filtro.</p>
+              <div className="bg-tarjeta border border-linea p-8 text-center rounded-xl">
+                <p className="text-[16px] text-tenue">Sin activos que mostrar con este filtro.</p>
               </div>
             ) : (
-            <div className="bg-navy-800 border border-white/10 overflow-hidden">
+            <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
               <div className="overflow-x-auto">
                 <div className="min-w-[580px]">
-                  <div className="grid grid-cols-6 px-4 md:px-6 py-3 border-b border-white/10 bg-white/[0.02]">
+                  <div className="grid grid-cols-6 px-4 md:px-6 py-3 border-b border-linea bg-sutil">
                     {['Activo', 'Propietario', 'Broker', 'Municipio', 'Precio', 'Fase'].map(h => (
-                      <p key={h} className="font-plex-mono text-[10px] text-slate uppercase tracking-wide">{h}</p>
+                      <p key={h} className="font-sans text-[13px] text-tenue">{h}</p>
                     ))}
                   </div>
                   {activosFiltrados.map((a, i) => {
@@ -538,28 +538,28 @@ export default function PanelPage() {
                     const nombreBroker = nombreDe(a.broker_id)
                     return (
                       <div key={a.id}
-                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-white/10' : ''} hover:bg-white/[0.02] transition-colors`}>
+                        className={`grid grid-cols-6 items-center px-4 md:px-6 py-4 ${i !== activosFiltrados.length - 1 ? 'border-b border-linea' : ''} hover:bg-sutil transition-colors`}>
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-[13px] font-medium text-paper truncate">{a.nombre}</p>
+                            <p className="text-[16px] font-medium text-tinta truncate">{a.nombre}</p>
                             {esDemoActivo(a) && <EjemploBadge />}
                           </div>
-                          <p className="text-[10px] text-slate">{a.tipo}</p>
+                          <p className="text-[13px] text-tenue">{a.tipo}</p>
                         </div>
-                        <p className="text-[12px] text-paper-dim truncate">{nombreDe(a.usuario_id) ?? '—'}</p>
+                        <p className="text-[15px] text-tinta-2 truncate">{nombreDe(a.usuario_id) ?? '—'}</p>
                         {nombreBroker ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center font-plex-mono text-[9px] font-medium shrink-0 bg-[#4F46E5]/20 text-[#a5a1f5]">
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center font-sans text-[12px] font-medium shrink-0 bg-[#4F46E5]/20 text-violeta">
                               {nombreBroker.charAt(0)}
                             </div>
-                            <p className="text-[12px] text-paper-dim truncate">{nombreBroker}</p>
+                            <p className="text-[15px] text-tinta-2 truncate">{nombreBroker}</p>
                           </div>
                         ) : (
-                          <p className="text-[12px] text-slate">Sin asignar</p>
+                          <p className="text-[15px] text-tenue">Sin asignar</p>
                         )}
-                        <p className="text-[12px] text-paper-dim">{a.municipio}</p>
-                        <p className="font-plex-mono text-[12px] text-paper">{formatMXN(a.precio_total || 0)}</p>
-                        <span className={`font-plex-mono text-[10px] font-medium px-2 py-1 border w-fit flex items-center gap-1.5 ${cfg.chip}`}>
+                        <p className="text-[15px] text-tinta-2">{a.municipio}</p>
+                        <p className="font-sans text-[15px] text-tinta">{formatMXN(a.precio_total || 0)}</p>
+                        <span className={`font-sans text-[13px] font-medium px-2 py-1 border w-fit flex items-center gap-1.5 ${cfg.chip} rounded-lg`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                           {cfg.label}
                         </span>
@@ -577,26 +577,26 @@ export default function PanelPage() {
 
             {/* Brokers */}
             <div>
-              <h2 className="font-display text-[17px] font-medium text-paper mb-4">Brokers aliados</h2>
+              <h2 className="font-display text-[19px] font-medium text-tinta mb-4">Brokers aliados</h2>
               {brokersAliadosTodos.length === 0 ? (
-                <div className="bg-navy-800 border border-white/10 p-6 text-center">
-                  <p className="text-[13px] text-slate">Sin brokers registrados todavía.</p>
+                <div className="bg-tarjeta border border-linea p-6 text-center rounded-xl">
+                  <p className="text-[16px] text-tenue">Sin brokers registrados todavía.</p>
                 </div>
               ) : (
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 {brokersAliadosTodos.map((b, i) => (
-                  <div key={b.id} className={`px-5 py-4 ${i !== brokersAliadosTodos.length - 1 ? 'border-b border-white/10' : ''}`}>
+                  <div key={b.id} className={`px-5 py-4 ${i !== brokersAliadosTodos.length - 1 ? 'border-b border-linea' : ''}`}>
                     <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                       <div className="w-8 h-8 rounded-full bg-[#4F46E5]/15 flex items-center justify-center">
-                        <span className="font-plex-mono text-[12px] font-medium text-[#a5a1f5]">{b.nombre.charAt(0)}</span>
+                        <span className="font-sans text-[15px] font-medium text-violeta">{b.nombre.charAt(0)}</span>
                       </div>
-                      <p className="text-[13px] font-medium text-paper">{b.nombre}</p>
+                      <p className="text-[16px] font-medium text-tinta">{b.nombre}</p>
                       {b.esDemo && <EjemploBadge />}
                       <button
                         onClick={() => cambiarPionero(b.id, !b.pionero)}
-                        className={`ml-auto font-plex-mono text-[10.5px] px-2.5 py-1 border transition-colors ${b.pionero
-                          ? 'border-gold-500/50 text-gold-400 hover:border-gold-500'
-                          : 'border-white/15 text-slate hover:text-paper'}`}
+                        className={`ml-auto font-sans text-[13px] px-2.5 py-1 border transition-colors ${b.pionero
+                          ? 'border-gold-500/50 text-acento hover:border-gold-500'
+                          : 'border-linea text-tenue hover:text-tinta'} rounded-lg`}
                         title={b.pionero ? 'Quitar la marca Pionero' : 'Marcar como broker Pionero del piloto'}>
                         {b.pionero ? '★ Pionero' : 'Marcar Pionero'}
                       </button>
@@ -607,9 +607,9 @@ export default function PanelPage() {
                         { label: 'Cerrados', value: b.cerrados },
                         { label: 'Volumen', value: formatMXN(b.volumen) },
                       ].map(s => (
-                        <div key={s.label} className="bg-navy-950/60 border border-white/5 p-2.5 text-center">
-                          <p className="font-plex-mono text-[13px] font-medium text-paper">{s.value}</p>
-                          <p className="text-[10px] text-slate">{s.label}</p>
+                        <div key={s.label} className="bg-fondo/60 border border-linea p-2.5 text-center">
+                          <p className="font-sans text-[16px] font-medium text-tinta">{s.value}</p>
+                          <p className="text-[13px] text-tenue">{s.label}</p>
                         </div>
                       ))}
                     </div>
@@ -621,25 +621,25 @@ export default function PanelPage() {
 
             {/* Inversionistas */}
             <div>
-              <h2 className="font-display text-[17px] font-medium text-paper mb-4">Compradores registrados</h2>
+              <h2 className="font-display text-[19px] font-medium text-tinta mb-4">Compradores registrados</h2>
               {inversionistasRegistradosTodos.length === 0 ? (
-                <div className="bg-navy-800 border border-white/10 p-6 text-center">
-                  <p className="text-[13px] text-slate">Sin compradores registrados todavía.</p>
+                <div className="bg-tarjeta border border-linea p-6 text-center rounded-xl">
+                  <p className="text-[16px] text-tenue">Sin compradores registrados todavía.</p>
                 </div>
               ) : (
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 {inversionistasRegistradosTodos.map((inv, i) => (
-                  <div key={inv.id} className={`px-5 py-4 flex items-start gap-2.5 ${i !== inversionistasRegistradosTodos.length - 1 ? 'border-b border-white/10' : ''}`}>
+                  <div key={inv.id} className={`px-5 py-4 flex items-start gap-2.5 ${i !== inversionistasRegistradosTodos.length - 1 ? 'border-b border-linea' : ''}`}>
                     <div className="w-8 h-8 rounded-full bg-gold-500/15 flex items-center justify-center shrink-0">
-                      <span className="font-plex-mono text-[12px] font-medium text-gold-400">{inv.nombre.charAt(0)}</span>
+                      <span className="font-sans text-[15px] font-medium text-acento">{inv.nombre.charAt(0)}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-[13px] font-medium text-paper">{inv.nombre}</p>
+                        <p className="text-[16px] font-medium text-tinta">{inv.nombre}</p>
                         {inv.esDemo && <EjemploBadge />}
                       </div>
-                      <p className="text-[11px] text-slate mt-0.5">{inv.intereses}</p>
-                      <p className="text-[11px] text-paper-dim font-medium mt-0.5">{inv.presupuesto}</p>
+                      <p className="text-[14px] text-tenue mt-0.5">{inv.intereses}</p>
+                      <p className="text-[14px] text-tinta-2 font-medium mt-0.5">{inv.presupuesto}</p>
                     </div>
                   </div>
                 ))}

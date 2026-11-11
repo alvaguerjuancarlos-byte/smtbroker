@@ -19,8 +19,8 @@ interface Dictamen {
   _guardado?: { id: string } | null
 }
 
-const boton = 'font-plex-mono text-[11px] px-3 py-1.5 border transition-colors disabled:opacity-50'
-const tonoDictamen = { ok: 'text-[#6bdb9a]', warn: 'text-[#e8b568]', bad: 'text-[#f3a3a3]' }
+const boton = 'font-sans text-[14px] px-3 py-1.5 border transition-colors disabled:opacity-50 rounded-lg'
+const tonoDictamen = { ok: 'text-exito', warn: 'text-aviso', bad: 'text-error' }
 
 async function llamar(url: string, body: object) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -81,52 +81,52 @@ export default function CertificacionesOperacion() {
   const abiertas = certs.filter(c => c.estado === 'en_revision')
 
   return (
-    <div className="bg-navy-800 border border-white/10">
-      <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-        <h2 className="font-display text-[17px] font-medium text-paper">Certificaciones legales</h2>
-        <span className="font-plex-mono text-[11px] text-slate">{abiertas.length}</span>
+    <div className="bg-tarjeta border border-linea rounded-xl">
+      <div className="px-5 py-4 border-b border-linea flex items-center justify-between">
+        <h2 className="font-display text-[19px] font-medium text-tinta">Certificaciones legales</h2>
+        <span className="font-sans text-[14px] text-tenue">{abiertas.length}</span>
       </div>
       {abiertas.length === 0 ? (
-        <p className="px-5 py-6 text-[13px] text-slate">Sin certificaciones en revisión.</p>
+        <p className="px-5 py-6 text-[16px] text-tenue">Sin certificaciones en revisión.</p>
       ) : abiertas.map(c => {
         const a = activo(c.activo_id)
         const quien = usuario(c.solicitado_por)
         const d = dictamen[c.id]
         const listo = d && d !== 'cargando' && !('error' in d) ? d : null
         return (
-          <div key={c.id} className="px-5 py-4 border-b border-white/10 last:border-b-0 flex flex-col gap-2">
+          <div key={c.id} className="px-5 py-4 border-b border-linea last:border-b-0 flex flex-col gap-2">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-[13.5px] text-paper"><b>{a?.nombre ?? 'Propiedad'}</b> ({a?.municipio})</p>
-              <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2 py-1 shrink-0">En revisión</span>
+              <p className="text-[16px] text-tinta"><b>{a?.nombre ?? 'Propiedad'}</b> ({a?.municipio})</p>
+              <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2 py-1 shrink-0 rounded-lg">En revisión</span>
             </div>
-            <p className="text-[11.5px] text-slate">
+            <p className="text-[14px] text-tenue">
               Solicitó: {quien?.nombre ?? '—'}{quien?.pionero ? ' · ★ Pionero' : ''} · {new Date(c.created_at).toLocaleDateString('es-MX')}
             </p>
             <div className="flex flex-wrap gap-2">
               <button disabled={d === 'cargando'} onClick={() => pedirDictamen(c, true)}
-                className={`${boton} border-gold-500/40 text-gold-400 hover:border-gold-500`}>
+                className={`${boton} border-gold-500/40 text-acento hover:border-gold-500`}>
                 {d === 'cargando' ? 'Generando dictamen… (≈1 min)' : listo ? 'Volver a correr el dictamen' : 'Correr dictamen'}
               </button>
               {!d && (
-                <button onClick={() => pedirDictamen(c, false)} className={`${boton} border-white/15 text-slate hover:text-paper`}>Ver último dictamen</button>
+                <button onClick={() => pedirDictamen(c, false)} className={`${boton} border-linea text-tenue hover:text-tinta`}>Ver último dictamen</button>
               )}
             </div>
-            {d && d !== 'cargando' && 'error' in d && <p className="text-[12px] text-[#f3a3a3]">{d.error}</p>}
+            {d && d !== 'cargando' && 'error' in d && <p className="text-[15px] text-error">{d.error}</p>}
             {listo && (
-              <div className="border border-white/10 bg-navy-950/40 p-3 flex flex-col gap-1.5">
-                <p className={`font-plex-mono text-[11px] ${tonoDictamen[listo.verdictCls]}`}>{listo.verdictBadge} · Score legal {listo.score}</p>
-                <p className="text-[13px] text-paper">{listo.verdictTitle}</p>
-                <p className="text-[12px] text-paper-dim">{listo.verdictDesc}</p>
-                <p className="text-[11px] text-slate">Revísalo completo en la ficha del activo antes de certificar. Quien la pidió recibe un correo con el resultado.</p>
+              <div className="border border-linea bg-fondo/40 p-3 flex flex-col gap-1.5">
+                <p className={`font-sans text-[14px] ${tonoDictamen[listo.verdictCls]}`}>{listo.verdictBadge} · Score legal {listo.score}</p>
+                <p className="text-[16px] text-tinta">{listo.verdictTitle}</p>
+                <p className="text-[15px] text-tinta-2">{listo.verdictDesc}</p>
+                <p className="text-[14px] text-tenue">Revísalo completo en la ficha del activo antes de certificar. Quien la pidió recibe un correo con el resultado.</p>
                 <div className="flex gap-2 mt-1">
                   <button disabled={!listo._guardado?.id} onClick={() => cerrar(c, 'certificada', listo._guardado!.id)}
-                    className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400`}>Certificar</button>
+                    className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg`}>Certificar</button>
                   <button onClick={() => cerrar(c, 'rechazada', listo._guardado?.id)}
-                    className={`${boton} border-white/15 text-slate hover:text-paper`}>Rechazar</button>
+                    className={`${boton} border-linea text-tenue hover:text-tinta`}>Rechazar</button>
                 </div>
               </div>
             )}
-            {errorCierre[c.id] && <p className="text-[12px] text-[#f3a3a3]">{errorCierre[c.id]}</p>}
+            {errorCierre[c.id] && <p className="text-[15px] text-error">{errorCierre[c.id]}</p>}
           </div>
         )
       })}

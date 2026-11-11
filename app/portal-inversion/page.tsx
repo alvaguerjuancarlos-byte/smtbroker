@@ -164,19 +164,19 @@ export default function PortalInversionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-        <p className="text-slate text-[14px] font-plex-mono">Cargando…</p>
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-tenue text-[17px] font-sans">Cargando…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
@@ -187,16 +187,16 @@ export default function PortalInversionPage() {
         <div className="w-full max-w-[900px] mx-auto flex flex-col gap-6 md:gap-8">
 
           <div>
-            <h1 className="font-display text-[26px] md:text-[30px] font-medium text-paper leading-tight">Hola, {firstName}</h1>
-            <p className="text-[14px] text-slate mt-1.5">Lo que buscas y las propiedades disponibles</p>
+            <h1 className="font-display text-[30px] md:text-[36px] font-medium text-tinta leading-tight">Hola, {firstName}</h1>
+            <p className="text-[17px] text-tenue mt-1.5">Lo que buscas y las propiedades disponibles</p>
           </div>
 
           {/* Perfil de intención */}
-          <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
+          <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Lo que buscas</p>
+              <p className="font-sans text-[14px] text-tenue">Lo que buscas</p>
               {tienePerfil && !editando && (
-                <button onClick={() => setEditando(true)} className="text-[12px] font-medium text-gold-400 hover:text-gold-100 transition-colors">
+                <button onClick={() => setEditando(true)} className="text-[15px] font-medium text-acento hover:text-acento-2 transition-colors">
                   Editar
                 </button>
               )}
@@ -205,20 +205,20 @@ export default function PortalInversionPage() {
             {!editando ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Presupuesto</p>
-                  <p className="text-[14px] text-paper mt-1">{perfil.presupuesto || '—'}</p>
+                  <p className="font-sans text-[13px] text-tenue">Presupuesto</p>
+                  <p className="text-[17px] text-tinta mt-1">{perfil.presupuesto || '—'}</p>
                 </div>
                 <div>
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Zona de interés</p>
-                  <p className="text-[14px] text-paper mt-1">{perfil.zona || '—'}</p>
+                  <p className="font-sans text-[13px] text-tenue">Zona de interés</p>
+                  <p className="text-[17px] text-tinta mt-1">{perfil.zona || '—'}</p>
                 </div>
                 <div>
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Tipo de propiedad</p>
-                  <p className="text-[14px] text-paper mt-1">{perfil.tipo_activo_interes || '—'}</p>
+                  <p className="font-sans text-[13px] text-tenue">Tipo de propiedad</p>
+                  <p className="text-[17px] text-tinta mt-1">{perfil.tipo_activo_interes || '—'}</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <p className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">Qué buscas y por qué</p>
-                  <p className="text-[13px] text-paper-dim mt-1 leading-relaxed">{perfil.tesis_inversion || '—'}</p>
+                  <p className="font-sans text-[13px] text-tenue">Qué buscas y por qué</p>
+                  <p className="text-[16px] text-tinta-2 mt-1 leading-relaxed">{perfil.tesis_inversion || '—'}</p>
                 </div>
               </div>
             ) : (
@@ -226,8 +226,8 @@ export default function PortalInversionPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Presupuesto estimado">
                     <select value={perfil.presupuesto} onChange={e => setPerfil(p => ({ ...p, presupuesto: e.target.value }))} className={inputCls(false, 'oscuro')}>
-                      <option value="" className="bg-navy-900">Selecciona…</option>
-                      {PRESUPUESTOS.map(p => <option key={p} className="bg-navy-900">{p}</option>)}
+                      <option value="" className="bg-superficie">Selecciona…</option>
+                      {PRESUPUESTOS.map(p => <option key={p} className="bg-superficie">{p}</option>)}
                     </select>
                   </Field>
                   <Field label="Zona de interés">
@@ -243,16 +243,16 @@ export default function PortalInversionPage() {
                   <textarea value={perfil.tesis_inversion} onChange={e => setPerfil(p => ({ ...p, tesis_inversion: e.target.value }))}
                     placeholder="Ej. casa de 3 recámaras cerca de escuelas, para mudarnos el próximo año…" rows={3} className={inputCls(false, 'oscuro')} />
                 </Field>
-                {errorPerfil && <p className="text-[12px] text-[#f3a3a3]">{errorPerfil}</p>}
+                {errorPerfil && <p className="text-[15px] text-error">{errorPerfil}</p>}
                 <div className="flex gap-2">
                   {tienePerfil && (
                     <button type="button" onClick={() => setEditando(false)}
-                      className="px-5 py-2.5 border border-white/15 text-paper-dim font-plex-mono text-[12px] hover:border-white/30 transition-colors">
+                      className="px-5 py-2.5 border border-linea text-tinta-2 font-sans text-[15px] hover:border-linea-fuerte transition-colors rounded-lg">
                       Cancelar
                     </button>
                   )}
                   <button type="submit" disabled={guardando}
-                    className="px-5 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors disabled:opacity-60">
+                    className="px-5 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg">
                     {guardando ? 'Guardando…' : 'Guardar perfil'}
                   </button>
                 </div>
@@ -266,13 +266,13 @@ export default function PortalInversionPage() {
               {tieneBroker || pedirBroker ? (
                 <ElegirBroker perfilId={perfilId} onAsignado={() => { if (!tieneBroker) cargarCoincidencias() }} />
               ) : (
-                <div className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl">
                   <div className="flex-1">
-                    <p className="text-[14px] text-paper">¿Quieres un broker que te represente?</p>
-                    <p className="text-[12px] text-slate mt-0.5">Puedes buscar y conectarte por tu cuenta. Un broker te acompaña en visitas, negociación y cierre.</p>
+                    <p className="text-[17px] text-tinta">¿Quieres un broker que te represente?</p>
+                    <p className="text-[15px] text-tenue mt-0.5">Puedes buscar y conectarte por tu cuenta. Un broker te acompaña en visitas, negociación y cierre.</p>
                   </div>
                   <button onClick={() => setPedirBroker(true)}
-                    className="font-plex-mono text-[11px] border border-gold-500/50 text-gold-400 px-3 py-2 hover:bg-gold-500/10 transition-colors shrink-0">
+                    className="font-sans text-[14px] border border-gold-500/50 text-acento px-3 py-2 hover:bg-gold-500/10 transition-colors shrink-0 rounded-lg">
                     Elegir mi broker
                   </button>
                 </div>
@@ -283,42 +283,42 @@ export default function PortalInversionPage() {
           {/* Coincidencias con lo que busca */}
           {tienePerfil && coincidencias && (
             <div>
-              <h2 className="font-display text-[17px] font-medium text-paper mb-1">{tieneBroker ? 'Coinciden con lo que buscas' : 'Propiedades de particulares que coinciden'}</h2>
-              <p className="text-[12px] text-slate mb-4">
+              <h2 className="font-display text-[19px] font-medium text-tinta mb-1">{tieneBroker ? 'Coinciden con lo que buscas' : 'Propiedades de particulares que coinciden'}</h2>
+              <p className="text-[15px] text-tenue mb-4">
                 Por tipo de propiedad, zona y presupuesto. {tieneBroker
                   ? 'Si te interesa alguna, tu broker se conecta con quien la vende.'
                   : 'Si te interesa alguna, nuestro equipo valida la conexión y te pasa el contacto de quien la vende. Las propiedades que traen los brokers se ven con un broker.'}
               </p>
               {coincidencias.length === 0 ? (
-                <div className="bg-navy-800 border border-white/10 px-8 py-8 text-center">
-                  <p className="text-[13px] text-slate">Por ahora ninguna propiedad coincide con lo que buscas. Te mostraremos las nuevas aquí.</p>
+                <div className="bg-tarjeta border border-linea px-8 py-8 text-center rounded-xl">
+                  <p className="text-[16px] text-tenue">Por ahora ninguna propiedad coincide con lo que buscas. Te mostraremos las nuevas aquí.</p>
                 </div>
               ) : (
-                <div className="bg-navy-800 border border-gold-500/30 overflow-hidden">
+                <div className="bg-tarjeta border border-gold-500/30 overflow-hidden rounded-xl">
                   {coincidencias.map((c, i) => (
-                    <div key={c.activoId} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== coincidencias.length - 1 ? 'border-b border-white/10' : ''}`}>
-                      <span className="font-display text-[22px] font-medium text-gold-400 w-12 shrink-0">{c.score}</span>
+                    <div key={c.activoId} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== coincidencias.length - 1 ? 'border-b border-linea' : ''}`}>
+                      <span className="font-display text-[24px] font-medium text-acento w-12 shrink-0">{c.score}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-paper">{c.activo.nombre}</p>
-                        <p className="text-[11.5px] text-slate mt-0.5">
+                        <p className="text-[17px] font-medium text-tinta">{c.activo.nombre}</p>
+                        <p className="text-[14px] text-tenue mt-0.5">
                           {c.activo.tipo} · {c.activo.municipio}{c.activo.precio_total != null ? ` · ${formatMXN(c.activo.precio_total)}` : ''}
                         </p>
-                        <p className="text-[11.5px] text-paper-dim mt-1">{c.razones.join(' · ')}</p>
+                        <p className="text-[14px] text-tinta-2 mt-1">{c.razones.join(' · ')}</p>
                         {c.contacto && (
-                          <p className="text-[12.5px] text-paper mt-1.5">
+                          <p className="text-[15px] text-tinta mt-1.5">
                             Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (broker de la propiedad)' : ' (vende por su cuenta)'}
-                            {c.contacto.correo && <> · <a href={`mailto:${c.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{c.contacto.correo}</a></>}
-{c.contacto.telefono && <> · <a href={`https://wa.me/52${c.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {c.contacto.telefono}</a></>}
+                            {c.contacto.correo && <> · <a href={`mailto:${c.contacto.correo}`} className="text-acento hover:text-acento-2">{c.contacto.correo}</a></>}
+{c.contacto.telefono && <> · <a href={`https://wa.me/52${c.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-acento hover:text-acento-2">WhatsApp {c.contacto.telefono}</a></>}
                           </p>
                         )}
                       </div>
                       {c.solicitud ? (
-                        <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">
+                        <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2.5 py-1 shrink-0 rounded-lg">
                           {c.solicitud === 'solicitado' ? (tieneBroker ? 'Solicitado · tu broker te avisa' : 'Solicitado · Operación la revisa') : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
                         </span>
                       ) : (
                         <button disabled={solicitando === c.activoId} onClick={() => meInteresa(c)}
-                          className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0">
+                          className="font-sans text-[14px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0 rounded-lg">
                           Me interesa
                         </button>
                       )}
@@ -335,32 +335,32 @@ export default function PortalInversionPage() {
           {/* Activos disponibles */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-display text-[17px] font-medium text-paper">Propiedades disponibles</h2>
-              <span className="text-[12px] text-slate">{activos.length}</span>
+              <h2 className="font-display text-[19px] font-medium text-tinta">Propiedades disponibles</h2>
+              <span className="text-[15px] text-tenue">{activos.length}</span>
             </div>
-            <p className="text-[12px] text-slate mb-4">Todas las propiedades de la plataforma.</p>
+            <p className="text-[15px] text-tenue mb-4">Todas las propiedades de la plataforma.</p>
 
             {activos.length === 0 ? (
-              <div className="bg-navy-800 border border-white/10 px-8 py-14 text-center">
-                <p className="text-[13px] text-slate">Todavía no hay activos cargados en la plataforma.</p>
+              <div className="bg-tarjeta border border-linea px-8 py-14 text-center rounded-xl">
+                <p className="text-[16px] text-tenue">Todavía no hay activos cargados en la plataforma.</p>
               </div>
             ) : (
-              <div className="bg-navy-800 border border-white/10 overflow-hidden">
+              <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
                 {activos.map((a, i) => (
-                  <div key={a.id} className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-white/10' : ''}`}>
-                    <div className="w-9 h-9 bg-navy-950/60 border border-white/10 flex items-center justify-center shrink-0">
+                  <div key={a.id} className={`flex items-center gap-3 px-4 md:px-6 py-4 ${i !== activos.length - 1 ? 'border-b border-linea' : ''}`}>
+                    <div className="w-9 h-9 bg-fondo/60 border border-linea flex items-center justify-center shrink-0">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="#8b96ab" strokeWidth="1.5" fill="none"/>
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-medium text-paper truncate">{a.nombre}</p>
-                      <p className="text-[11px] text-slate mt-0.5 truncate">
+                      <p className="text-[17px] font-medium text-tinta truncate">{a.nombre}</p>
+                      <p className="text-[14px] text-tenue mt-0.5 truncate">
                         {a.tipo} · {a.municipio}, {a.estado}{a.superficie ? ` · ${a.superficie} m²` : ''} · {formatDate(a.created_at)}
                       </p>
                     </div>
                     {a.precio_total != null && (
-                      <span className="font-plex-mono text-[13px] text-paper shrink-0">{formatMXN(a.precio_total)}</span>
+                      <span className="font-sans text-[16px] text-tinta shrink-0">{formatMXN(a.precio_total)}</span>
                     )}
                   </div>
                 ))}

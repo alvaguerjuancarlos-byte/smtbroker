@@ -133,12 +133,12 @@ export default function NuevoActivoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+            'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
         }}
       />
@@ -151,28 +151,28 @@ export default function NuevoActivoPage() {
           {/* Header */}
           <div>
             <button onClick={() => router.push(homePorRol(rol))}
-              className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
+              className="flex items-center gap-1.5 text-[16px] text-tenue hover:text-tinta mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               Volver
             </button>
-            <h1 className="font-display text-[26px] font-medium text-paper">{esBroker ? 'Cargar propiedad a tu portafolio' : 'Registrar activo'}</h1>
-            <p className="text-[14px] text-slate mt-1.5">Ingresa los datos del inmueble para iniciar el análisis</p>
+            <h1 className="font-display text-[30px] font-medium text-tinta">{esBroker ? 'Cargar propiedad a tu portafolio' : 'Registrar activo'}</h1>
+            <p className="text-[17px] text-tenue mt-1.5">Ingresa los datos del inmueble para iniciar el análisis</p>
           </div>
 
           {/* Fase */}
           <div className="flex items-center gap-2 bg-gold-500/[0.06] border-l-2 border-gold-500 px-4 py-3">
-            <span className="font-plex-mono text-[10.5px] font-medium text-navy-950 bg-gold-500 px-2 py-0.5">Fase 01</span>
-            <span className="text-[13px] text-paper-dim font-medium">Diagnóstico y Estrategia</span>
+            <span className="font-sans text-[13px] font-medium text-navy-950 bg-gold-500 px-2 py-0.5 rounded-lg">Fase 01</span>
+            <span className="text-[16px] text-tinta-2 font-medium">Diagnóstico y Estrategia</span>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
             {/* Sección 0 (solo broker): representación del propietario */}
             {esBroker && (
-              <div className="bg-navy-800 border border-gold-500/30 p-4 md:p-6 flex flex-col gap-5">
-                <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Representación del propietario</p>
+              <div className="bg-tarjeta border border-gold-500/30 p-4 md:p-6 flex flex-col gap-5 rounded-xl">
+                <p className="font-sans text-[14px] text-tenue">Representación del propietario</p>
                 <Field label="Nombre del propietario" required error={submitted && required.propietario_nombre}>
                   <input type="text" value={representacion.propietario_nombre}
                     onChange={e => setRepresentacion(r => ({ ...r, propietario_nombre: e.target.value }))}
@@ -182,15 +182,15 @@ export default function NuevoActivoPage() {
                   <select value={representacion.tipo}
                     onChange={e => setRepresentacion(r => ({ ...r, tipo: e.target.value as 'exclusiva' | 'carta' }))}
                     className={inputCls(false, 'oscuro')}>
-                    <option value="exclusiva" className="bg-navy-900">Contrato de exclusiva</option>
-                    <option value="carta" className="bg-navy-900">Carta de representación</option>
+                    <option value="exclusiva" className="bg-superficie">Contrato de exclusiva</option>
+                    <option value="carta" className="bg-superficie">Carta de representación</option>
                   </select>
                 </Field>
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={representacion.declarada}
                     onChange={e => setRepresentacion(r => ({ ...r, declarada: e.target.checked }))}
                     className="mt-0.5 accent-[#c9a227]" />
-                  <span className={`text-[13px] leading-relaxed ${submitted && required.representacion ? 'text-[#f3a3a3]' : 'text-paper-dim'}`}>
+                  <span className={`text-[16px] leading-relaxed ${submitted && required.representacion ? 'text-error' : 'text-tinta-2'}`}>
                     Declaro que represento a este propietario con el documento indicado y que cuento con su autorización para comercializar el inmueble.
                   </span>
                 </label>
@@ -198,8 +198,8 @@ export default function NuevoActivoPage() {
             )}
 
             {/* Sección 1: Datos generales */}
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Datos generales</p>
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 flex flex-col gap-5 rounded-xl">
+              <p className="font-sans text-[14px] text-tenue">Datos generales</p>
 
               <Field label="Nombre del activo" required error={submitted && required.nombre}>
                 <input type="text" value={form.nombre} onChange={e => set('nombre', e.target.value)}
@@ -208,14 +208,14 @@ export default function NuevoActivoPage() {
 
               <Field label="Tipo de activo" required>
                 <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls(false, 'oscuro')}>
-                  {TIPOS.map(t => <option key={t} className="bg-navy-900">{t}</option>)}
+                  {TIPOS.map(t => <option key={t} className="bg-superficie">{t}</option>)}
                 </select>
               </Field>
             </div>
 
             {/* Sección 2: Ubicación */}
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Ubicación</p>
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 flex flex-col gap-5 rounded-xl">
+              <p className="font-sans text-[14px] text-tenue">Ubicación</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
@@ -248,7 +248,7 @@ export default function NuevoActivoPage() {
 
               <Field label="Estado" required error={submitted && required.estado}>
                 <select value={form.estado} onChange={e => set('estado', e.target.value)} className={inputCls(submitted && required.estado, 'oscuro')}>
-                  {ESTADOS_MX.map(s => <option key={s} className="bg-navy-900">{s}</option>)}
+                  {ESTADOS_MX.map(s => <option key={s} className="bg-superficie">{s}</option>)}
                 </select>
               </Field>
 
@@ -258,7 +258,7 @@ export default function NuevoActivoPage() {
                   type="button"
                   onClick={() => setShowMap(true)}
                   disabled={!form.municipio}
-                  className="flex items-center gap-2 font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed w-fit"
+                  className="flex items-center gap-2 font-sans text-[15px] text-acento hover:text-acento-2 border border-gold-500/40 hover:border-gold-500 px-4 py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed w-fit rounded-lg"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Z" stroke="currentColor" strokeWidth="1.8" fill="none"/>
@@ -268,13 +268,13 @@ export default function NuevoActivoPage() {
                 </button>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Mapa</p>
+                  <p className="font-sans text-[13px] text-tenue">Mapa</p>
                   <MapPicker
                     onLocationChange={(la, ln) => { setLat(la); setLng(ln) }}
                     initialAddress={addressForMap}
                   />
                   {lat && lng && (
-                    <p className="text-[11px] text-gold-400 font-medium">✓ Ubicación confirmada en el mapa</p>
+                    <p className="text-[14px] text-acento font-medium">✓ Ubicación confirmada en el mapa</p>
                   )}
                 </div>
               )}
@@ -284,8 +284,8 @@ export default function NuevoActivoPage() {
             <CatastroLegalSection value={catastro} onChange={setCatastroPatch} tipoActivo={form.tipo} submitted={submitted} />
 
             {/* Sección 3: Características */}
-            <div className="bg-navy-800 border border-white/10 p-4 md:p-6 flex flex-col gap-5">
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.1em]">Características y precio</p>
+            <div className="bg-tarjeta border border-linea p-4 md:p-6 flex flex-col gap-5 rounded-xl">
+              <p className="font-sans text-[14px] text-tenue">Características y precio</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Superficie (m²)">
@@ -306,23 +306,23 @@ export default function NuevoActivoPage() {
             </div>
 
             {submitted && hasErrors && (
-              <div className="flex items-start gap-2.5 bg-red-950/20 border border-red-900/60 px-4 py-3">
+              <div className="flex items-start gap-2.5 bg-error-suave border border-error-linea px-4 py-3 rounded-lg">
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
                   <circle cx="8" cy="8" r="7" stroke="#f3a3a3" strokeWidth="1.4"/>
                   <path d="M8 5v3.5M8 10.5v.5" stroke="#f3a3a3" strokeWidth="1.4" strokeLinecap="round"/>
                 </svg>
-                <p className="text-[12px] text-[#f3a3a3]">Completa los campos obligatorios marcados en rojo antes de continuar.</p>
+                <p className="text-[15px] text-error">Completa los campos obligatorios marcados en rojo antes de continuar.</p>
               </div>
             )}
 
             {error && (
-              <div className="flex items-center gap-2 bg-red-950/20 border border-red-900/60 px-4 py-3">
-                <p className="text-[12px] text-[#f3a3a3]">{error}</p>
+              <div className="flex items-center gap-2 bg-error-suave border border-error-linea px-4 py-3 rounded-lg">
+                <p className="text-[15px] text-error">{error}</p>
               </div>
             )}
 
             <button type="submit" disabled={loading || diagnosticando}
-              className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              className="w-full py-3.5 bg-gold-500 text-navy-950 font-sans text-[16px] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed rounded-lg">
               {loading ? 'Guardando…' : 'Registrar y continuar →'}
             </button>
 
@@ -332,11 +332,11 @@ export default function NuevoActivoPage() {
       </div>
 
       {diagnosticando && (
-        <div className="fixed inset-0 bg-navy-950 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-fondo flex items-center justify-center z-50">
           <div className="text-center">
             <span className="block w-2.5 h-2.5 rounded-full bg-gold-500 mx-auto mb-4 animate-pulse" />
-            <p className="text-[15px] text-paper font-medium">Mastermind está coordinando a los agentes Legal y de Mercado…</p>
-            <p className="text-[12px] text-slate mt-1.5 font-plex-mono">Abriendo el diagnóstico</p>
+            <p className="text-[18px] text-tinta font-medium">Mastermind está coordinando a los agentes Legal y de Mercado…</p>
+            <p className="text-[15px] text-tenue mt-1.5 font-sans">Abriendo el diagnóstico</p>
           </div>
         </div>
       )}

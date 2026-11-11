@@ -94,8 +94,8 @@ export function MapPicker({
 
   if (!ready) {
     return (
-      <div className="w-full border border-white/10 bg-navy-950/60 flex items-center justify-center" style={{ height: 260 }}>
-        <p className="text-[13px] text-slate font-plex-mono">Cargando mapa…</p>
+      <div className="w-full border border-linea bg-fondo/60 flex items-center justify-center" style={{ height: 260 }}>
+        <p className="text-[16px] text-tenue font-sans">Cargando mapa…</p>
       </div>
     )
   }
@@ -107,27 +107,27 @@ export function MapPicker({
           type="text"
           placeholder="Buscar dirección en el mapa…"
           id="map-search-input"
-          className="flex-1 px-4 py-2.5 border border-white/15 bg-navy-950/60 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
+          className="flex-1 px-4 py-2.5 border border-linea bg-fondo/60 text-[17px] text-tinta placeholder-tenue-2 focus:outline-none focus:border-gold-500 transition-colors rounded-lg"
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); geocode((e.target as HTMLInputElement).value) } }}
         />
         <button
           type="button"
           onClick={() => { const el = document.getElementById('map-search-input') as HTMLInputElement; if (el?.value) geocode(el.value) }}
           disabled={loading}
-          className="px-4 py-2.5 bg-gold-500 text-navy-950 font-plex-mono text-[12px] hover:bg-gold-400 transition-colors disabled:opacity-60"
+          className="px-4 py-2.5 bg-gold-500 text-navy-950 font-sans text-[15px] hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg"
         >
           {loading ? '…' : 'Buscar'}
         </button>
       </div>
-      <div className="relative w-full overflow-hidden border border-white/10" style={{ height: 260 }}>
+      <div className="relative w-full overflow-hidden border border-linea" style={{ height: 260 }}>
         <div ref={mapRef} className="w-full h-full" />
         {pos && (
-          <div className="absolute bottom-3 left-3 bg-navy-900 border border-white/15 px-3 py-1.5">
-            <p className="text-[10px] text-paper-dim font-plex-mono">{pos.lat.toFixed(6)}, {pos.lng.toFixed(6)}</p>
+          <div className="absolute bottom-3 left-3 bg-superficie border border-linea px-3 py-1.5 rounded-xl">
+            <p className="text-[13px] text-tinta-2 font-sans">{pos.lat.toFixed(6)}, {pos.lng.toFixed(6)}</p>
           </div>
         )}
       </div>
-      {!pos && <p className="text-[11px] text-slate">Busca la dirección o arrastra el marcador para confirmar la ubicación exacta.</p>}
+      {!pos && <p className="text-[14px] text-tenue">Busca la dirección o arrastra el marcador para confirmar la ubicación exacta.</p>}
     </div>
   )
 }
@@ -159,11 +159,11 @@ export function MapView({ lat, lng, label }: { lat: number; lng: number; label?:
 
   if (!ready) {
     return (
-      <div className="w-full border border-white/10 bg-navy-950/60 flex items-center justify-center" style={{ height: 260 }}>
-        <p className="text-[13px] text-slate font-plex-mono">Cargando mapa…</p>
+      <div className="w-full border border-linea bg-fondo/60 flex items-center justify-center" style={{ height: 260 }}>
+        <p className="text-[16px] text-tenue font-sans">Cargando mapa…</p>
       </div>
     )
   }
 
-  return <div ref={mapRef} className="w-full overflow-hidden border border-white/10" style={{ height: 260 }} />
+  return <div ref={mapRef} className="w-full overflow-hidden border border-linea" style={{ height: 260 }} />
 }

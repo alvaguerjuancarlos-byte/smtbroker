@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { AvisoSimplificado } from '@/app/components/AvisoSimplificado'
 import { RANGOS_PRESUPUESTO, PLAZOS, FORMAS_PAGO } from '@/lib/calificacionLeads'
 
-const campo = 'w-full bg-navy-950/60 border border-white/15 px-3 py-2.5 text-[14px] text-paper placeholder:text-slate focus:border-gold-500 outline-none'
+const campo = 'w-full bg-fondo/60 border border-linea px-3 py-2.5 text-[17px] text-tinta placeholder:text-tenue focus:border-gold-500 outline-none rounded-lg'
 
 export function MeInteresa({ activoId }: { activoId: string }) {
   const [abierto, setAbierto] = useState(false)
@@ -32,8 +32,8 @@ export function MeInteresa({ activoId }: { activoId: string }) {
   if (listo) {
     return (
       <div className="border border-gold-500/40 bg-gold-500/[0.08] p-5">
-        <p className="text-[16px] font-medium text-paper">¡Gracias! Recibimos tu interés.</p>
-        <p className="text-[13px] text-paper-dim mt-1">El broker que representa esta propiedad te contactará pronto.</p>
+        <p className="text-[18px] font-medium text-tinta">¡Gracias! Recibimos tu interés.</p>
+        <p className="text-[16px] text-tinta-2 mt-1">El broker que representa esta propiedad te contactará pronto.</p>
       </div>
     )
   }
@@ -41,15 +41,15 @@ export function MeInteresa({ activoId }: { activoId: string }) {
   if (!abierto) {
     return (
       <button onClick={() => setAbierto(true)}
-        className="w-full bg-gold-500 text-navy-950 px-6 py-4 font-plex-mono text-[14px] tracking-[0.02em] hover:bg-gold-400 transition-colors">
+        className="w-full bg-gold-500 text-navy-950 px-6 py-4 font-sans text-[17px] hover:bg-gold-400 transition-colors rounded-lg">
         Me interesa esta propiedad
       </button>
     )
   }
 
   return (
-    <form onSubmit={enviar} className="bg-navy-800 border border-gold-500/30 p-5 flex flex-col gap-3">
-      <p className="font-plex-mono text-[11px] text-gold-400 uppercase tracking-[0.1em]">Me interesa</p>
+    <form onSubmit={enviar} className="bg-tarjeta border border-gold-500/30 p-5 flex flex-col gap-3 rounded-xl">
+      <p className="font-sans text-[14px] text-acento">Me interesa</p>
       <input className={campo} placeholder="Tu nombre" value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} required />
       <input className={campo} placeholder="Correo o WhatsApp (10 dígitos)" value={f.contacto} onChange={e => setF({ ...f, contacto: e.target.value })} required />
       {/* Campo trampa para bots: oculto a personas. */}
@@ -69,14 +69,14 @@ export function MeInteresa({ activoId }: { activoId: string }) {
         </select>
       </div>
       <textarea className={campo} rows={2} placeholder="Mensaje (opcional)" value={f.mensaje} onChange={e => setF({ ...f, mensaje: e.target.value })} />
-      <label className="flex gap-2.5 items-start text-[12.5px] text-paper-dim cursor-pointer">
+      <label className="flex gap-2.5 items-start text-[15px] text-tinta-2 cursor-pointer">
         <input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} className="mt-0.5" />
         <span>Acepto que mis datos se compartan con el broker o propietario de esta propiedad.</span>
       </label>
       <AvisoSimplificado contexto="interesado" />
-      {error && <p className="text-[12.5px] text-[#f3a3a3]">{error}</p>}
+      {error && <p className="text-[15px] text-error">{error}</p>}
       <button type="submit" disabled={enviando || !acepta}
-        className="bg-gold-500 text-navy-950 px-6 py-3 font-plex-mono text-[13px] hover:bg-gold-400 disabled:opacity-50">
+        className="bg-gold-500 text-navy-950 px-6 py-3 font-sans text-[16px] hover:bg-gold-400 disabled:opacity-50 rounded-lg">
         {enviando ? 'Enviando…' : 'Enviar'}
       </button>
     </form>

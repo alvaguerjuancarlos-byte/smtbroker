@@ -26,9 +26,9 @@ export function AvisoSimplificado({
 }) {
   const esOscuro = tema === 'oscuro'
   return (
-    <p className={`text-[11.5px] leading-[1.6] ${esOscuro ? 'text-slate' : 'text-gray-500'}`}>
+    <p className={`text-[14px] leading-[1.6] ${esOscuro ? 'text-tenue' : 'text-gray-500'}`}>
       {TEXTOS[contexto]} Consulta el{' '}
-      <Link href="/aviso-privacidad" target="_blank" className={esOscuro ? 'text-gold-400 underline' : 'text-blue-600 underline'}>
+      <Link href="/aviso-privacidad" target="_blank" className={esOscuro ? 'text-acento underline' : 'text-blue-600 underline'}>
         Aviso de Privacidad Integral
       </Link>.
     </p>

@@ -59,46 +59,46 @@ export function RadarMercado() {
   return (
     <div id="radar">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="font-display text-[17px] font-medium text-paper">Radar de mercado</h2>
-        <span className="font-plex-mono text-[10px] text-slate uppercase tracking-[0.1em]">opciones no certificadas</span>
+        <h2 className="font-display text-[19px] font-medium text-tinta">Radar de mercado</h2>
+        <span className="font-sans text-[13px] text-tenue">opciones no certificadas</span>
       </div>
-      <p className="text-[12px] text-slate mb-4">
+      <p className="text-[15px] text-tenue mb-4">
         ¿Viste algo en otro lado? Pega la liga y le pedimos al anunciante que certifique su propiedad: precio de mercado y revisión de documentos.
       </p>
 
-      <form onSubmit={pegar} className="bg-navy-800 border border-white/10 p-4 flex flex-col gap-2 mb-3">
+      <form onSubmit={pegar} className="bg-tarjeta border border-linea p-4 flex flex-col gap-2 mb-3 rounded-xl">
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://… liga del anuncio" required
             className={`${inputCls(false, 'oscuro')} flex-1`} inputMode="url" />
           <button disabled={enviando || !url.trim()}
-            className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-4 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0">
+            className="font-sans text-[14px] bg-gold-500 text-navy-950 px-4 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 shrink-0 rounded-lg">
             {enviando ? 'Agregando…' : 'Agregar al Radar'}
           </button>
         </div>
         <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300}
           placeholder="Opcional: qué te gustó o qué quieres saber" className={inputCls(false, 'oscuro')} />
-        {error && <p className="text-[12px] text-[#f3a3a3]">{error}</p>}
+        {error && <p className="text-[15px] text-error">{error}</p>}
       </form>
 
       {opciones.length > 0 && (
-        <div className="bg-navy-800 border border-white/10 overflow-hidden">
+        <div className="bg-tarjeta border border-linea overflow-hidden rounded-xl">
           {opciones.map((o, i) => (
-            <div key={o.id} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== opciones.length - 1 ? 'border-b border-white/10' : ''}`}>
+            <div key={o.id} className={`px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${i !== opciones.length - 1 ? 'border-b border-linea' : ''}`}>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-paper truncate">{o.titulo ?? `Anuncio en ${o.fuente}`}</p>
-                <p className="text-[11.5px] text-slate mt-0.5">
+                <p className="text-[17px] font-medium text-tinta truncate">{o.titulo ?? `Anuncio en ${o.fuente}`}</p>
+                <p className="text-[14px] text-tenue mt-0.5">
                   {[o.tipo, o.municipio, o.precio != null ? mxn(o.precio) : null, o.fuente].filter(Boolean).join(' · ')}
                   {o.origen === 'operacion' ? ' · te la sugirió nuestro equipo' : ''}
                 </p>
-                <a href={o.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[12px] text-gold-400 hover:text-gold-100 underline underline-offset-2">Ver anuncio</a>
+                <a href={o.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[15px] text-acento hover:text-acento-2 underline underline-offset-2">Ver anuncio</a>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`font-plex-mono text-[10.5px] px-2.5 py-1 border ${o.certificada ? 'text-gold-400 border-gold-500/40' : 'text-slate border-white/15'}`}>
+                <span className={`font-sans text-[13px] px-2.5 py-1 border ${o.certificada ? 'text-acento border-gold-500/40' : 'text-tenue border-linea'} rounded-lg`}>
                   {o.estado}
                 </span>
                 {!o.interesado && (
                   <button disabled={ocupado === o.id} onClick={() => meInteresa(o.id)}
-                    className="font-plex-mono text-[11px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60">
+                    className="font-sans text-[14px] bg-gold-500 text-navy-950 px-3 py-2 hover:bg-gold-400 transition-colors disabled:opacity-60 rounded-lg">
                     Me interesa
                   </button>
                 )}

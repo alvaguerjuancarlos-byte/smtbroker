@@ -77,21 +77,21 @@ export default function EstablecerPasswordPage() {
 
   const gridBg = {
     backgroundImage:
-      'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+      'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
     backgroundSize: '56px 56px',
   }
 
   if (estado === 'revisando') {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center relative">
+      <div className="min-h-screen bg-fondo flex items-center justify-center relative">
         <div className="absolute inset-0 pointer-events-none" style={gridBg} />
-        <p className="relative text-slate text-[14px] font-plex-mono">Revisando enlace…</p>
+        <p className="relative text-tenue text-[17px] font-sans">Revisando enlace…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex items-center justify-center px-4 relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex items-center justify-center px-4 relative">
       <div className="absolute inset-0 pointer-events-none" style={gridBg} />
 
       <div className="relative w-full max-w-[400px]">
@@ -101,19 +101,19 @@ export default function EstablecerPasswordPage() {
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <h1 className="font-display font-semibold text-[19px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></h1>
-          <p className="font-plex-mono text-[10px] text-slate tracking-[0.14em] uppercase mt-0.5">Plataforma IA de ventas inmobiliarias</p>
+          <h1 className="font-display font-semibold text-[21px] tracking-tight">SMT<span className="text-acento">BROKER</span></h1>
+          <p className="font-sans text-[13px] text-tenue mt-0.5">Plataforma IA de ventas inmobiliarias</p>
         </div>
 
         <div className="relative before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">
-          <div className="bg-navy-800 border border-white/10 p-8">
+          <div className="bg-tarjeta border border-linea p-8 rounded-xl">
           {estado === 'invalido' && (
             <>
-              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Enlace inválido o expirado</h2>
-              <p className="text-[13px] text-slate mb-6">
+              <h2 className="font-display text-[20px] font-medium text-tinta mb-1">Enlace inválido o expirado</h2>
+              <p className="text-[16px] text-tenue mb-6">
                 Este enlace ya no es válido (los enlaces expiran después de un tiempo o de un solo uso). Pide que te envíen uno nuevo.
               </p>
-              <a href="/login" className="block text-center w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors">
+              <a href="/login" className="block text-center w-full py-3.5 bg-gold-500 text-navy-950 font-sans text-[16px] hover:bg-gold-400 transition-colors rounded-lg">
                 Ir a iniciar sesión
               </a>
             </>
@@ -121,14 +121,14 @@ export default function EstablecerPasswordPage() {
 
           {(estado === 'porConfirmar' || estado === 'confirmando') && (
             <>
-              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Confirma tu enlace</h2>
-              <p className="text-[13px] text-slate mb-6">
+              <h2 className="font-display text-[20px] font-medium text-tinta mb-1">Confirma tu enlace</h2>
+              <p className="text-[16px] text-tenue mb-6">
                 Por seguridad, confirma manualmente para continuar (esto evita que un escáner de correo lo abra por ti).
               </p>
               <button
                 onClick={handleConfirmar}
                 disabled={estado === 'confirmando'}
-                className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-gold-500 text-navy-950 font-sans text-[16px] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed rounded-lg"
               >
                 {estado === 'confirmando' ? 'Confirmando…' : 'Confirmar y continuar'}
               </button>
@@ -137,43 +137,43 @@ export default function EstablecerPasswordPage() {
 
           {estado === 'listo' && (
             <>
-              <h2 className="font-display text-[18px] font-medium text-paper mb-1">Crea tu contraseña</h2>
-              <p className="text-[13px] text-slate mb-6">Último paso para activar tu cuenta.</p>
+              <h2 className="font-display text-[20px] font-medium text-tinta mb-1">Crea tu contraseña</h2>
+              <p className="text-[16px] text-tenue mb-6">Último paso para activar tu cuenta.</p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Contraseña</label>
+                  <label className="font-sans text-[13px] text-tenue">Contraseña</label>
                   <input
                     type="password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
                     required
-                    className="w-full px-4 py-3 border border-white/15 bg-navy-950/60 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
+                    className="w-full px-4 py-3 border border-linea bg-fondo/60 text-[17px] text-tinta placeholder-tenue-2 focus:outline-none focus:border-gold-500 transition-colors rounded-lg"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Confirmar contraseña</label>
+                  <label className="font-sans text-[13px] text-tenue">Confirmar contraseña</label>
                   <input
                     type="password"
                     value={confirmar}
                     onChange={e => setConfirmar(e.target.value)}
                     placeholder="Repite la contraseña"
                     required
-                    className="w-full px-4 py-3 border border-white/15 bg-navy-950/60 text-[14px] text-paper placeholder-slate-dim focus:outline-none focus:border-gold-500 transition-colors"
+                    className="w-full px-4 py-3 border border-linea bg-fondo/60 text-[17px] text-tinta placeholder-tenue-2 focus:outline-none focus:border-gold-500 transition-colors rounded-lg"
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-start gap-2.5 bg-red-950/20 border border-red-900/60 px-4 py-3">
-                    <p className="text-[12px] text-[#f3a3a3] leading-snug">{error}</p>
+                  <div className="flex items-start gap-2.5 bg-error-suave border border-error-linea px-4 py-3 rounded-lg">
+                    <p className="text-[15px] text-error leading-snug">{error}</p>
                   </div>
                 )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                  className="w-full py-3.5 bg-gold-500 text-navy-950 font-sans text-[16px] hover:bg-gold-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-1 rounded-lg"
                 >
                   {loading ? 'Guardando…' : 'Activar cuenta'}
                 </button>

@@ -3,11 +3,11 @@
 export const ESTADOS_ACTIVO = ['ingresado', 'valoracion', 'marketing', 'leads', 'cerrado'] as const
 
 export const statusCfg = (status: string) => {
-  if (status === 'valoracion')  return { label: 'En valoración', chip: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10' }
-  if (status === 'marketing')   return { label: 'En marketing',  chip: 'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10' }
-  if (status === 'leads')       return { label: 'Leads activos', chip: 'border-gold-500/40 text-gold-400 bg-gold-500/10' }
-  if (status === 'cerrado')     return { label: 'Cerrado',       chip: 'border-white/15 text-slate bg-white/5' }
-  return { label: 'Ingresado', chip: 'border-white/15 text-slate bg-white/5' }
+  if (status === 'valoracion')  return { label: 'En valoración', chip: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10' }
+  if (status === 'marketing')   return { label: 'En marketing',  chip: 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10' }
+  if (status === 'leads')       return { label: 'Leads activos', chip: 'border-gold-500/40 text-acento bg-gold-500/10' }
+  if (status === 'cerrado')     return { label: 'Cerrado',       chip: 'border-linea text-tenue bg-sutil' }
+  return { label: 'Ingresado', chip: 'border-linea text-tenue bg-sutil' }
 }
 
 export const formatDate = (iso: string) =>

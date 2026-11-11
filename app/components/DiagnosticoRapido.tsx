@@ -47,7 +47,7 @@ const aValorFormulario = (a: ExpedienteActivo): CatastroLegalValue => ({
   superficie_construccion_m2: a.superficie_construccion_m2 != null ? String(a.superficie_construccion_m2) : '',
 })
 
-const boton = 'font-plex-mono text-[12px] px-4 py-2.5 border transition-colors'
+const boton = 'font-sans text-[15px] px-4 py-2.5 border transition-colors rounded-lg'
 
 export function DiagnosticoRapido({
   datos, error, activo, tipoActivo, onActualizado,
@@ -65,13 +65,13 @@ export function DiagnosticoRapido({
   const [aviso, setAviso] = useState('')
 
   if (error) {
-    return <div className="bg-navy-800 border border-red-900/40 p-5 text-[13px] text-paper-dim">No se pudo revisar el expediente ({error}).</div>
+    return <div className="bg-tarjeta border border-error-linea p-5 text-[16px] text-tinta-2 rounded-xl">No se pudo revisar el expediente ({error}).</div>
   }
   if (!datos) {
     return (
-      <div className="bg-navy-800 border border-white/10 p-5 flex items-center gap-3">
+      <div className="bg-tarjeta border border-linea p-5 flex items-center gap-3 rounded-xl">
         <span className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
-        <p className="text-[13px] text-slate font-plex-mono">Revisando uso de suelo y expediente…</p>
+        <p className="text-[16px] text-tenue font-sans">Revisando uso de suelo y expediente…</p>
       </div>
     )
   }
@@ -113,22 +113,22 @@ export function DiagnosticoRapido({
   return (
     <div className="flex flex-col gap-3">
       {/* Uso de suelo */}
-      <div className="bg-navy-800 border border-white/10 p-4 md:p-5">
+      <div className="bg-tarjeta border border-linea p-4 md:p-5 rounded-xl">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
-          <h4 className="text-[14px] font-medium text-paper">Uso de suelo</h4>
-          <span className="font-plex-mono text-[10px] uppercase tracking-wide px-2 py-0.5 border border-white/15 text-slate">
+          <h4 className="text-[17px] font-medium text-tinta">Uso de suelo</h4>
+          <span className="font-sans text-[13px] px-2 py-0.5 border border-linea text-tenue rounded-lg">
             Declarado: {USO_DECLARADO[datos.usoSueloDeclarado ?? 'no_determinado'] ?? datos.usoSueloDeclarado}
           </span>
         </div>
         {datos.usoSuelo ? (
           <>
-            <p className="text-[13px] text-paper-dim leading-relaxed">
-              Zonificación oficial: <b className="text-paper">{datos.usoSuelo.uso}</b> — {datos.usoSuelo.descripcion} (distrito {datos.usoSuelo.distrito}).
+            <p className="text-[16px] text-tinta-2 leading-relaxed">
+              Zonificación oficial: <b className="text-tinta">{datos.usoSuelo.uso}</b> — {datos.usoSuelo.descripcion} (distrito {datos.usoSuelo.distrito}).
             </p>
-            <p className="text-[11px] text-slate mt-1.5"><b className="font-medium">Fuente:</b> {datos.usoSuelo.fuente}</p>
+            <p className="text-[14px] text-tenue mt-1.5"><b className="font-medium">Fuente:</b> {datos.usoSuelo.fuente}</p>
           </>
         ) : (
-          <p className="text-[13px] text-paper-dim leading-relaxed">
+          <p className="text-[16px] text-tinta-2 leading-relaxed">
             {datos.gisDisponible
               ? 'No se pudo ubicar el predio en el GIS municipal (revisa que el punto del mapa esté sobre el terreno).'
               : 'Este municipio no publica su zonificación en línea: el uso de suelo se revisa en la certificación legal.'}
@@ -137,26 +137,26 @@ export function DiagnosticoRapido({
       </div>
 
       {/* Expediente */}
-      <div className="bg-navy-800 border border-white/10 p-4 md:p-5">
+      <div className="bg-tarjeta border border-linea p-4 md:p-5 rounded-xl">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
-          <h4 className="text-[14px] font-medium text-paper">Expediente para certificar</h4>
+          <h4 className="text-[17px] font-medium text-tinta">Expediente para certificar</h4>
           {!expedienteBloqueado && !editando && (
             <button onClick={() => { setForm(aValorFormulario(activo)); setEditando(true) }}
-              className="font-plex-mono text-[11px] text-gold-400 hover:text-gold-100 underline underline-offset-2">
+              className="font-sans text-[14px] text-acento hover:text-acento-2 underline underline-offset-2">
               {datos.faltantes.length ? 'Completar expediente' : 'Editar expediente'}
             </button>
           )}
         </div>
         {datos.faltantes.length === 0 ? (
-          <p className="text-[13px] text-[#6bdb9a]">✓ Expediente completo: folio real, escritura, clave catastral, gravámenes y uso de suelo declarados.</p>
+          <p className="text-[16px] text-exito">✓ Expediente completo: folio real, escritura, clave catastral, gravámenes y uso de suelo declarados.</p>
         ) : (
           <>
-            <p className="text-[13px] text-paper-dim mb-2.5">Para certificar te falta:</p>
+            <p className="text-[16px] text-tinta-2 mb-2.5">Para certificar te falta:</p>
             <ul className="flex flex-col gap-2">
               {datos.faltantes.map(f => (
-                <li key={f.campo} className="flex gap-2.5 text-[13px]">
-                  <span className="text-[#e8b568] shrink-0">○</span>
-                  <span><b className="text-paper font-medium">{f.documento}</b> <span className="text-slate">— {f.porque}</span></span>
+                <li key={f.campo} className="flex gap-2.5 text-[16px]">
+                  <span className="text-aviso shrink-0">○</span>
+                  <span><b className="text-tinta font-medium">{f.documento}</b> <span className="text-tenue">— {f.porque}</span></span>
                 </li>
               ))}
             </ul>
@@ -169,41 +169,41 @@ export function DiagnosticoRapido({
           <CatastroLegalSection value={form} onChange={patch => setForm(f => ({ ...f, ...patch }))} tipoActivo={tipoActivo} submitted={false} />
           <div className="flex gap-2">
             <button onClick={guardarExpediente} disabled={guardando}
-              className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60`}>
+              className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60 rounded-lg`}>
               {guardando ? 'Guardando…' : 'Guardar expediente'}
             </button>
-            <button onClick={() => setEditando(false)} className={`${boton} border-white/15 text-slate hover:text-paper`}>Cancelar</button>
+            <button onClick={() => setEditando(false)} className={`${boton} border-linea text-tenue hover:text-tinta`}>Cancelar</button>
           </div>
         </div>
       )}
 
       {/* Certificación legal */}
-      <div className={`p-4 md:p-5 border ${cert?.estado === 'certificada' ? 'bg-gold-500/[0.08] border-gold-500/40' : 'bg-navy-900 border-gold-500/20'}`}>
-        <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-[0.1em] mb-1">Certificación legal · Reporte de Transparencia</p>
+      <div className={`p-4 md:p-5 border ${cert?.estado === 'certificada' ? 'bg-gold-500/[0.08] border-gold-500/40' : 'bg-superficie border-gold-500/20'} rounded-xl`}>
+        <p className="font-sans text-[13px] text-acento mb-1">Certificación legal · Reporte de Transparencia</p>
         {cert && cert.estado !== 'rechazada' ? (
           <>
-            <p className="text-[15px] font-medium text-paper">{cert.estado === 'certificada' ? '★ ' : ''}{ETIQUETA_CERTIFICACION[cert.estado]}</p>
-            <p className="text-[12.5px] text-paper-dim mt-1">
+            <p className="text-[18px] font-medium text-tinta">{cert.estado === 'certificada' ? '★ ' : ''}{ETIQUETA_CERTIFICACION[cert.estado]}</p>
+            <p className="text-[15px] text-tinta-2 mt-1">
               {cert.estado === 'en_revision' && 'Operación MindBridge está revisando el dictamen legal completo. Te avisamos al terminar.'}
               {cert.estado === 'certificada' && 'El dictamen legal está abajo y en el reporte descargable. Las propiedades certificadas dan confianza al comprador y suben el nivel del broker.'}
             </p>
           </>
         ) : (
           <>
-            {cert?.estado === 'rechazada' && <p className="text-[12.5px] text-[#f3a3a3] mb-1.5">La certificación anterior no se aprobó. Revisa el expediente y vuelve a solicitarla.</p>}
-            <p className="text-[13px] text-paper-dim">
-              Dictamen legal completo (título, gravámenes, uso de suelo y restricciones), sello de <b className="text-paper">inventario certificado</b> y reporte descargable para el comprador.
+            {cert?.estado === 'rechazada' && <p className="text-[15px] text-error mb-1.5">La certificación anterior no se aprobó. Revisa el expediente y vuelve a solicitarla.</p>}
+            <p className="text-[16px] text-tinta-2">
+              Dictamen legal completo (título, gravámenes, uso de suelo y restricciones), sello de <b className="text-tinta">inventario certificado</b> y reporte descargable para el comprador.
             </p>
             <button onClick={solicitarCertificacion} disabled={!datos.listoParaCertificar || solicitando}
-              className={`${boton} mt-3 bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 disabled:cursor-not-allowed`}>
+              className={`${boton} mt-3 bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg`}>
               {solicitando ? 'Enviando…' : 'Solicitar certificación legal'}
             </button>
-            <p className="text-[11.5px] text-slate mt-2">
+            <p className="text-[14px] text-tenue mt-2">
               {datos.listoParaCertificar ? `Hasta ${LIMITE_CERTIFICACIONES_MES} certificaciones al mes.` : 'Completa el expediente para poder solicitarla.'}
             </p>
           </>
         )}
-        {aviso && <p className="text-[12px] text-[#f3a3a3] mt-2">{aviso}</p>}
+        {aviso && <p className="text-[15px] text-error mt-2">{aviso}</p>}
       </div>
     </div>
   )

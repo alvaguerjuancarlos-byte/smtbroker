@@ -17,7 +17,7 @@ import PanelComprador from './PanelComprador'
 
 const GRID_BG = {
   backgroundImage:
-    'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+    'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
   backgroundSize: '56px 56px',
 }
 
@@ -44,16 +44,16 @@ export default function InicioPage() {
   }, [router])
 
   if (!rol) {
-    return <div className="min-h-screen bg-navy-950 flex items-center justify-center"><p className="text-slate text-[14px] font-plex-mono">Cargando…</p></div>
+    return <div className="min-h-screen bg-fondo flex items-center justify-center"><p className="text-tenue text-[17px] font-sans">Cargando…</p></div>
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative flex flex-col flex-1">
         <Topbar rol={rol} />
-        <main className="flex-1 px-4 md:px-6 py-6 md:py-10">
-          <div className="w-full max-w-[640px] mx-auto flex flex-col gap-4">
+        <main className="flex-1 px-4 md:px-6 pb-10">
+          <div className="w-full max-w-[860px] mx-auto flex flex-col gap-4">
             {rol === 'propietario'
               ? <PanelVendedor uid={uid} nombre={nombre} conBroker={conBroker} />
               : <PanelComprador uid={uid} nombre={nombre} conBroker={conBroker} />}

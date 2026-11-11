@@ -24,8 +24,8 @@ const ESTADO: Record<Estado, string> = {
 const ORDEN: Record<Estado, number> = { pendiente: 0, enviada: 1, aceptada: 2, sin_invitar: 3, sin_respuesta: 4, rechazada: 5 }
 const CANAL: Record<string, string> = { correo: 'Correo', whatsapp: 'WhatsApp', portal: 'Mensaje del portal', telefono: 'Teléfono' }
 
-const campo = 'bg-navy-950 border border-white/15 text-paper text-[12.5px] px-2.5 py-1.5 focus:outline-none focus:border-gold-500/60'
-const boton = 'font-plex-mono text-[11px] px-3 py-1.5 border transition-colors'
+const campo = 'bg-fondo border border-linea text-tinta text-[15px] px-2.5 py-1.5 focus:outline-none focus:border-gold-500/60 rounded-lg'
+const boton = 'font-sans text-[14px] px-3 py-1.5 border transition-colors rounded-lg'
 const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
 
 function TarjetaAnuncio({ a, onGuardado }: { a: Anuncio; onGuardado: () => void }) {
@@ -54,15 +54,15 @@ function TarjetaAnuncio({ a, onGuardado }: { a: Anuncio; onGuardado: () => void 
   }
 
   return (
-    <div className="px-5 py-4 border-b border-white/10 last:border-b-0 flex flex-col gap-2.5">
+    <div className="px-5 py-4 border-b border-linea last:border-b-0 flex flex-col gap-2.5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[13.5px] text-gold-400 hover:text-gold-100 break-all">{a.titulo || a.url}</a>
-          <p className="text-[11.5px] text-slate">{a.fuente} · {a.interesados} {a.interesados === 1 ? 'comprador interesado' : 'compradores interesados'}</p>
+          <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[16px] text-acento hover:text-acento-2 break-all">{a.titulo || a.url}</a>
+          <p className="text-[14px] text-tenue">{a.fuente} · {a.interesados} {a.interesados === 1 ? 'comprador interesado' : 'compradores interesados'}</p>
         </div>
-        <span className="font-plex-mono text-[10.5px] text-gold-400 border border-gold-500/30 px-2.5 py-1 shrink-0">{ESTADO[a.invitacion_estado]}</span>
+        <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2.5 py-1 shrink-0 rounded-lg">{ESTADO[a.invitacion_estado]}</span>
       </div>
-      <ul className="text-[11.5px] text-paper-dim flex flex-col gap-0.5">
+      <ul className="text-[14px] text-tinta-2 flex flex-col gap-0.5">
         {a.compradores.map((c, i) => (
           <li key={i}>
             {c.nombre} · {c.origen === 'comprador' ? 'pegó la liga' : 'sugerida por Operación'}{c.interesado ? ' · le interesa' : ''}{c.nota ? ` · "${c.nota}"` : ''}
@@ -77,7 +77,7 @@ function TarjetaAnuncio({ a, onGuardado }: { a: Anuncio; onGuardado: () => void 
       </div>
       {!cerrada && (
         <>
-          <textarea readOnly value={a.mensaje} rows={3} className={`${campo} w-full resize-y text-paper-dim`} />
+          <textarea readOnly value={a.mensaje} rows={3} className={`${campo} w-full resize-y text-tinta-2`} />
           <input value={f.anunciante_contacto} onChange={set('anunciante_contacto')}
             placeholder="Contacto del anunciante (se borra al cerrar la invitación)" className={campo} />
         </>
@@ -93,11 +93,11 @@ function TarjetaAnuncio({ a, onGuardado }: { a: Anuncio; onGuardado: () => void 
         {f.invitacion_estado === 'aceptada' && (
           <input value={f.activo_id} onChange={set('activo_id')} placeholder="ID de la propiedad ya registrada (opcional)" className={`${campo} flex-1 min-w-[200px]`} />
         )}
-        {!cerrada && <button onClick={copiar} className={`${boton} border-gold-500/40 text-gold-400 hover:border-gold-500`}>Copiar mensaje</button>}
-        <button onClick={guardar} disabled={guardando} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60`}>
+        {!cerrada && <button onClick={copiar} className={`${boton} border-gold-500/40 text-acento hover:border-gold-500`}>Copiar mensaje</button>}
+        <button onClick={guardar} disabled={guardando} className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60 rounded-lg`}>
           {guardando ? 'Guardando…' : 'Guardar'}
         </button>
-        {aviso && <span className="text-[11.5px] text-slate">{aviso}</span>}
+        {aviso && <span className="text-[14px] text-tenue">{aviso}</span>}
       </div>
     </div>
   )
@@ -139,29 +139,29 @@ export default function RadarOperacion() {
   const setN = (k: keyof typeof nuevo) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setNuevo((x) => ({ ...x, [k]: e.target.value }))
 
   return (
-    <div id="radar" className="bg-navy-800 border border-white/10">
-      <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-        <h2 className="font-display text-[17px] font-medium text-paper">Radar de mercado · invitaciones a certificar</h2>
-        <span className="font-plex-mono text-[11px] text-slate">{abiertos.length}</span>
+    <div id="radar" className="bg-tarjeta border border-linea rounded-xl">
+      <div className="px-5 py-4 border-b border-linea flex items-center justify-between">
+        <h2 className="font-display text-[19px] font-medium text-tinta">Radar de mercado · invitaciones a certificar</h2>
+        <span className="font-sans text-[14px] text-tenue">{abiertos.length}</span>
       </div>
 
       {abiertos.length === 0 ? (
-        <p className="px-5 py-6 text-[13px] text-slate">Sin anuncios por invitar.</p>
+        <p className="px-5 py-6 text-[16px] text-tenue">Sin anuncios por invitar.</p>
       ) : abiertos.map((a) => <TarjetaAnuncio key={a.id + a.invitacion_estado} a={a} onGuardado={cargar} />)}
 
       {resto.length > 0 && (
-        <div className="border-t border-white/10">
-          <button onClick={() => setVerCerrados((v) => !v)} className="px-5 py-3 text-[12px] text-slate hover:text-paper">
+        <div className="border-t border-linea">
+          <button onClick={() => setVerCerrados((v) => !v)} className="px-5 py-3 text-[15px] text-tenue hover:text-tinta">
             {verCerrados ? 'Ocultar' : 'Ver'} otros anuncios ({resto.length})
           </button>
           {verCerrados && resto.map((a) => <TarjetaAnuncio key={a.id + a.invitacion_estado} a={a} onGuardado={cargar} />)}
         </div>
       )}
 
-      <form onSubmit={agregar} className="px-5 py-4 border-t border-white/10 flex flex-col gap-2">
-        <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-[0.1em]">Agregar una opción al Radar de un comprador</p>
+      <form onSubmit={agregar} className="px-5 py-4 border-t border-linea flex flex-col gap-2">
+        <p className="font-sans text-[13px] text-acento">Agregar una opción al Radar de un comprador</p>
         {compradores.length === 0 ? (
-          <p className="text-[12px] text-slate">No hay compradores por su cuenta todavía.</p>
+          <p className="text-[15px] text-tenue">No hay compradores por su cuenta todavía.</p>
         ) : (
           <>
             <select value={nuevo.perfilId} onChange={setN('perfilId')} required className={campo}>
@@ -176,8 +176,8 @@ export default function RadarOperacion() {
               <input value={nuevo.municipio} onChange={setN('municipio')} placeholder="Municipio" className={campo} />
             </div>
             <div className="flex items-center gap-3">
-              <button className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 self-start`}>Agregar al Radar</button>
-              {error && <span className="text-[12px] text-[#f3a3a3]">{error}</span>}
+              <button className={`${boton} bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 self-start rounded-lg`}>Agregar al Radar</button>
+              {error && <span className="text-[15px] text-error">{error}</span>}
             </div>
           </>
         )}

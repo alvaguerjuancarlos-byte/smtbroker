@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
   --color-smt: #0F1F3D;
   --color-smt-dark: #0A1628;
   --color-smt-light: #1A3460;
@@ -21,8 +21,6 @@
   /* Rediseño navy/dorado (piloto: /login) — paleta y tipografía separadas de --color-smt-*
      para no alterar ninguna pantalla existente mientras se decide si se extiende. */
   --font-display: var(--font-display);
-  --font-plex-sans: var(--font-plex-sans);
-  --font-plex-mono: var(--font-plex-mono);
   --color-navy-950: #070f1c;
   --color-navy-900: #0b1d3a;
   --color-navy-800: #13294a;
@@ -34,14 +32,96 @@
   --color-paper-dim: #cfc9b8;
   --color-slate: #8b96ab;
   --color-slate-dim: #5f6a80;
+
+  /* Nuevo look (estilo C, JC 11-nov-2026): tokens semánticos. El contenido es claro; las bandas
+     de encabezado (Topbar y encabezados de página) llevan la clase .tema-oscuro, que regresa los
+     valores azul marino. Ver :root y .tema-oscuro abajo. */
+  --color-fondo: var(--c-fondo);
+  --color-superficie: var(--c-superficie);
+  --color-tarjeta: var(--c-tarjeta);
+  --color-tinta: var(--c-tinta);
+  --color-tinta-2: var(--c-tinta-2);
+  --color-tenue: var(--c-tenue);
+  --color-tenue-2: var(--c-tenue-2);
+  --color-linea: var(--c-linea);
+  --color-linea-fuerte: var(--c-linea-fuerte);
+  --color-sutil: var(--c-sutil);
+  --color-acento: var(--c-acento);
+  --color-acento-2: var(--c-acento-2);
+  --color-error: var(--c-error);
+  --color-error-linea: var(--c-error-linea);
+  --color-error-suave: var(--c-error-suave);
+  --color-aviso: var(--c-aviso);
+  --color-exito: var(--c-exito);
+  --color-violeta: var(--c-violeta);
+  --color-verde: var(--c-verde);
+}
+
+:root {
+  --c-fondo: #f5f6f8;
+  --c-superficie: #ffffff;
+  --c-tarjeta: #ffffff;
+  --c-tinta: #0b1d3a;
+  --c-tinta-2: #3d4a5c;
+  --c-tenue: #5b6576;
+  --c-tenue-2: #7a8394;
+  --c-linea: #e2e6ed;
+  --c-linea-fuerte: #c5ccd8;
+  --c-sutil: #eef1f7;
+  --c-acento: #8a6a12;
+  --c-acento-2: #6e5310;
+  --c-error: #b42318;
+  --c-error-linea: #f1c0bb;
+  --c-error-suave: #fdf1f0;
+  --c-aviso: #9a5b00;
+  --c-exito: #1e7a4c;
+  --c-violeta: #4f46e5;
+  --c-verde: #17775b;
+  --c-verde-suave: rgba(23, 119, 91, 0.08);
+  --c-oro: #8a6a12;
+  --c-rojo: #b42318;
+  --c-gris: #5b6576;
+  --c-rejilla: transparent;
+}
+
+.tema-oscuro {
+  --c-fondo: #070f1c;
+  --c-superficie: #0b1d3a;
+  --c-tarjeta: #13294a;
+  --c-tinta: #f4f0e6;
+  --c-tinta-2: #c9d2e3;
+  --c-tenue: #9aa6bb;
+  --c-tenue-2: #6b7790;
+  --c-linea: rgba(255, 255, 255, 0.12);
+  --c-linea-fuerte: rgba(255, 255, 255, 0.28);
+  --c-sutil: rgba(255, 255, 255, 0.07);
+  --c-acento: #ddc06a;
+  --c-acento-2: #f1e6c2;
+  --c-error: #f3a3a3;
+  --c-error-linea: rgba(127, 29, 29, 0.6);
+  --c-error-suave: rgba(69, 10, 10, 0.25);
+  --c-aviso: #e8b568;
+  --c-exito: #6bdb9a;
+  --c-violeta: #a5a1f5;
+  --c-verde: #7fd1b9;
+  --c-verde-suave: rgba(127, 209, 185, 0.12);
+  --c-oro: #d9b45a;
+  --c-rojo: #f3a3a3;
+  --c-gris: #8a93a3;
+  --c-rejilla: rgba(244, 240, 230, 0.12);
+  color: var(--c-tinta);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 input[type="range"] {
   accent-color: #C9A84C;
+}
+
+body {
+  overflow-x: clip;
 }

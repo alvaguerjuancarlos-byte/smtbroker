@@ -16,8 +16,8 @@ interface Oportunidad { id: string; broker_id: string; estado: 'ofrecida' | 'ace
 
 const COLOR_NIVEL: Record<string, string> = {
   Platino: 'border-[#c9d4e8]/50 text-[#dfe7f5]',
-  Oro: 'border-gold-500/60 text-gold-400',
-  Plata: 'border-white/30 text-paper',
+  Oro: 'border-gold-500/60 text-acento',
+  Plata: 'border-linea-fuerte text-tinta',
 }
 
 async function llamar(url: string, body: object) {
@@ -32,8 +32,8 @@ async function llamar(url: string, body: object) {
 function Nivel({ b }: { b: BrokerZona }) {
   return (
     <>
-      {b.nivel && <span className={`font-plex-mono text-[10px] uppercase tracking-wide px-2 py-0.5 border ${COLOR_NIVEL[b.nivel] ?? 'border-white/15 text-slate'}`}>Nivel {b.nivel}</span>}
-      {b.pionero && <span className="font-plex-mono text-[10px] text-gold-400">★ Pionero</span>}
+      {b.nivel && <span className={`font-sans text-[13px] px-2 py-0.5 border ${COLOR_NIVEL[b.nivel] ?? 'border-linea text-tenue'} rounded-lg`}>Nivel {b.nivel}</span>}
+      {b.pionero && <span className="font-sans text-[13px] text-acento">★ Pionero</span>}
     </>
   )
 }
@@ -78,18 +78,18 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
     await cargar()
   }
 
-  if (error && !brokers) return <div className="bg-navy-800 border border-red-900/40 p-5 text-[13px] text-paper-dim">No se pudieron cargar los brokers ({error}).</div>
+  if (error && !brokers) return <div className="bg-tarjeta border border-error-linea p-5 text-[16px] text-tinta-2 rounded-xl">No se pudieron cargar los brokers ({error}).</div>
   if (!brokers) return null
 
   if (asignado) {
     return (
-      <div className="bg-navy-800 border border-white/10 p-4 md:p-6">
-        <p className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em] mb-2">Tu broker</p>
+      <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
+        <p className="font-sans text-[13px] text-tenue mb-2">Tu broker</p>
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-[15px] font-medium text-paper">{asignado.nombre}</p>
+          <p className="text-[18px] font-medium text-tinta">{asignado.nombre}</p>
           <Nivel b={asignado} />
         </div>
-        <p className="text-[12px] text-slate mt-1">Te representa en cada conexión: cuando te interese una propiedad, se pone en contacto con el broker que la representa.</p>
+        <p className="text-[15px] text-tenue mt-1">Te representa en cada conexión: cuando te interese una propiedad, se pone en contacto con el broker que la representa.</p>
       </div>
     )
   }
@@ -99,10 +99,10 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
   const nombreDe = (id: string) => brokers.find(b => b.id === id)?.nombre ?? 'el broker'
 
   return (
-    <div className="bg-navy-800 border border-gold-500/30 p-4 md:p-6">
-      <p className="font-plex-mono text-[10.5px] text-gold-400 uppercase tracking-[0.1em] mb-1">Elige un broker verificado de tu zona</p>
-      {motivo && <p className="text-[14px] text-paper mb-2">{motivo}</p>}
-      <p className="text-[13px] text-paper-dim mb-4">
+    <div className="bg-tarjeta border border-gold-500/30 p-4 md:p-6 rounded-xl">
+      <p className="font-sans text-[13px] text-acento mb-1">Elige un broker verificado de tu zona</p>
+      {motivo && <p className="text-[17px] text-tinta mb-2">{motivo}</p>}
+      <p className="text-[16px] text-tinta-2 mb-4">
         {esComprador
           ? 'Un broker verificado te representa: busca contigo, se conecta con el broker de cada propiedad y te acompaña hasta el cierre.'
           : 'Un broker verificado representa tu propiedad, la presenta a sus compradores y a los de toda la red.'}
@@ -111,34 +111,34 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
 
       {abierta ? (
         <div className="border border-gold-500/30 bg-gold-500/[0.06] p-4">
-          <p className="text-[14px] text-paper">Esperando respuesta de <b>{nombreDe(abierta.broker_id)}</b></p>
-          <p className="text-[12px] text-slate mt-1">{esComprador ? 'Le enviamos lo que buscas' : 'Le enviamos tu propiedad'} como oportunidad. Si la acepta, pasará a representarte.</p>
+          <p className="text-[17px] text-tinta">Esperando respuesta de <b>{nombreDe(abierta.broker_id)}</b></p>
+          <p className="text-[15px] text-tenue mt-1">{esComprador ? 'Le enviamos lo que buscas' : 'Le enviamos tu propiedad'} como oportunidad. Si la acepta, pasará a representarte.</p>
         </div>
       ) : brokers.length === 0 ? (
-        <p className="text-[13px] text-slate">Todavía no hay brokers verificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
+        <p className="text-[16px] text-tenue">Todavía no hay brokers verificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {brokers.map(b => (
-            <div key={b.id} className="flex flex-col sm:flex-row sm:items-center gap-3 border border-white/10 bg-navy-950/40 p-4">
+            <div key={b.id} className="flex flex-col sm:flex-row sm:items-center gap-3 border border-linea bg-fondo/40 p-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-[14px] font-medium text-paper">{b.nombre}</p>
+                  <p className="text-[17px] font-medium text-tinta">{b.nombre}</p>
                   <Nivel b={b} />
                 </div>
-                <p className="text-[12px] text-slate mt-1">
+                <p className="text-[15px] text-tenue mt-1">
                   {b.certificadas} {b.certificadas === 1 ? 'propiedad certificada' : 'propiedades certificadas'} · {b.cierresVerificados} {b.cierresVerificados === 1 ? 'cierre verificado' : 'cierres verificados'} · {b.propiedades} en portafolio
                 </p>
-                {rechazaron.has(b.id) && <p className="text-[11.5px] text-[#e8b568] mt-1">{esComprador ? 'No pudo representarte esta vez.' : 'No pudo tomar tu propiedad esta vez.'}</p>}
+                {rechazaron.has(b.id) && <p className="text-[14px] text-aviso mt-1">{esComprador ? 'No pudo representarte esta vez.' : 'No pudo tomar tu propiedad esta vez.'}</p>}
               </div>
               <button onClick={() => elegir(b.id)} disabled={!!eligiendo || rechazaron.has(b.id)}
-                className="font-plex-mono text-[12px] px-4 py-2.5 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 shrink-0">
+                className="font-sans text-[15px] px-4 py-2.5 border bg-gold-500 border-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-40 shrink-0 rounded-lg">
                 {eligiendo === b.id ? 'Enviando…' : 'Elegir'}
               </button>
             </div>
           ))}
         </div>
       )}
-      {error && <p className="text-[12px] text-[#f3a3a3] mt-2">{error}</p>}
+      {error && <p className="text-[15px] text-error mt-2">{error}</p>}
     </div>
   )
 }

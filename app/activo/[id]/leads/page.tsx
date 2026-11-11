@@ -35,10 +35,10 @@ interface MatchMotor {
 
 const ORDEN: Record<CategoriaLead, number> = { serio: 0, calificado: 1, interesado: 2, curioso: 3 }
 const ESTILO: Record<CategoriaLead, string> = {
-  serio: 'border-gold-500/60 text-gold-400 bg-gold-500/10',
-  calificado: 'border-[#4F46E5]/50 text-[#a5a1f5] bg-[#4F46E5]/10',
-  interesado: 'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
-  curioso: 'border-white/15 text-slate',
+  serio: 'border-gold-500/60 text-acento bg-gold-500/10',
+  calificado: 'border-[#4F46E5]/50 text-violeta bg-[#4F46E5]/10',
+  interesado: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10',
+  curioso: 'border-linea text-tenue',
 }
 const fecha = (iso: string) => new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const enlaceContacto = (c: string) => (c.includes('@') ? `mailto:${c}` : `https://wa.me/52${c.replace(/\D/g, '').slice(-10)}`)
@@ -87,15 +87,15 @@ export default function LeadsPage() {
   }, [id, router])
 
   if (loading || !activo) {
-    return <div className="min-h-screen bg-navy-950 flex items-center justify-center"><p className="text-slate text-[14px] font-plex-mono">Cargando…</p></div>
+    return <div className="min-h-screen bg-fondo flex items-center justify-center"><p className="text-tenue text-[17px] font-sans">Cargando…</p></div>
   }
 
   const conteo = (c: CategoriaLead) => leads.filter(l => l.categoria === c).length
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex flex-col relative">
+    <div className="min-h-screen bg-fondo text-tinta font-sans flex flex-col relative">
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+        backgroundImage: 'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
         backgroundSize: '56px 56px',
       }} />
       <div className="relative flex flex-col flex-1">
@@ -105,12 +105,12 @@ export default function LeadsPage() {
         <div className="w-full max-w-[860px] mx-auto flex flex-col gap-6 md:gap-8">
 
           <div>
-            <button onClick={() => router.push(`/activo/${id}`)} className="flex items-center gap-1.5 text-[13px] text-slate hover:text-paper mb-4 transition-colors">
+            <button onClick={() => router.push(`/activo/${id}`)} className="flex items-center gap-1.5 text-[16px] text-tenue hover:text-tinta mb-4 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               {activo.nombre}
             </button>
-            <h1 className="font-display text-[24px] md:text-[28px] font-medium text-paper">Leads</h1>
-            <p className="text-[14px] text-slate mt-1">Fase 03 · interesados calificados por reglas explicables</p>
+            <h1 className="font-display text-[28px] md:text-[32px] font-medium text-tinta">Leads</h1>
+            <p className="text-[17px] text-tenue mt-1">Fase 03 · interesados calificados por reglas explicables</p>
           </div>
 
           <div className="grid grid-cols-3 gap-2 md:gap-3">
@@ -120,63 +120,63 @@ export default function LeadsPage() {
               { fase: '03', label: 'Leads', href: null },
             ].map(f => (
               <button key={f.fase} onClick={() => f.href && router.push(f.href)} disabled={!f.href}
-                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 border text-left transition-all ${!f.href ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-navy-800 border-white/10 text-paper hover:border-gold-500/50'}`}>
-                <span className={`font-plex-mono text-[10px] font-medium px-1.5 py-0.5 shrink-0 ${!f.href ? 'bg-navy-950/20 text-navy-950' : 'bg-white/5 text-slate'}`}>{f.fase}</span>
-                <span className="text-[12px] md:text-[13px] font-medium truncate">{f.label}</span>
+                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 border text-left transition-all ${!f.href ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-tarjeta border-linea text-tinta hover:border-gold-500/50'} rounded-xl`}>
+                <span className={`font-sans text-[13px] font-medium px-1.5 py-0.5 shrink-0 ${!f.href ? 'bg-fondo/20 text-navy-950' : 'bg-sutil text-tenue'}`}>{f.fase}</span>
+                <span className="text-[15px] md:text-[16px] font-medium truncate">{f.label}</span>
               </button>
             ))}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {(['serio', 'calificado', 'interesado', 'curioso'] as CategoriaLead[]).map(c => (
-              <div key={c} className="bg-navy-800 border border-white/10 p-4">
-                <span className={`font-plex-mono text-[10px] uppercase tracking-wide px-2 py-0.5 border ${ESTILO[c]}`}>{ETIQUETA_CATEGORIA[c]}</span>
-                <p className="font-display text-[26px] text-paper mt-2">{conteo(c)}</p>
+              <div key={c} className="bg-tarjeta border border-linea p-4 rounded-xl">
+                <span className={`font-sans text-[13px] px-2 py-0.5 border ${ESTILO[c]} rounded-lg`}>{ETIQUETA_CATEGORIA[c]}</span>
+                <p className="font-display text-[30px] text-tinta mt-2">{conteo(c)}</p>
               </div>
             ))}
           </div>
 
           <div>
-            <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-3">Interesados de la página pública</h2>
+            <h2 className="font-sans text-[14px] font-medium text-tenue mb-3">Interesados de la página pública</h2>
             {porSuCuenta && (leads.length > 0 || motor.length > 0) && (
-              <div className="bg-navy-800 border border-white/10 p-4 mb-3">
-                <p className="text-[14px] text-paper">Vendes por tu cuenta: tú atiendes a tus interesados.</p>
-                <p className="text-[12px] text-slate mt-1">Si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un broker de tu zona.</p>
-                <button onClick={() => router.push(`/activo/${id}`)} className="font-plex-mono text-[11px] text-gold-400 underline underline-offset-2 mt-2">Elegir un broker</button>
+              <div className="bg-tarjeta border border-linea p-4 mb-3 rounded-xl">
+                <p className="text-[17px] text-tinta">Vendes por tu cuenta: tú atiendes a tus interesados.</p>
+                <p className="text-[15px] text-tenue mt-1">Si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un broker de tu zona.</p>
+                <button onClick={() => router.push(`/activo/${id}`)} className="font-sans text-[14px] text-acento underline underline-offset-2 mt-2">Elegir un broker</button>
               </div>
             )}
             {leads.length === 0 ? (
-              <div className="bg-navy-800 border border-white/10 p-6">
-                <p className="text-[13px] text-slate">
+              <div className="bg-tarjeta border border-linea p-6 rounded-xl">
+                <p className="text-[16px] text-tenue">
                   {activo.publicada_at
                     ? 'Todavía nadie presiona «Me interesa». Comparte el enlace de la página pública desde Marketing.'
                     : 'La propiedad aún no tiene página pública. Publícala desde Marketing para empezar a recibir interesados.'}
                 </p>
-                <button onClick={() => router.push(`/activo/${id}/marketing`)} className="font-plex-mono text-[11px] text-gold-400 underline underline-offset-2 mt-2">Ir a Marketing</button>
+                <button onClick={() => router.push(`/activo/${id}/marketing`)} className="font-sans text-[14px] text-acento underline underline-offset-2 mt-2">Ir a Marketing</button>
               </div>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {leads.map(l => (
-                  <div key={l.id} className="bg-navy-800 border border-white/10 p-4 md:p-5 flex flex-col gap-2">
+                  <div key={l.id} className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col gap-2 rounded-xl">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <p className="text-[15px] font-medium text-paper">{l.nombre ?? 'Interesado'}</p>
+                        <p className="text-[18px] font-medium text-tinta">{l.nombre ?? 'Interesado'}</p>
                         {l.contacto
-                          ? <a href={enlaceContacto(l.contacto)} target="_blank" rel="noopener noreferrer" className="text-[13px] text-gold-400 hover:text-gold-100">{l.contacto}</a>
+                          ? <a href={enlaceContacto(l.contacto)} target="_blank" rel="noopener noreferrer" className="text-[16px] text-acento hover:text-acento-2">{l.contacto}</a>
                           : null}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate">{fecha(l.created_at)}</span>
-                        <span className={`font-plex-mono text-[10.5px] uppercase tracking-wide px-2 py-1 border ${ESTILO[l.categoria]}`}>{ETIQUETA_CATEGORIA[l.categoria]}</span>
+                        <span className="text-[14px] text-tenue">{fecha(l.created_at)}</span>
+                        <span className={`font-sans text-[13px] px-2 py-1 border ${ESTILO[l.categoria]} rounded-lg`}>{ETIQUETA_CATEGORIA[l.categoria]}</span>
                       </div>
                     </div>
-                    <p className="text-[12.5px] text-paper-dim">
+                    <p className="text-[15px] text-tinta-2">
                       {l.presupuesto ?? 'Sin presupuesto'} · {PLAZOS[l.plazo]} · {FORMAS_PAGO[l.forma_pago]}
                     </p>
-                    <p className="text-[12px] text-slate">Por qué: {l.razones.join(' · ')}</p>
-                    {l.mensaje && <p className="text-[13px] text-paper-dim border-l-2 border-white/15 pl-3">{l.mensaje}</p>}
+                    <p className="text-[15px] text-tenue">Por qué: {l.razones.join(' · ')}</p>
+                    {l.mensaje && <p className="text-[16px] text-tinta-2 border-l-2 border-linea pl-3">{l.mensaje}</p>}
                     {l.categoria === 'serio' && (
-                      <p className="text-[12px] text-gold-400">
+                      <p className="text-[15px] text-acento">
                         {certificada
                           ? <>Atiéndelo primero y envíale el <button onClick={() => router.push(`/activo/${id}/reporte`)} className="underline underline-offset-2">Reporte de Transparencia</button> (descárgalo en PDF).</>
                           : 'Atiéndelo primero. Con la certificación legal podrías enviarle el Reporte de Transparencia.'}
@@ -190,30 +190,30 @@ export default function LeadsPage() {
 
           {motor.length > 0 && (
             <div>
-              <h2 className="font-plex-mono text-[11px] font-medium text-slate tracking-[0.12em] uppercase mb-3">Compradores del motor de matching</h2>
+              <h2 className="font-sans text-[14px] font-medium text-tenue mb-3">Compradores del motor de matching</h2>
               <div className="flex flex-col gap-2">
                 {motor.map(m => (
-                  <div key={m.id} className="bg-navy-800 border border-white/10 p-4 flex items-start justify-between gap-3">
+                  <div key={m.id} className="bg-tarjeta border border-linea p-4 flex items-start justify-between gap-3 rounded-xl">
                     <div className="flex flex-col gap-1">
-                      <p className="text-[12.5px] text-paper-dim">{(m.razones || []).join(' · ')}</p>
+                      <p className="text-[15px] text-tinta-2">{(m.razones || []).join(' · ')}</p>
                       {m.contraparte && (
-                        <p className="text-[11.5px] text-slate">
+                        <p className="text-[14px] text-tenue">
                           {m.contraparte} · {m.estado === 'en_contacto' ? 'En contacto' : m.estado === 'solicitado' ? 'Operación revisa la conexión' : m.estado === 'cerrado' ? 'Cerrado' : 'No disponible'}
                         </p>
                       )}
                       {m.contacto && (
-                        <p className="text-[13px] text-paper">
+                        <p className="text-[16px] text-tinta">
                           {m.contacto.nombre}{m.contacto.esBroker ? ' (su broker)' : ''}
-                          {m.contacto.correo && <> · <a href={`mailto:${m.contacto.correo}`} className="text-gold-400 hover:text-gold-100">{m.contacto.correo}</a></>}
-{m.contacto.telefono && <> · <a href={`https://wa.me/52${m.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-100">WhatsApp {m.contacto.telefono}</a></>}
+                          {m.contacto.correo && <> · <a href={`mailto:${m.contacto.correo}`} className="text-acento hover:text-acento-2">{m.contacto.correo}</a></>}
+{m.contacto.telefono && <> · <a href={`https://wa.me/52${m.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-acento hover:text-acento-2">WhatsApp {m.contacto.telefono}</a></>}
                         </p>
                       )}
                     </div>
-                    <span className="font-display text-[18px] text-gold-400 shrink-0">{m.score}</span>
+                    <span className="font-display text-[20px] text-acento shrink-0">{m.score}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-[11.5px] text-slate mt-2">
+              <p className="text-[14px] text-tenue mt-2">
                 {porSuCuenta ? 'Las conexiones del motor las valida Operación MindBridge; al validarlas te llega el contacto aquí y por correo.'
                   : 'Las conexiones del motor las valida Operación MindBridge; el detalle está en Matches de tu portal.'}
               </p>

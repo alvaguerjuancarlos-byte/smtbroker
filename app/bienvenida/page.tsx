@@ -24,8 +24,8 @@ const ROLES = [
         <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     ),
-    accent: '#ddc06a',
-    chip:   'border-gold-500/40 text-gold-400 bg-gold-500/10',
+    accent: 'var(--c-acento)',
+    chip:   'border-gold-500/40 text-acento bg-gold-500/10',
     // Sin menciones a pagos ni promesas que hoy son visión (hallazgo del recorrido guiado, 2026-10-07).
     beneficios: ['Precio de salida con comparables reales', 'Certificación legal de tu propiedad', 'Eliges a un broker verificado'],
   },
@@ -39,8 +39,8 @@ const ROLES = [
         <path d="M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
-    accent: '#a5a1f5',
-    chip:   'border-[#4F46E5]/40 text-[#a5a1f5] bg-[#4F46E5]/10',
+    accent: 'var(--c-violeta)',
+    chip:   'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10',
     beneficios: ['Coincidencias con puntaje y razones', 'Propiedades con diagnóstico de mercado', 'Inventario con certificación legal'],
   },
   {
@@ -55,15 +55,15 @@ const ROLES = [
         <path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     ),
-    accent: '#e8b568',
-    chip:   'border-[#D97706]/40 text-[#e8b568] bg-[#D97706]/10',
+    accent: 'var(--c-aviso)',
+    chip:   'border-[#D97706]/40 text-aviso bg-[#D97706]/10',
     beneficios: ['Oportunidades de propietarios de tu zona', 'Tus clientes siguen siendo tuyos', 'Niveles Plata, Oro y Platino'],
   },
 ]
 
 const GRID_BG = {
   backgroundImage:
-    'linear-gradient(rgba(244,240,230,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(244,240,230,0.12) 1px, transparent 1px)',
+    'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
   backgroundSize: '56px 56px',
 }
 
@@ -127,7 +127,7 @@ export default function BienvenidaPage() {
   // ── Pantalla de éxito ───────────────────────────────────────────────────────
   if (enviado && rolActivo) {
     return (
-      <div className="min-h-screen bg-navy-950 text-paper font-plex-sans flex items-center justify-center px-4 relative">
+      <div className="min-h-screen bg-fondo text-tinta font-sans flex items-center justify-center px-4 relative">
         <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
         <div className="relative w-full max-w-[480px] text-center flex flex-col items-center gap-5">
           <div className="w-14 h-14 border flex items-center justify-center" style={{ borderColor: rolActivo.accent }}>
@@ -136,13 +136,13 @@ export default function BienvenidaPage() {
             </svg>
           </div>
           <div>
-            <h1 className="font-display text-[26px] font-medium text-paper">¡Solicitud recibida!</h1>
-            <p className="text-[14px] text-slate mt-2 leading-relaxed">
+            <h1 className="font-display text-[30px] font-medium text-tinta">¡Solicitud recibida!</h1>
+            <p className="text-[17px] text-tenue mt-2 leading-relaxed">
               Hemos recibido tu registro como <strong style={{ color: rolActivo.accent }}>{rolActivo.titulo.toLowerCase()}</strong>. Nuestro equipo la revisará y, al aprobarla, te llegará un correo de invitación para crear tu contraseña y entrar. Revisa también la carpeta de spam.
             </p>
           </div>
           <button onClick={() => router.push('/login')}
-            className="font-plex-mono text-[12px] text-gold-400 hover:text-gold-100 transition-colors">
+            className="font-sans text-[15px] text-acento hover:text-acento-2 transition-colors">
             ¿Ya tienes cuenta? Inicia sesión →
           </button>
         </div>
@@ -151,7 +151,7 @@ export default function BienvenidaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-paper font-plex-sans relative overflow-hidden">
+    <div className="min-h-screen bg-fondo text-tinta font-sans relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
 
       <div className="relative">
@@ -161,10 +161,10 @@ export default function BienvenidaPage() {
             <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
             <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
           </svg>
-          <span className="font-display font-semibold text-[16px] tracking-tight">SMT<span className="text-gold-400">BROKER</span></span>
+          <span className="font-display font-semibold text-[18px] tracking-tight">SMT<span className="text-acento">BROKER</span></span>
           <div className="ml-auto">
             <button onClick={() => router.push('/login')}
-              className="font-plex-mono text-[11.5px] text-slate hover:text-gold-400 border border-white/15 hover:border-gold-500 px-3.5 py-2 transition-colors">
+              className="font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3.5 py-2 transition-colors rounded-lg">
               Iniciar sesión
             </button>
           </div>
@@ -175,18 +175,18 @@ export default function BienvenidaPage() {
 
             {/* Hero */}
             <div className="max-w-[620px]">
-              <span className="font-plex-mono text-[11px] tracking-[0.22em] uppercase text-gold-400">Plataforma IA de ventas inmobiliarias</span>
+              <span className="font-sans text-[14px] text-acento">Plataforma IA de ventas inmobiliarias</span>
               <h1 className="font-display font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
-                Únete al ecosistema<br /><span className="italic font-normal text-gold-400">SMTBROKER.</span>
+                Únete al ecosistema<br /><span className="italic font-normal text-acento">SMTBROKER.</span>
               </h1>
-              <p className="text-[15px] text-paper-dim mt-5 max-w-[52ch] leading-relaxed">
+              <p className="text-[18px] text-tinta-2 mt-5 max-w-[52ch] leading-relaxed">
                 Conectamos propietarios, brokers y compradores con tecnología de agentes IA para cerrar operaciones más rápido y con mayor rentabilidad.
               </p>
             </div>
 
             {/* Selección de rol */}
             <div>
-              <p className="font-plex-mono text-[11px] text-slate uppercase tracking-[0.14em] mb-5">¿Cómo quieres participar?</p>
+              <p className="font-sans text-[14px] text-tenue mb-5">¿Cómo quieres participar?</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {ROLES.map(r => {
                   const sel = rol === r.id
@@ -197,16 +197,16 @@ export default function BienvenidaPage() {
                       if (r.id === 'propietario' || r.id === 'inversionista') { router.push(`/empezar?quiere=${r.id === 'propietario' ? 'vender' : 'comprar'}`); return }
                       setRol(r.id); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
                     }}
-                      className={`p-5 border text-left transition-all bg-navy-800 ${sel ? 'border-gold-500' : 'border-white/10 hover:border-white/25'}`}>
+                      className={`p-5 border text-left transition-all bg-tarjeta ${sel ? 'border-gold-500' : 'border-linea hover:border-linea-fuerte'} rounded-xl`}>
                       <div className="w-11 h-11 border flex items-center justify-center mb-4" style={{ borderColor: r.accent, color: r.accent }}>
                         {r.icono}
                       </div>
-                      <p className="text-[15px] font-medium text-paper mb-0.5">{r.titulo}</p>
-                      <p className="text-[12px] text-slate mb-3">{r.sub}</p>
-                      <p className="text-[12px] text-paper-dim leading-relaxed mb-4">{r.desc}</p>
-                      <div className="flex flex-col gap-1.5 pt-3 border-t border-white/10">
+                      <p className="text-[18px] font-medium text-tinta mb-0.5">{r.titulo}</p>
+                      <p className="text-[15px] text-tenue mb-3">{r.sub}</p>
+                      <p className="text-[15px] text-tinta-2 leading-relaxed mb-4">{r.desc}</p>
+                      <div className="flex flex-col gap-1.5 pt-3 border-t border-linea">
                         {r.beneficios.map(b => (
-                          <p key={b} className="text-[11px] text-slate">— {b}</p>
+                          <p key={b} className="text-[14px] text-tenue">— {b}</p>
                         ))}
                       </div>
                     </button>
@@ -218,14 +218,14 @@ export default function BienvenidaPage() {
             {/* Formulario — aparece al seleccionar rol */}
             {rol && rolActivo && (
               <div ref={formRef} className="relative before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">
-              <form onSubmit={handleSubmit} className="bg-navy-800 border border-white/10 p-5 md:p-8 flex flex-col gap-5 md:gap-6">
+              <form onSubmit={handleSubmit} className="bg-tarjeta border border-linea p-5 md:p-8 flex flex-col gap-5 md:gap-6 rounded-xl">
                 <input className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" value={sitioWeb} onChange={e => setSitioWeb(e.target.value)} />
                 <div>
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 border mb-3 ${rolActivo.chip}`}>
-                    <span className="font-plex-mono text-[11px] font-medium">{rolActivo.titulo}</span>
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 border mb-3 ${rolActivo.chip} rounded-lg`}>
+                    <span className="font-sans text-[14px] font-medium">{rolActivo.titulo}</span>
                   </div>
-                  <h2 className="font-display text-[19px] md:text-[21px] font-medium text-paper">Completa tu registro</h2>
-                  <p className="text-[13px] text-slate mt-1">Nuestro equipo revisará tu solicitud y te enviará una invitación por correo para crear tu contraseña.</p>
+                  <h2 className="font-display text-[21px] md:text-[23px] font-medium text-tinta">Completa tu registro</h2>
+                  <p className="text-[16px] text-tenue mt-1">Nuestro equipo revisará tu solicitud y te enviará una invitación por correo para crear tu contraseña.</p>
                 </div>
 
                 {/* Campos comunes */}
@@ -255,8 +255,8 @@ export default function BienvenidaPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Field label="Tipo de activo" tema="oscuro">
                       <select value={form.tipoActivo} onChange={e => set('tipoActivo', e.target.value)} className={inputCls(false, 'oscuro')}>
-                        <option value="" className="bg-navy-900">Selecciona…</option>
-                        {['Terreno','Casa','Departamento','Local comercial','Edificio','Bodega','Otro'].map(t => <option key={t} className="bg-navy-900">{t}</option>)}
+                        <option value="" className="bg-superficie">Selecciona…</option>
+                        {['Terreno','Casa','Departamento','Local comercial','Edificio','Bodega','Otro'].map(t => <option key={t} className="bg-superficie">{t}</option>)}
                       </select>
                     </Field>
                     <Field label="Municipio del activo" tema="oscuro">
@@ -270,8 +270,8 @@ export default function BienvenidaPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Field label="Presupuesto estimado" tema="oscuro">
                       <select value={form.presupuesto} onChange={e => set('presupuesto', e.target.value)} className={inputCls(false, 'oscuro')}>
-                        <option value="" className="bg-navy-900">Selecciona…</option>
-                        {['Menos de $2M','$2M – $5M','$5M – $15M','$15M – $50M','Más de $50M'].map(p => <option key={p} className="bg-navy-900">{p}</option>)}
+                        <option value="" className="bg-superficie">Selecciona…</option>
+                        {['Menos de $2M','$2M – $5M','$5M – $15M','$15M – $50M','Más de $50M'].map(p => <option key={p} className="bg-superficie">{p}</option>)}
                       </select>
                     </Field>
                     <Field label="Tipo de propiedad que buscas" tema="oscuro">
@@ -285,8 +285,8 @@ export default function BienvenidaPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Field label="Años de experiencia" tema="oscuro">
                       <select value={form.experiencia} onChange={e => set('experiencia', e.target.value)} className={inputCls(false, 'oscuro')}>
-                        <option value="" className="bg-navy-900">Selecciona…</option>
-                        {['Menos de 1 año','1–3 años','3–5 años','5–10 años','Más de 10 años'].map(x => <option key={x} className="bg-navy-900">{x}</option>)}
+                        <option value="" className="bg-superficie">Selecciona…</option>
+                        {['Menos de 1 año','1–3 años','3–5 años','5–10 años','Más de 10 años'].map(x => <option key={x} className="bg-superficie">{x}</option>)}
                       </select>
                     </Field>
                     <Field label="Zona de operación" tema="oscuro">
@@ -299,13 +299,13 @@ export default function BienvenidaPage() {
                 <AvisoSimplificado contexto="directo" tema="oscuro" />
 
                 {error && (
-                  <div className="flex items-center gap-2 bg-red-950/20 border border-red-900/60 px-4 py-3">
-                    <p className="text-[12px] text-[#f3a3a3]">{error}</p>
+                  <div className="flex items-center gap-2 bg-error-suave border border-error-linea px-4 py-3 rounded-lg">
+                    <p className="text-[15px] text-error">{error}</p>
                   </div>
                 )}
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3.5 bg-gold-500 text-navy-950 font-plex-mono text-[13px] tracking-[0.03em] transition-colors disabled:opacity-60 disabled:cursor-not-allowed hover:bg-gold-400">
+                  className="w-full py-3.5 bg-gold-500 text-navy-950 font-sans text-[16px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed hover:bg-gold-400 rounded-lg">
                   {loading ? 'Enviando solicitud…' : 'Solicitar acceso →'}
                 </button>
 
