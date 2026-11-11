@@ -49,6 +49,7 @@ try {
     return data.id
   }
   const bodega = await nueva({ nombre: 'Bodega Prueba V8b Apodaca', tipo: 'Bodega', municipio: 'Apodaca', superficie: 1100, precio_total: 7_500_000 })
+  const ajena = await nueva({ nombre: 'Bodega Prueba V8b sin proponer', tipo: 'Bodega', municipio: 'Apodaca', superficie: 1100, precio_total: 7_500_000 })
   const apoyo = []
   for (let i = 0; i < 5; i++) apoyo.push(await nueva({ nombre: `Bodega Apoyo V8b ${i + 1}`, tipo: 'Bodega', municipio: 'Apodaca', superficie: 1000, precio_total: 7_000_000 }, false))
 
@@ -116,8 +117,8 @@ try {
   ok(avisos.length === 1, 'marcar "Me interesa" no crea nada visible para el broker')
 
   // 5. Reglas: propiedad ajena, pedir certificación, tope de 5 a la vez y tope mensual por tipo.
-  r = await api(comprador.tk, '/api/analisis', 'POST', { activoId: '9eaa5046-8416-44fd-9fee-b192da73ce19' })
-  ok(r.status === 403, `una propiedad de broker que no le propusieron se rechaza (${r.status})`)
+  r = await api(comprador.tk, '/api/analisis', 'POST', { activoId: ajena })
+  ok(r.status === 403, `una propiedad de broker que no le propusieron se rechaza (${r.status} ${r.j.error})`)
   r = await api(comprador.tk, `/api/analisis/${analisisId}`, 'POST', { accion: 'pedir_certificacion' })
   ok(r.status === 200, 'pedir que se certifique')
   r = await api(comprador.tk, `/api/analisis/${analisisId}`, 'POST', { accion: 'pedir_certificacion' })

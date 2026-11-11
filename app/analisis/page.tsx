@@ -137,7 +137,7 @@ export default function AnalisisPage() {
               const sem = r.mercado.semaforo
               const p = r.mercado.precio
               return (
-                <div key={f.id} id={f.activo_id} className="bg-navy-800 border p-4 md:p-5 flex flex-col gap-3 scroll-mt-4" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
+                <div key={f.id} id={f.activo_id} className="bg-navy-800 border p-4 md:p-5 flex flex-col gap-3 scroll-mt-32" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
                   <div className="flex flex-col gap-0.5">
                     <h2 className="font-display text-[21px] font-medium leading-tight">{r.activo.nombre}</h2>
                     <span className="text-[12.5px] text-slate">
@@ -198,7 +198,8 @@ export default function AnalisisPage() {
                       {/terreno/i.test(r.activo.tipo) && <p className="text-[12.5px] text-slate">¿Qué conviene construir aquí? SMT Land analiza el mejor proyecto para este terreno.</p>}
                       {r.porTipo.renta && (
                         r.porTipo.renta.rendimiento
-                          ? <p className="text-[13px]"><b className="font-medium">Si la rentas:</b> {pesos(r.porTipo.renta.rendimiento.rentaMensual)} al mes de referencia → <b>{r.porTipo.renta.rendimiento.capRatePct} % anual</b> (recuperas la inversión en ~{r.porTipo.renta.rendimiento.aniosRecuperar} años). <span className="text-slate">Estimación con {r.porTipo.renta.precio.comparablesUsados} comparables de renta.</span></p>
+                          ? <p className="text-[13px]"><b className="font-medium">Si la rentas:</b> {pesos(r.porTipo.renta.rendimiento.rentaMensual)} al mes de referencia → <b>{r.porTipo.renta.rendimiento.capRatePct} % anual</b> (recuperas la inversión en ~{r.porTipo.renta.rendimiento.aniosRecuperar} años). <span className="text-slate">Estimación con {r.porTipo.renta.precio.comparablesUsados} comparables de renta.</span>
+                              {r.porTipo.renta.rendimiento.capRatePct > 15 && <span style={{ color: '#d9b45a' }}> Ojo: un rendimiento tan alto suele indicar que el precio está muy abajo del mercado o que las rentas encontradas no son comparables. Revísalo antes de decidir.</span>}</p>
                           : <p className="text-[13px]"><b className="font-medium">Si la rentas:</b> <span className="text-paper-dim">{r.porTipo.renta.texto}</span></p>
                       )}
                     </div>
