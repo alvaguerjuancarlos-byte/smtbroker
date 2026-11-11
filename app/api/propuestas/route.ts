@@ -3,6 +3,8 @@ import { sesionServidor } from '@/lib/sesionServidor'
 import { avisarUsuario } from '@/lib/avisos'
 import { cumpleNecesidad, etiquetaTipo, millones, MAX_PROPUESTAS_POR_BROKER } from '@/lib/necesidad'
 import { vigente, COLS_NECESIDAD, type FilaNecesidad } from '@/lib/necesidadServidor'
+import { datosDeMercado, COLS_ACTIVO_ANALISIS, type ActivoParaAnalisis } from '@/lib/analisisServidor'
+import { precioContraMercado } from '@/lib/analisis'
 
 // POST {necesidadId, activoId, aceptoTerminos}: un broker propone una propiedad de su cartera a una
 // necesidad del panel (Documento Maestro V8, §19.3). Reglas, todas revisadas aquí y no en el
@@ -14,6 +16,10 @@ import { vigente, COLS_NECESIDAD, type FilaNecesidad } from '@/lib/necesidadServ
 //   - mismo mundo (demo/real).
 // La propiedad se vuelve visible para ESE comprador en su bandeja, que recibe un aviso. El broker no
 // conoce al comprador hasta que este pida contacto (Parte 3).
+//
+// V8 Parte 2 (§20.5 regla 4): al proponer se calcula el precio contra mercado de la propiedad
+// (propuestas.precio_mercado). Es lo único del análisis que ve el broker, y no depende de que el
+// comprador se interese.
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,14 +45,19 @@ export async function POST(req: NextRequest) {
     const { count } = await s.admin.from('propuestas').select('id', { count: 'exact', head: true }).eq('necesidad_id', n.id).eq('broker_id', s.uid)
     if ((count ?? 0) >= MAX_PROPUESTAS_POR_BROKER) return NextResponse.json({ error: `Máximo ${MAX_PROPUESTAS_POR_BROKER} propuestas por necesidad` }, { status: 409 })
 
-    const { error } = await s.admin.from('propuestas').insert({
+    const { data: nueva, error } = await s.admin.from('propuestas').insert({
       necesidad_id: n.id, activo_id: a.id, broker_id: s.uid, terminos_aceptados_at: new Date().toISOString(),
-    })
+    }).select('id').single()
     if (error) {
       const dup = /duplicate|unique/i.test(error.message)
       return NextResponse.json({ error: dup ? 'Esa propiedad ya se propuso a esta necesidad' : error.message }, { status: dup ? 409 : 500 })
     }
 
+    after(async () => {
+      const { data: completo } = await s.admin.from('activos').select(COLS_ACTIVO_ANALISIS).eq('id', a.id).single()
+      const m = await datosDeMercado(s.admin, completo as ActivoParaAnalisis, 'venta')
+      await s.admin.from('propuestas').update({ precio_mercado: { ...m, semaforo: precioContraMercado(a.precio_total, m.precio) } }).eq('id', (nueva as { id: string }).id)
+    })
     after(() => avisarUsuario(s.admin, n.usuario_id, {
       asunto: `Un broker verificado te propone una opción en ${a.municipio}: ${etiquetaTipo(n.tipo).toLowerCase()}`,
       titulo: 'Tienes una propuesta nueva',

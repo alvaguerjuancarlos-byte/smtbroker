@@ -4,6 +4,8 @@
 // compradores, ANÓNIMO (sin nombre ni contacto hasta que el comprador pida ver una propiedad).
 // El broker propone propiedades de su cartera que cumplen la ficha; al proponer acepta los términos
 // (§21.6). Las reglas (cumple la ficha, hasta 3 por necesidad) las revisa app/api/propuestas.
+// De cada propuesta ve solo su precio contra mercado (V8 Parte 2, §20.5 regla 4), calculado al
+// proponer: no sabe si el comprador se interesó.
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -13,7 +15,10 @@ interface NecesidadPanel {
   id: string; resumen: string; detalle: string[]; proposito: string | null; created_at: string
   enMiZona: boolean; propuestasTotal: number; misPropuestas: string[]; puedeProponer: boolean
   compatibles: { activoId: string; nombre: string; precio_total: number | null; superficie: number | null }[]
+  detallePropuestas: { activoId: string; nombre: string; precioMercado: { estado: 'arriba' | 'en_linea' | 'abajo' | null; texto: string } | null }[]
 }
+
+const SEMAFORO = { arriba: ['Arriba del mercado', '#f3a3a3'], en_linea: ['En línea con el mercado', '#7fd1b9'], abajo: ['Abajo del mercado', '#d9b45a'] } as const
 
 const hace = (fecha: string) => {
   const h = Math.floor((Date.now() - new Date(fecha).getTime()) / 3600_000)
@@ -89,6 +94,21 @@ export default function PanelNecesidades() {
             {n.propuestasTotal} {n.propuestasTotal === 1 ? 'propuesta' : 'propuestas'} · publicada {hace(n.created_at)}
             {n.misPropuestas.length > 0 ? ` · ya propusiste ${n.misPropuestas.length}` : ''}
           </p>
+
+          {n.detallePropuestas.length > 0 && (
+            <div className="flex flex-col gap-1.5 border-t border-white/10 pt-2.5">
+              <span className="font-plex-mono text-[10.5px] text-slate uppercase tracking-[0.1em]">Tus propuestas · precio contra mercado</span>
+              {n.detallePropuestas.map((d) => (
+                <p key={d.activoId} className="text-[12.5px] text-paper-dim">
+                  <span className="text-paper">{d.nombre}</span>
+                  {' · '}
+                  {d.precioMercado?.estado
+                    ? <span style={{ color: SEMAFORO[d.precioMercado.estado][1] }}>{SEMAFORO[d.precioMercado.estado][0]}</span>
+                    : <span className="text-slate">{d.precioMercado ? 'Sin comparables suficientes' : 'Calculando…'}</span>}
+                </p>
+              ))}
+            </div>
+          )}
 
           {n.puedeProponer ? (
             <button onClick={() => abrir(n.id)} className="w-fit bg-gold-500 text-navy-950 font-plex-mono text-[12px] px-4 py-2.5 hover:bg-gold-400">

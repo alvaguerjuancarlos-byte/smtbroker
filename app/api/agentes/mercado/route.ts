@@ -4,7 +4,8 @@ import { callClaudeJson, serieSHFParaCiudad, calcularApreciacionSHF, resolverAbs
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { filtroAccesoActivo } from '@/lib/accesoActivo'
 import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
-import { MODELO_DICTAMEN, MODELO_EXTRACCION, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
+import { MODELO_DICTAMEN, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
+import { buscarComparables } from '@/lib/comparables'
 import { avisarUsuario } from '@/lib/avisos'
 import { calcularPrecioMercado } from '@/lib/precioMercado'
 
@@ -21,80 +22,13 @@ import { calcularPrecioMercado } from '@/lib/precioMercado'
 //   - Absorción: SNIIV (SEDATU) -- NO cubre San Pedro/Monterrey/San Nicolás (vivienda premium sin
 //     financiamiento formal no pasa por este sistema, ver resolverAbsorcionSNIIV) -- se declara
 //     "sin dato" honesto en vez de fabricar un "4.5 meses" como hacía el bloque simulado viejo.
-// Los comparables de venta sí se buscan en vivo (Serper + extracción LLM), mismo patrón que
+// Los comparables de venta sí se buscan en vivo (lib/comparables.ts: Serper + extracción LLM), mismo patrón que
 // app/api/agentes/comparables-venta/route.ts de smt-developer, pero sin su persistencia (ese
 // Supabase es de otro proyecto) ni su filtro geocodificado de 5km (fuera de alcance aquí).
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-interface ResultadoSerper { link: string; title: string; snippet?: string }
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
-
-interface ComparableReventa {
-  nombre: string
-  direccion: string | null
-  precioM2: number | null
-  precioTotal: number | null
-  superficieM2: number | null
-  tipologia: string | null
-  url: string
-}
-
-async function buscarComparablesReventa(tipo: string, municipio: string, colonia: string | null, estado: string): Promise<{ comparables: ComparableReventa[]; fuentesConsultadas: { url: string; titulo: string }[] }> {
-  const serperKey = process.env.SERPER_API_KEY?.trim()
-  const fuentesConsultadas: { url: string; titulo: string }[] = []
-  if (!serperKey) return { comparables: [], fuentesConsultadas }
-
-  // Antes todo lo que no era terreno ni "depto" buscaba "casas": una bodega se comparaba contra
-  // casas (y "Departamento" no contiene "depto").
-  const t = tipo.toLowerCase()
-  const palabraClave = t.includes('terreno') ? 'terrenos' : t.includes('depa') || t.includes('depto') ? 'departamentos'
-    : t.includes('bodega') ? 'bodegas' : t.includes('local') ? 'locales comerciales' : t.includes('oficina') ? 'oficinas'
-    : t.includes('edificio') || t.includes('torre') ? 'edificios' : 'casas'
-  const lugar = [colonia, municipio, estado].filter(Boolean).join(' ')
-  const queries = [
-    `${palabraClave} en venta ${lugar} precio m2 site:inmuebles24.com OR site:lamudi.com.mx OR site:vivanuncios.com.mx`,
-    `${palabraClave} en venta ${municipio} ${estado} precio`,
-  ]
-  const snippets: string[] = []
-  for (const q of queries) {
-    try {
-      const res = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q, gl: 'mx', hl: 'es', num: 8 }),
-      })
-      if (!res.ok) continue
-      const json = await res.json()
-      ;(json.organic ?? []).forEach((r: ResultadoSerper) => {
-        snippets.push(`URL: ${r.link}\nTÍTULO: ${r.title}\nSNIPPET: ${r.snippet ?? ''}`)
-        fuentesConsultadas.push({ url: r.link, titulo: r.title })
-      })
-    } catch { /* una búsqueda fallida no tumba el resto */ }
-  }
-  if (snippets.length === 0) return { comparables: [], fuentesConsultadas }
-
-  const prompt = `Analiza estos resultados de búsqueda de Google sobre ${palabraClave} EN VENTA (reventa, no preventa) en ${lugar}.
-Extrae propiedades YA CONSTRUIDAS con precio identificable -- NO terrenos en preventa de desarrollador, NO rentas.
-
-RESULTADOS:
-${snippets.join('\n---\n')}
-
-Para cada propiedad extrae: nombre (o descripción corta), direccion o colonia aproximada, precioM2 (número, null si no se puede calcular), precioTotal (número, null si no aparece), superficieM2 (número, null si no aparece), tipologia (ej. "3 rec · 180 m²", null si no se puede determinar), url.
-Reglas: solo VENTA (no renta), solo si hay precio total O precio/m², máximo 8 comparables.
-Retorna ÚNICAMENTE un array JSON válido, sin markdown.`
-
-  try {
-    const comparables = await callClaudeJson<ComparableReventa[]>(client, {
-      model: MODELO_EXTRACCION,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    }, /\[[\s\S]*\]/)
-    return { comparables, fuentesConsultadas }
-  } catch {
-    return { comparables: [], fuentesConsultadas }
-  }
-}
 
 export async function POST(req: NextRequest) {
   let supabaseAdmin
@@ -130,7 +64,7 @@ export async function POST(req: NextRequest) {
   const plusvaliaShf = serieShf ? calcularApreciacionSHF(serieShf.serie).find(v => v.ventana === '3_anios') ?? null : null
   const absorcion = await resolverAbsorcionSNIIV(activo.municipio || '', activo.estado || '').catch(() => null)
 
-  const { comparables, fuentesConsultadas } = await buscarComparablesReventa(activo.tipo, activo.municipio, activo.colonia, activo.estado)
+  const { comparables, fuentesConsultadas } = await buscarComparables({ tipo: activo.tipo, municipio: activo.municipio, colonia: activo.colonia, estado: activo.estado })
   const grounded = comparables.length > 0
   // Rango y precio de salida calculados en código (lib/precioMercado.ts) — el modelo no los decide.
   const precio = calcularPrecioMercado(comparables, activo.superficie ? Number(activo.superficie) : null, activo.precio_total ? Number(activo.precio_total) : null)

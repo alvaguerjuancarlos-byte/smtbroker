@@ -37,10 +37,10 @@ export async function GET(req: NextRequest) {
       const [{ data: activos }, { data: props }] = await Promise.all([
         s.admin.from('activos').select('id, nombre, tipo, municipio, colonia, superficie, precio_total, broker_id, status')
           .eq('broker_id', s.uid).neq('status', 'cerrado'),
-        N.length ? s.admin.from('propuestas').select('necesidad_id, activo_id, broker_id').in('necesidad_id', N.map((n) => n.id)) : Promise.resolve({ data: [] }),
+        N.length ? s.admin.from('propuestas').select('necesidad_id, activo_id, broker_id, precio_mercado').in('necesidad_id', N.map((n) => n.id)) : Promise.resolve({ data: [] }),
       ])
       const A = (activos as ActivoPublico[]) || []
-      const P = (props as { necesidad_id: string; activo_id: string; broker_id: string }[]) || []
+      const P = (props as { necesidad_id: string; activo_id: string; broker_id: string; precio_mercado: { semaforo?: { estado: string | null; texto: string } } | null }[]) || []
       const misZonas = new Set(A.map((a) => municipioCanonico(a.municipio)))
       const orden = { ya: 0, '3_meses': 1, '6_meses': 2, explorando: 3 } as Record<string, number>
 
@@ -52,6 +52,11 @@ export async function GET(req: NextRequest) {
           enMiZona: misZonas.has(municipioCanonico(n.municipio)),
           propuestasTotal: P.filter((p) => p.necesidad_id === n.id).length,
           misPropuestas: mias,
+          // §20.5 regla 4: de su propuesta, el broker ve solo el precio contra mercado.
+          detallePropuestas: P.filter((p) => p.necesidad_id === n.id && p.broker_id === s.uid).map((p) => ({
+            activoId: p.activo_id, nombre: A.find((a) => a.id === p.activo_id)?.nombre ?? 'Tu propiedad',
+            precioMercado: p.precio_mercado?.semaforo ?? null,
+          })),
           puedeProponer: mias.length < MAX_PROPUESTAS_POR_BROKER,
           compatibles: A.filter((a) => !mias.includes(a.id) && cumpleNecesidad(a, n).cumple)
             .map((a) => ({ activoId: a.id, nombre: a.nombre, precio_total: a.precio_total, superficie: a.superficie })),
@@ -125,8 +130,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const { data: an } = await s.admin.from('analisis').select('activo_id').eq('usuario_id', s.uid).eq('descartado', false)
     return NextResponse.json({
       conBroker,
+      analizados: [...new Set(((an as { activo_id: string }[]) || []).map((x) => x.activo_id))],
       necesidades: N.map((n) => ({
         id: n.id, resumen: resumenNecesidad(n), detalle: detalleCaracteristicas(n), activa: n.activa, vigente: vigente(n),
         vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers,

@@ -6,8 +6,11 @@
 //     (hasta 3 activas, en /buscar).
 //   - Tu bandeja (§19.4): todas las opciones en un solo lugar, con su etiqueta de origen.
 //   - Su Radar (pegar ligas de otros portales) y, si va por su cuenta, el broker.
+//   - V8 Parte 2 (§20): "Me interesa" en cada propiedad de la bandeja dispara su análisis y lleva a
+//     /analisis (comparativo). Los listados de portales no se analizan: son páginas de resultados.
 // Todo sale de app/api/necesidades (GET), que arma la bandeja en el servidor.
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { millones, MAX_NECESIDADES_ACTIVAS } from '@/lib/necesidad'
 
@@ -18,9 +21,9 @@ interface Busqueda {
 interface Opcion {
   clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
-  broker?: { nombre: string; nivel: string }; certificada?: boolean
+  broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
 }
-interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[] }
+interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
 const verde = '#7fd1b9'
 const tarjeta = 'bg-navy-800 border p-4 md:p-5 flex flex-col gap-2.5'
@@ -41,6 +44,8 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   const [error, setError] = useState<string | null>(null)
   const [filtro, setFiltro] = useState<Opcion['origen'] | 'todas'>('todas')
   const [ocupado, setOcupado] = useState<string | null>(null)
+  const [analizando, setAnalizando] = useState<string | null>(null)
+  const router = useRouter()
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
   const cargar = useCallback(async () => {
@@ -63,6 +68,21 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     setOcupado(null)
     if (!r.ok) { setError(j.error ?? 'No se pudo guardar'); return }
     await cargar()
+  }
+
+  // "Me interesa": el análisis tarda (busca comparables reales); al terminar abre el comparativo.
+  const meInteresa = async (o: Opcion) => {
+    if (!o.activoId) return
+    if (datos?.analizados.includes(o.activoId)) { router.push(`/analisis#${o.activoId}`); return }
+    setAnalizando(o.activoId); setError(null)
+    const r = await fetch('/api/analisis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
+      body: JSON.stringify({ activoId: o.activoId, necesidadId: o.necesidadId }),
+    })
+    const j = await r.json().catch(() => ({}))
+    setAnalizando(null)
+    if (!r.ok) { setError(j.error ?? 'No se pudo analizar'); return }
+    router.push(`/analisis#${o.activoId}`)
   }
 
   if (!datos) return error ? <p className="text-[13px] text-[#f3a3a3]">{error}</p> : <p className="text-slate text-[13px] font-plex-mono">Cargando tu búsqueda…</p>
@@ -170,9 +190,15 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
             <span className="text-[12px] text-slate">
               {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
             </span>
+            {o.activoId && (
+              <button onClick={() => meInteresa(o)} disabled={!!analizando} className="w-fit mt-1 px-3 py-2 text-[12.5px] font-plex-mono border disabled:opacity-60"
+                style={datos.analizados.includes(o.activoId) ? { borderColor: verde, color: verde } : { borderColor: verde, background: verde, color: '#070f1c' }}>
+                {analizando === o.activoId ? 'Analizando… (hasta 1 min)' : datos.analizados.includes(o.activoId) ? 'Ver su análisis →' : 'Me interesa'}
+              </button>
+            )}
           </div>
         ))}
-        <p className="text-[12px] text-slate">Pronto podrás marcar &quot;Me interesa&quot; y recibir el análisis de cada una: precio contra mercado y plusvalía.</p>
+        <p className="text-[12px] text-slate">Marca &quot;Me interesa&quot; y recibe el análisis: precio contra mercado, plusvalía y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
       </div>
 
       {porSuCuenta && (

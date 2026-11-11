@@ -41,6 +41,9 @@ export function calcularPrecioMercado(
   comparables: ComparableConPrecio[],
   superficieM2: number | null,
   precioListaMXN: number | null,
+  // Redondeo: venta a $100,000 y $100/m²; para rentas (lib/comparables.ts, operación 'renta') se
+  // pasa { total: 1_000, m2: 1 }, porque la renta mensual no se redondea a cientos de miles.
+  redondeo: { total: number; m2: number } = { total: 100_000, m2: 100 },
 ): PrecioMercado {
   const sup = superficieM2 != null && superficieM2 > 0 ? superficieM2 : null
   // Tamaño parecido (entre la mitad y el doble): el precio/m² de una casa de 100 m² no sirve para
@@ -71,10 +74,10 @@ export function calcularPrecioMercado(
 
   return {
     ...vacio,
-    precioPromedioM2Zona: redondear(mediana, 100),
-    rangoMinMXN: sup ? redondear(p25 * sup, 100_000) : null,
-    rangoMaxMXN: sup ? redondear(p75 * sup, 100_000) : null,
-    precioSalidaRecomendadoMXN: sup ? redondear(mediana * sup, 100_000) : null,
+    precioPromedioM2Zona: redondear(mediana, redondeo.m2),
+    rangoMinMXN: sup ? redondear(p25 * sup, redondeo.total) : null,
+    rangoMaxMXN: sup ? redondear(p75 * sup, redondeo.total) : null,
+    precioSalidaRecomendadoMXN: sup ? redondear(mediana * sup, redondeo.total) : null,
     percentilPosicionamiento: m2Lista != null ? Math.round((valores.filter((v) => v < m2Lista).length / valores.length) * 100) : null,
   }
 }
