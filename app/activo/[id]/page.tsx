@@ -25,6 +25,9 @@ interface MercadoReal {
   scoreComponentes: { comparablesMercado: number; documentacionLegal: number; condicionActivo: number }
   interpretacion: string
   grounded: boolean
+  // V9 (§22.3): renta realista con comparables de renta, si la propiedad está en renta.
+  operacion?: 'venta' | 'renta' | 'ambas'
+  renta?: { comparablesAnalizados: number; comparablesUsados: number; rentaM2Zona: number | null; rangoMinMXN: number | null; rangoMaxMXN: number | null; rentaRealistaMXN: number | null; percentilPosicionamiento: number | null } | null
 }
 
 import { rentaTexto, detalleRentaActivo, type RentaActivo } from '@/lib/necesidad'
@@ -466,7 +469,7 @@ export default function ActivoPage() {
                 </span>
                 <span className="text-[15px] text-tinta-2">{activo.municipio}, {activo.estado}</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 mb-4 md:mb-5">
+              {mercado.operacion !== 'renta' && <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 mb-4 md:mb-5">
                 <div>
                   <MetricRow label="Comparables reales encontrados" value={`${mercado.comparablesAnalizados} propiedades`} />
                   <MetricRow label="Precio promedio zona" value={mercado.precioPromedioM2Zona ? formatMXN(mercado.precioPromedioM2Zona) + '/m²' : 'Sin dato'} />
@@ -477,13 +480,25 @@ export default function ActivoPage() {
                   <MetricRow label="Rango de precio detectado" value={precioMin && precioMax ? `${formatMXN(precioMin)} – ${formatMXN(precioMax)}` : 'Sin suficientes comparables'} />
                   <MetricRow label="Demanda estimada" value={mercado.demandaLabel || 'Sin base para estimar'} valueClass={mercado.demandaLabel ? 'text-acento font-medium' : ''} />
                 </div>
-              </div>
-              <div className="border border-linea bg-sutil px-4 py-3 rounded-lg">
+              </div>}
+              {mercado.renta && (
+                <div className="border border-linea bg-sutil px-4 py-3 mb-3 flex flex-col gap-1 rounded-lg" data-renta-mercado>
+                  <p className="font-sans text-[13px] font-medium text-acento">Renta realista recomendada</p>
+                  <p className="text-[16px] font-medium text-tinta">
+                    {mercado.renta.rentaRealistaMXN ? `${formatMXN(mercado.renta.rentaRealistaMXN)} al mes` : 'Sin dato'}{mercado.renta.percentilPosicionamiento != null ? ` · tu renta queda en el percentil ${mercado.renta.percentilPosicionamiento} de la zona` : ''}
+                  </p>
+                  <p className="text-[15px] text-tenue">
+                    {mercado.renta.rangoMinMXN && mercado.renta.rangoMaxMXN ? `Rango ${formatMXN(mercado.renta.rangoMinMXN)} – ${formatMXN(mercado.renta.rangoMaxMXN)} al mes · ` : ''}
+                    {mercado.renta.rentaM2Zona ? `${formatMXN(mercado.renta.rentaM2Zona)}/m² al mes · ` : ''}{mercado.renta.comparablesUsados} de {mercado.renta.comparablesAnalizados} comparables de renta usados
+                  </p>
+                </div>
+              )}
+              {mercado.operacion !== 'renta' && <div className="border border-linea bg-sutil px-4 py-3 rounded-lg">
                 <p className="font-sans text-[13px] font-medium text-acento mb-1">Precio de salida recomendado</p>
                 <p className="text-[16px] font-medium text-tinta">
                   {fmtOrDash(precioSalida)}{mercado.percentilPosicionamiento != null ? ` · posicionamiento en percentil ${mercado.percentilPosicionamiento} del mercado local` : ''}
                 </p>
-              </div>
+              </div>}
             </div>
             )}
           </div>

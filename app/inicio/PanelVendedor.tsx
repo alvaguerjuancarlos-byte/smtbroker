@@ -11,7 +11,8 @@ interface Activo {
   id: string; nombre: string; colonia: string | null; municipio: string | null
   broker_id: string | null; publicada_at: string | null
 }
-type Precio = { salida: number | null; frase: string | null } | 'calculando' | 'error'
+// V9 (§22.3): en renta, la renta realista al mes; en venta y renta, las dos cifras.
+type Precio = { salida: number | null; renta: number | null; operacion: 'venta' | 'renta' | 'ambas'; frase: string | null } | 'calculando' | 'error'
 type Ficha = { titular: string; puntos: string[]; whatsapp: string | null } | 'preparando' | 'error' | null
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -56,7 +57,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
         })
         const d = await r.json().catch(() => ({}))
         const frase = typeof d.interpretacion === 'string' ? d.interpretacion.split(/(?<=[.!?])\s+/)[0] : null
-        setPrecio(r.ok ? { salida: d.precioSalidaRecomendadoMXN ?? null, frase } : 'error')
+        setPrecio(r.ok ? { salida: d.precioSalidaRecomendadoMXN ?? null, renta: d.renta?.rentaRealistaMXN ?? null, operacion: d.operacion ?? 'venta', frase } : 'error')
         if (!r.ok) { setFicha('error'); return }
       } catch { setPrecio('error'); setFicha('error'); return }
       // Con el diagnóstico listo, la plataforma escribe la ficha de venta (o devuelve la guardada):
@@ -128,19 +129,21 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
 
       <div className={`${tarjeta} border-gold-500`}>
         <div className="flex items-center justify-between gap-2">
-          <span className={`${etiqueta} text-acento`}>Tu precio realista de mercado</span>
-          {typeof precio === 'object' && precio.salida && <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-1.5 py-0.5 rounded-lg">LISTO</span>}
+          <span className={`${etiqueta} text-acento`} data-precio-realista>{typeof precio === 'object' && precio.operacion === 'renta' ? 'Tu renta realista de mercado' : typeof precio === 'object' && precio.operacion === 'ambas' ? 'Tu precio y tu renta realistas' : 'Tu precio realista de mercado'}</span>
+          {typeof precio === 'object' && (precio.salida || precio.renta) && <span className="font-sans text-[13px] text-navy-950 bg-gold-500 px-1.5 py-0.5 rounded-lg">LISTO</span>}
         </div>
         {precio === 'calculando' ? (
           <div className="flex items-center gap-3 py-1">
             <span className="w-2.5 h-2.5 rounded-full bg-gold-500 animate-pulse shrink-0" />
             <p className="text-[17px] text-tinta-2">Analizando el mercado de tu zona… Te avisamos por correo cuando esté listo.</p>
           </div>
-        ) : precio === 'error' || !precio.salida ? (
+        ) : precio === 'error' || (!precio.salida && !precio.renta) ? (
           <p className="text-[17px] text-tinta-2">Tu análisis de mercado queda en tu propiedad. <a href={`/activo/${activo.id}`} className="text-acento underline underline-offset-2">Verlo</a></p>
         ) : (
           <>
-            <span className="font-display text-[32px] font-medium">{mxn(precio.salida)}</span>
+            {precio.salida && <span className="font-display text-[32px] font-medium">{mxn(precio.salida)}{precio.operacion === 'ambas' && <span className="text-[17px] text-tinta-2 font-sans"> en venta</span>}</span>}
+            {precio.renta && <span className="font-display text-[32px] font-medium" data-renta-realista>{mxn(precio.renta)}<span className="text-[17px] text-tinta-2 font-sans"> al mes{precio.operacion === 'ambas' ? ' en renta' : ''}</span></span>}
+            {precio.operacion !== 'venta' && !precio.renta && <p className="text-[16px] text-tinta-2">Renta realista: sin dato todavía (pocas rentas comparables en tu zona).</p>}
             {precio.frase && <p className="text-[16px] text-tinta-2">{precio.frase}</p>}
             <a href={`/activo/${activo.id}`} className="font-sans text-[15px] text-acento">Ver análisis completo →</a>
           </>
@@ -180,7 +183,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
             <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
             <div className="flex items-center gap-3 py-1">
               <span className="w-2.5 h-2.5 rounded-full bg-gold-500 animate-pulse shrink-0" />
-              <p className="text-[17px] text-tinta-2">{ficha === 'preparando' ? 'Escribiendo tu ficha de venta y armando tu página…' : 'Tu ficha y tu página se preparan en cuanto esté tu precio.'}</p>
+              <p className="text-[17px] text-tinta-2">{ficha === 'preparando' ? 'Escribiendo tu ficha y armando tu página…' : 'Tu ficha y tu página se preparan en cuanto esté tu precio.'}</p>
             </div>
           </>
         ) : typeof ficha === 'object' && ficha ? (
@@ -202,7 +205,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
         ) : (
           <>
             <span className={`${etiqueta} text-tenue`}>Tu página de venta</span>
-            <p className="text-[17px]">Escribimos tu ficha de venta y armamos tu página para que la publiques.</p>
+            <p className="text-[17px]">Escribimos tu ficha y armamos tu página para que la publiques.</p>
             <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Preparar mi página</a>
           </>
         )}

@@ -25,6 +25,11 @@ import { calcularPrecioMercado } from '@/lib/precioMercado'
 // Los comparables de venta sí se buscan en vivo (lib/comparables.ts: Serper + extracción LLM), mismo patrón que
 // app/api/agentes/comparables-venta/route.ts de smt-developer, pero sin su persistencia (ese
 // Supabase es de otro proyecto) ni su filtro geocodificado de 5km (fuera de alcance aquí).
+//
+// V9 (§22.3, rentas): una propiedad en renta recibe su RENTA REALISTA con comparables de renta
+// (renta mensual por m² × superficie, mismo cálculo, sin redondear a cientos de miles), en
+// `resultado.renta`. Solo en renta: no se buscan comparables de venta y los campos de precio de venta
+// quedan vacíos. En venta y renta: los dos.
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -64,11 +69,30 @@ export async function POST(req: NextRequest) {
   const plusvaliaShf = serieShf ? calcularApreciacionSHF(serieShf.serie).find(v => v.ventana === '3_anios') ?? null : null
   const absorcion = await resolverAbsorcionSNIIV(activo.municipio || '', activo.estado || '').catch(() => null)
 
-  const { comparables, fuentesConsultadas } = await buscarComparables({ tipo: activo.tipo, municipio: activo.municipio, colonia: activo.colonia, estado: activo.estado })
-  const grounded = comparables.length > 0
+  const operacion: 'venta' | 'renta' | 'ambas' = activo.operacion ?? 'venta'
+  const conVenta = operacion !== 'renta', conRenta = operacion !== 'venta'
+  const lugar = { tipo: activo.tipo, municipio: activo.municipio, colonia: activo.colonia, estado: activo.estado }
+  const sinBusqueda = { comparables: [], fuentesConsultadas: [] } as Awaited<ReturnType<typeof buscarComparables>>
+  const [venta, rentaBusqueda] = await Promise.all([
+    conVenta ? buscarComparables(lugar) : Promise.resolve(sinBusqueda),
+    conRenta ? buscarComparables(lugar, 'renta') : Promise.resolve(sinBusqueda),
+  ])
+  const { comparables } = venta
+  const fuentesConsultadas = [...venta.fuentesConsultadas, ...rentaBusqueda.fuentesConsultadas]
+  const grounded = comparables.length + rentaBusqueda.comparables.length > 0
+  const sup = activo.superficie ? Number(activo.superficie) : null
   // Rango y precio de salida calculados en código (lib/precioMercado.ts) — el modelo no los decide.
-  const precio = calcularPrecioMercado(comparables, activo.superficie ? Number(activo.superficie) : null, activo.precio_total ? Number(activo.precio_total) : null)
+  const precio = calcularPrecioMercado(comparables, sup, activo.precio_total ? Number(activo.precio_total) : null)
+  const renta = conRenta ? calcularPrecioMercado(rentaBusqueda.comparables, sup, activo.renta_mensual ? Number(activo.renta_mensual) : null, { total: 1_000, m2: 1 }) : null
   const mxn = (n: number | null) => n == null ? 'sin dato' : '$' + n.toLocaleString('es-MX')
+  const bloqueRenta = renta ? `
+
+RENTA DE MERCADO -- YA CALCULADA con ${rentaBusqueda.comparables.length} comparables de RENTA (${renta.comparablesUsados} usados, ${renta.outliersExcluidos} descartados por atípicos o por tamaño muy distinto; los demás no traen renta por m² calculable y no cuentan — es normal, no lo señales como error):
+${rentaBusqueda.comparables.map(c => `- ${c.nombre} | ${c.direccion || '?'} | $${c.precioM2 ?? '?'}/m² al mes | ${c.url}`).join('\n') || 'Ninguno.'}
+- Renta por m² de la zona (mediana): ${mxn(renta.precioPromedioM2Zona)} al mes
+- Rango: ${mxn(renta.rangoMinMXN)} a ${mxn(renta.rangoMaxMXN)} al mes
+- Renta realista recomendada: ${mxn(renta.precioSalidaRecomendadoMXN)} al mes
+- La renta que pide el propietario (${activo.renta_mensual ? mxn(Number(activo.renta_mensual)) + ' al mes' : 'no capturada'}) queda en el percentil ${renta.percentilPosicionamiento ?? 'sin dato'}.` : ''
 
   const datosRealesBlock = `
 DATO REAL -- Plusvalía 3 años (Índice SHF${serieShf ? `, serie ${serieShf.nombre}` : ''}):
@@ -83,14 +107,14 @@ ${absorcion?.disponible
     ? `${absorcion.diasVenta} días de venta promedio (${absorcion.municipio}, ${absorcion.anio}).`
     : `Sin dato -- ${absorcion?.motivo || 'servicio no disponible'}. IMPORTANTE: si el motivo es que San Pedro/zona premium no aparece en SNIIV, es esperado (vivienda sin financiamiento tradicional no pasa por este sistema) -- dilo así, no lo trates como un fallo.`}
 
-COMPARABLES DE REVENTA ENCONTRADOS (búsqueda real, ${comparables.length} resultados):
+${conVenta ? `COMPARABLES DE REVENTA ENCONTRADOS (búsqueda real, ${comparables.length} resultados):
 ${comparables.length > 0 ? comparables.map(c => `- ${c.nombre} | ${c.direccion || '?'} | $${c.precioM2 ?? '?'}/m² | ${c.tipologia || '?'} | ${c.url}`).join('\n') : 'Ninguno -- sin SERPER_API_KEY configurada o sin resultados.'}
 
 PRECIO DE MERCADO -- YA CALCULADO con los comparables (mediana y cuartiles del precio/m² × superficie; ${precio.comparablesUsados} comparables usados, ${precio.outliersExcluidos} descartados por atípicos o por tamaño muy distinto al activo):
 - Precio/m² de la zona (mediana): ${mxn(precio.precioPromedioM2Zona)}
 - Rango: ${mxn(precio.rangoMinMXN)} a ${mxn(precio.rangoMaxMXN)}
 - Precio de salida recomendado: ${mxn(precio.precioSalidaRecomendadoMXN)}
-- El precio del propietario queda en el percentil ${precio.percentilPosicionamiento ?? 'sin dato'} de los comparables.`
+- El precio del propietario queda en el percentil ${precio.percentilPosicionamiento ?? 'sin dato'} de los comparables.` : 'LA PROPIEDAD ESTÁ SOLO EN RENTA: no se valúa para venta.'}${bloqueRenta}`
 
   const prompt = `Eres el Agente de Mercado de SMTBROKER -- analizas en qué rango se debería vender
 una propiedad YA CONSTRUIDA (reventa), comparada contra reventas similares reales en la zona. No
@@ -99,9 +123,13 @@ analizas absorción de un desarrollo nuevo en preventa -- eso es un producto dis
 ACTIVO A VALUAR:
 - Tipo: ${activo.tipo}. Ubicación: ${activo.colonia || ''}, ${activo.municipio}, ${activo.estado}.
 - Superficie: ${activo.superficie ?? 'no capturada'} m². Precio de lista del propietario: ${activo.precio_total ? '$' + Number(activo.precio_total).toLocaleString('es-MX') : 'no capturado'}.
+- Operación: ${operacion === 'renta' ? 'SOLO EN RENTA' : operacion === 'ambas' ? 'en venta y en renta' : 'en venta'}.${conRenta ? ` Renta que pide: ${activo.renta_mensual ? '$' + Number(activo.renta_mensual).toLocaleString('es-MX') + ' al mes' : 'no capturada'}.` : ''}
 ${datosRealesBlock}
 
 REGLAS:
+- Si la propiedad está en renta, la renta de mercado también ya está calculada: compárala igual con
+  la renta que pide (arriba, en línea o abajo). Si está SOLO en renta, la estrategia es de renta: no
+  menciones plusvalía, absorción ni venta en "interpretacion" (quien renta no compra).
 - El precio de mercado ya está calculado arriba: NO lo recalcules ni propongas otro número. Si dice
   "sin dato" (menos de 2 comparables o sin superficie), dilo en "interpretacion". Compara el
   precio del propietario contra ese precio y dilo con claridad (arriba, en línea o abajo del mercado).
@@ -139,18 +167,35 @@ Retorna ÚNICAMENTE el JSON.`
       precioSalidaRecomendadoMXN: precio.precioSalidaRecomendadoMXN,
       percentilPosicionamiento: precio.percentilPosicionamiento,
     })
+    parsed.operacion = operacion
+    parsed.renta = renta ? {
+      comparablesAnalizados: rentaBusqueda.comparables.length,
+      comparablesUsados: renta.comparablesUsados,
+      rentaM2Zona: renta.precioPromedioM2Zona,
+      rangoMinMXN: renta.rangoMinMXN,
+      rangoMaxMXN: renta.rangoMaxMXN,
+      rentaRealistaMXN: renta.precioSalidaRecomendadoMXN,
+      percentilPosicionamiento: renta.percentilPosicionamiento,
+      comparables: rentaBusqueda.comparables,
+    } : null
     parsed.grounded = grounded
     parsed.comparables = comparables
     parsed.fuentesConsultadas = fuentesConsultadas
     const g = await guardar(supabaseAdmin, { activoId, agente: 'mercado', resultado: parsed, modelo: MODELO_DICTAMEN, creadoPor: caller.user.id })
     // V7.2 (panel /inicio): el primer precio realista de un propietario se le avisa por correo,
     // por si dejó el panel mientras se calculaba. Las actualizaciones no avisan.
-    if (!regenerar && activo.usuario_id === caller.user.id && parsed.precioSalidaRecomendadoMXN) {
-      const precio = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(parsed.precioSalidaRecomendadoMXN))
+    const rentaRealista = renta?.precioSalidaRecomendadoMXN ?? null
+    if (!regenerar && activo.usuario_id === caller.user.id && (parsed.precioSalidaRecomendadoMXN || rentaRealista)) {
+      const f = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+      const cifras = [
+        parsed.precioSalidaRecomendadoMXN ? `${conRenta ? 'venta ' : ''}${f(Number(parsed.precioSalidaRecomendadoMXN))}` : null,
+        rentaRealista ? `${conVenta ? 'renta ' : ''}${f(rentaRealista)} al mes` : null,
+      ].filter(Boolean).join(' · ')
+      const soloRenta = !parsed.precioSalidaRecomendadoMXN
       after(() => avisarUsuario(supabaseAdmin, activo.usuario_id, {
-        asunto: `Tu precio realista está listo: ${activo.nombre}`,
-        titulo: 'Tu precio realista de mercado',
-        lineas: [`${activo.nombre}: ${precio}.`, 'Basado en el valor de mercado y la plusvalía de propiedades similares.',
+        asunto: `Tu ${soloRenta ? 'renta' : 'precio'} realista está listo: ${activo.nombre}`,
+        titulo: soloRenta ? 'Tu renta realista de mercado' : 'Tu precio realista de mercado',
+        lineas: [`${activo.nombre}: ${cifras}.`, soloRenta ? 'Basada en la renta de propiedades similares en tu zona.' : 'Basado en el valor de mercado y la plusvalía de propiedades similares.',
           'Siguiente paso: certifica tu propiedad. La plataforma se encarga por ti.'],
         enlace: { texto: 'Ver mi panel', ruta: '/inicio' },
       }, { esDemo: !!activo.es_demo }))

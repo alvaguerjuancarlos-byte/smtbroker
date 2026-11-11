@@ -57,10 +57,14 @@ export async function POST(req: NextRequest) {
       nombre: activo.nombre, tipo: activo.tipo, colonia: activo.colonia, municipio: activo.municipio, estado: activo.estado,
       superficieTerrenoM2: activo.superficie, superficieConstruccionM2: activo.superficie_construccion_m2,
       precioListaMXN: activo.precio_total, descripcionDelPropietario: activo.descripcion || null,
+      // V9 (§22.3): en renta, la renta mensual y sus condiciones (depósito, plazo, mascotas…).
+      operacion: activo.operacion ?? 'venta', rentaMensualMXN: activo.renta_mensual ?? null, condicionesRenta: activo.renta ?? null,
     }
-    const prompt = `Eres el Agente de Ficha de venta de SMTBROKER. Escribes la ficha con la que un broker
-presentará esta propiedad a compradores (página pública y WhatsApp), en español de México, tono
-profesional y cálido, sin exageraciones de folleto.
+    const op = (activo.operacion ?? 'venta') as 'venta' | 'renta' | 'ambas'
+    const r = (m.renta ?? null) as { rentaRealistaMXN?: number | null; rangoMinMXN?: number | null; rangoMaxMXN?: number | null; comparablesAnalizados?: number } | null
+    const prompt = `Eres el Agente de Ficha de SMTBROKER. Escribes la ficha con la que un broker
+presentará esta propiedad ${op === 'renta' ? 'EN RENTA a quienes buscan rentar' : op === 'ambas' ? 'EN VENTA Y EN RENTA a compradores e inquilinos' : 'a compradores'} (página pública y WhatsApp), en español de México, tono
+profesional y cálido, sin exageraciones de folleto.${op === 'renta' ? ' Está SOLO en renta: no hables de venta, plusvalía ni inversión; habla de la renta mensual y sus condiciones.' : ''}
 
 REGLA DURA: usa SOLO los datos de abajo. No inventes recámaras, amenidades, acabados, vistas ni
 cifras que no aparezcan. Si un dato no está, no lo menciones. Los números de mercado salen del
@@ -81,7 +85,8 @@ DIAGNÓSTICO DE MERCADO (guardado):
 - Rango de comparables: ${m.rangoMinMXN ?? '—'} a ${m.rangoMaxMXN ?? '—'} (${m.comparablesAnalizados ?? 0} comparables reales)
 - Precio promedio de la zona: ${m.precioPromedioM2Zona ?? 'sin dato'} MXN/m²
 - Plusvalía 3 años (SHF): ${m.plusvalia3AniosTexto ?? 'sin dato'}
-- Lectura del analista: ${m.interpretacion ?? ''}
+- Lectura del analista: ${m.interpretacion ?? ''}${r ? `
+- Renta realista de mercado: ${r.rentaRealistaMXN ?? 'sin dato'} MXN al mes (rango ${r.rangoMinMXN ?? '—'} a ${r.rangoMaxMXN ?? '—'}, ${r.comparablesAnalizados ?? 0} comparables de renta)` : ''}
 ${legal ? `\nCERTIFICACIÓN LEGAL: la propiedad está CERTIFICADA por SMTBROKER (dictamen: "${(legal.resultado as { verdictTitle?: string }).verdictTitle ?? ''}"). Puedes mencionarlo como respaldo de confianza.` : '\nLa propiedad NO tiene certificación legal: no afirmes nada sobre su situación legal.'}
 
 OUTPUT -- JSON EXACTO, sin texto adicional:
