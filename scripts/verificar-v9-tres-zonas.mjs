@@ -127,6 +127,19 @@ try {
   ok(r.status === 200, `propone su casa (${r.status} ${r.j.error ?? ''})`)
 
   // 3. Bandeja por zona: las 3 mejores de cada una, "Ver las N" y la zona vacía en blanco.
+  // Los listados reales de portales que trajo la búsqueda directa se cuentan y se quitan, para que
+  // la prueba no dependa de lo que haya hoy en internet.
+  const { data: pf } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', compradorId).single()
+  // Se guardan en segundo plano después de crear la ficha: se espera a que la cuenta deje de crecer.
+  let previo = -1, motor = []
+  for (let i = 0; i < 20; i++) {
+    ;({ data: motor } = await admin.from('radar_opciones').select('id').eq('perfil_id', pf.id).eq('origen', 'motor'))
+    if (motor.length === previo && previo > 0) break
+    previo = motor.length
+    await espera(4000)
+  }
+  console.log(`INFO  listados de portales encontrados en las tres zonas: ${motor?.length ?? 0}`)
+  await admin.from('radar_opciones').delete().eq('perfil_id', pf.id).eq('origen', 'motor')
   const tkC = await token(correoComprador)
   const g = await api(tkC, '/api/necesidades')
   const op = (id) => g.j.bandeja.find((o) => o.activoId === id)

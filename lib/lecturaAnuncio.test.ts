@@ -36,3 +36,8 @@ test('verificación: descarta lo que no se comprueba y lo que no es venta en pes
   assert.equal(verificarExtraccion(SPOT2, { esVenta: false }).lectura, 'fallo')
   assert.equal(verificarExtraccion(SPOT2, { precio: 900_000, moneda: 'USD', citaPrecio: 'x' }).lectura, 'fallo')
 })
+
+test('bloqueo: la verificación de Vercel que puso Spot2 (11-nov-2026)', () => {
+  const t = 'Title: Vercel Security Checkpoint\n\nWarning: Target URL returned error 429: Too Many Requests\n\n' + 'x '.repeat(400)
+  assert.equal(detectarBloqueo(t), true)
+})

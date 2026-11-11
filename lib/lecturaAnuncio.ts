@@ -17,6 +17,8 @@
 const SENALES_BLOQUEO = [
   /just a moment/i, /are not a bot/i, /captcha/i, /access denied/i, /challenge validation/i,
   /account-verification/i, /request could not be satisfied/i, /returned error 40[13]/i, /attention required/i,
+  // Spot2 (11-nov-2026): "Vercel Security Checkpoint" con error 429.
+  /security checkpoint/i, /returned error 429/i, /too many requests/i,
 ]
 
 export function detectarBloqueo(texto: string): boolean {

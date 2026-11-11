@@ -277,7 +277,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
                     <div className="flex flex-col gap-0.5">
                       <span className="font-display text-[20px] font-medium">{z.nombre}</span>
                       <span className="text-[15px] text-tenue">
-                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m²` : ''}
+                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m² (${z.comparables} comparables)` : ''}
                       </span>
                       {z.rinde && (
                         <span className="text-[15px] text-tinta-2">
