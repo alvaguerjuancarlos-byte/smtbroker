@@ -62,7 +62,7 @@ export default function ConexionPage() {
   const [cierre, setCierre] = useState({ precio: '', fecha: new Date().toISOString().slice(0, 10) })
   const [motivo, setMotivo] = useState('')
   const [notas, setNotas] = useState({ atencion: 0, rapidez: 0, honestidad: 0, comentario: '' })
-  const fin = useRef<HTMLDivElement>(null)
+  const caja = useRef<HTMLDivElement>(null)
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
   const cargar = useCallback(async () => {
@@ -83,7 +83,8 @@ export default function ConexionPage() {
     const t = setInterval(() => { if (document.visibilityState === 'visible') cargar() }, 15000)
     return () => clearInterval(t)
   }, [cargar, router])
-  useEffect(() => { fin.current?.scrollIntoView({ block: 'nearest' }) }, [d?.mensajes.length])
+  // Al último mensaje, moviendo solo el recuadro de la conversación (no la página).
+  useEffect(() => { if (caja.current) caja.current.scrollTop = caja.current.scrollHeight }, [d?.mensajes.length])
 
   const accion = async (cuerpo: Record<string, unknown>) => {
     setOcupado(true); setError(null)
@@ -279,7 +280,7 @@ export default function ConexionPage() {
             {c.estado !== 'por_validar' && c.estado !== 'rechazada' && (
               <div className={tarjeta}>
                 <span className={etiqueta}>Conversación</span>
-                <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto">
+                <div ref={caja} className="flex flex-col gap-2 max-h-[420px] overflow-y-auto">
                   {d.mensajes.length === 0 && <p className="text-[13px] text-slate">Todavía no hay mensajes. {activa ? 'Escribe el primero.' : ''}</p>}
                   {d.mensajes.map((m) => (
                     <div key={m.id} className={`max-w-[85%] px-3 py-2 ${m.mio ? 'self-end bg-[#7fd1b9]/15' : 'self-start bg-navy-950/70'}`}>
@@ -287,7 +288,6 @@ export default function ConexionPage() {
                       <p className="text-[14px] whitespace-pre-wrap break-words">{m.texto}</p>
                     </div>
                   ))}
-                  <div ref={fin} />
                 </div>
                 {activa && d.rol !== 'operacion' && (
                   <form onSubmit={async (e) => { e.preventDefault(); if (texto.trim() && await accion({ accion: 'mensaje', texto })) setTexto('') }} className="flex gap-2">

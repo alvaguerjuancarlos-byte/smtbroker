@@ -33,11 +33,13 @@ export function precioContraMercado(precio: number | null, m: PrecioMercado): Pr
   const diferenciaPct = Math.round((precio / m.precioSalidaRecomendadoMXN - 1) * 1000) / 10
   const estado: Semaforo = precio > m.rangoMaxMXN ? 'arriba' : precio < m.rangoMinMXN ? 'abajo' : 'en_linea'
   const margen = precio > m.precioSalidaRecomendadoMXN ? precio - m.precioSalidaRecomendadoMXN : null
-  const rango = `${millones(m.rangoMinMXN)} a ${millones(m.rangoMaxMXN)}`
+  // Si el rango redondeado da la misma cifra, "entre $24.3M y $24.3M" no dice nada.
+  const rango = millones(m.rangoMinMXN) === millones(m.rangoMaxMXN)
+    ? `alrededor de ${millones(m.rangoMinMXN)}` : `entre ${millones(m.rangoMinMXN)} y ${millones(m.rangoMaxMXN)}`
   const texto = estado === 'arriba'
-    ? `Pide ${Math.abs(diferenciaPct)} % más que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está entre ${rango}: hay margen para negociar.`
+    ? `Pide ${Math.abs(diferenciaPct)} % más que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: hay margen para negociar.`
     : estado === 'abajo'
-      ? `Pide ${Math.abs(diferenciaPct)} % menos que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está entre ${rango}: buena oportunidad, revisa por qué.`
+      ? `Pide ${Math.abs(diferenciaPct)} % menos que el precio realista (${millones(m.precioSalidaRecomendadoMXN)}). El mercado está ${rango}: buena oportunidad, revisa por qué.`
       : `En línea con el mercado (${rango}; precio realista ${millones(m.precioSalidaRecomendadoMXN)}).`
   return { estado, texto, diferenciaPct, margenNegociacionMXN: margen }
 }
