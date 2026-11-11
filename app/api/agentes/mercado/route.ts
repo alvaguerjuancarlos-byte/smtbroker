@@ -6,6 +6,7 @@ import { filtroAccesoActivo } from '@/lib/accesoActivo'
 import { leerUltimo, guardar, conGuardado } from '@/lib/diagnosticoGuardado'
 import { MODELO_DICTAMEN, MODELO_EXTRACCION, MAX_TOKENS_DICTAMEN } from '@/lib/modelos'
 import { avisarUsuario } from '@/lib/avisos'
+import { calcularPrecioMercado } from '@/lib/precioMercado'
 
 // Agente de Mercado real para REVENTA -- distinto del "Agente Mercado" de smt-developer (que
 // analiza oferta/demanda de un PROYECTO nuevo en preventa). Aquí la pregunta es "¿en qué rango
@@ -44,7 +45,12 @@ async function buscarComparablesReventa(tipo: string, municipio: string, colonia
   const fuentesConsultadas: { url: string; titulo: string }[] = []
   if (!serperKey) return { comparables: [], fuentesConsultadas }
 
-  const palabraClave = tipo.toLowerCase().includes('terreno') ? 'terrenos' : tipo.toLowerCase().includes('depto') ? 'departamentos' : 'casas'
+  // Antes todo lo que no era terreno ni "depto" buscaba "casas": una bodega se comparaba contra
+  // casas (y "Departamento" no contiene "depto").
+  const t = tipo.toLowerCase()
+  const palabraClave = t.includes('terreno') ? 'terrenos' : t.includes('depa') || t.includes('depto') ? 'departamentos'
+    : t.includes('bodega') ? 'bodegas' : t.includes('local') ? 'locales comerciales' : t.includes('oficina') ? 'oficinas'
+    : t.includes('edificio') || t.includes('torre') ? 'edificios' : 'casas'
   const lugar = [colonia, municipio, estado].filter(Boolean).join(' ')
   const queries = [
     `${palabraClave} en venta ${lugar} precio m2 site:inmuebles24.com OR site:lamudi.com.mx OR site:vivanuncios.com.mx`,
@@ -126,6 +132,9 @@ export async function POST(req: NextRequest) {
 
   const { comparables, fuentesConsultadas } = await buscarComparablesReventa(activo.tipo, activo.municipio, activo.colonia, activo.estado)
   const grounded = comparables.length > 0
+  // Rango y precio de salida calculados en código (lib/precioMercado.ts) — el modelo no los decide.
+  const precio = calcularPrecioMercado(comparables, activo.superficie ? Number(activo.superficie) : null, activo.precio_total ? Number(activo.precio_total) : null)
+  const mxn = (n: number | null) => n == null ? 'sin dato' : '$' + n.toLocaleString('es-MX')
 
   const datosRealesBlock = `
 DATO REAL -- Plusvalía 3 años (Índice SHF${serieShf ? `, serie ${serieShf.nombre}` : ''}):
@@ -141,7 +150,13 @@ ${absorcion?.disponible
     : `Sin dato -- ${absorcion?.motivo || 'servicio no disponible'}. IMPORTANTE: si el motivo es que San Pedro/zona premium no aparece en SNIIV, es esperado (vivienda sin financiamiento tradicional no pasa por este sistema) -- dilo así, no lo trates como un fallo.`}
 
 COMPARABLES DE REVENTA ENCONTRADOS (búsqueda real, ${comparables.length} resultados):
-${comparables.length > 0 ? comparables.map(c => `- ${c.nombre} | ${c.direccion || '?'} | $${c.precioM2 ?? '?'}/m² | ${c.tipologia || '?'} | ${c.url}`).join('\n') : 'Ninguno -- sin SERPER_API_KEY configurada o sin resultados.'}`
+${comparables.length > 0 ? comparables.map(c => `- ${c.nombre} | ${c.direccion || '?'} | $${c.precioM2 ?? '?'}/m² | ${c.tipologia || '?'} | ${c.url}`).join('\n') : 'Ninguno -- sin SERPER_API_KEY configurada o sin resultados.'}
+
+PRECIO DE MERCADO -- YA CALCULADO con los comparables (mediana y cuartiles del precio/m² × superficie; ${precio.comparablesUsados} comparables usados, ${precio.outliersExcluidos} descartados por atípicos o por tamaño muy distinto al activo):
+- Precio/m² de la zona (mediana): ${mxn(precio.precioPromedioM2Zona)}
+- Rango: ${mxn(precio.rangoMinMXN)} a ${mxn(precio.rangoMaxMXN)}
+- Precio de salida recomendado: ${mxn(precio.precioSalidaRecomendadoMXN)}
+- El precio del propietario queda en el percentil ${precio.percentilPosicionamiento ?? 'sin dato'} de los comparables.`
 
   const prompt = `Eres el Agente de Mercado de SMTBROKER -- analizas en qué rango se debería vender
 una propiedad YA CONSTRUIDA (reventa), comparada contra reventas similares reales en la zona. No
@@ -153,9 +168,9 @@ ACTIVO A VALUAR:
 ${datosRealesBlock}
 
 REGLAS:
-- precioPromedioM2Zona, rangoMinMXN, rangoMaxMXN, precioSalidaRecomendadoMXN: básalos en los
-  comparables reales de arriba si hay al menos 2; si hay menos de 2, repórtalos como null y dilo
-  en "interpretacion", NO inventes un rango sin comparables reales que lo respalden.
+- El precio de mercado ya está calculado arriba: NO lo recalcules ni propongas otro número. Si dice
+  "sin dato" (menos de 2 comparables o sin superficie), dilo en "interpretacion". Compara el
+  precio del propietario contra ese precio y dilo con claridad (arriba, en línea o abajo del mercado).
 - plusvalia3Anios y absorcion: copia LITERAL el dato real de arriba (texto y número), nunca lo
   recalcules ni lo completes si dice "sin dato".
 - demandaLabel ("Alta"/"Media"/"Baja"/null): solo si tienes base real para decirlo (densidad de
@@ -166,12 +181,6 @@ REGLAS:
 
 OUTPUT -- JSON EXACTO:
 {
-  "comparablesAnalizados": ${comparables.length},
-  "precioPromedioM2Zona": number | null,
-  "rangoMinMXN": number | null,
-  "rangoMaxMXN": number | null,
-  "precioSalidaRecomendadoMXN": number | null,
-  "percentilPosicionamiento": number | null,
   "plusvalia3AniosTexto": "texto corto, copiado del dato real de arriba",
   "absorcionTexto": "texto corto, copiado del dato real de arriba",
   "demandaLabel": "Alta" | "Media" | "Baja" | null,
@@ -186,6 +195,15 @@ Retorna ÚNICAMENTE el JSON.`
       model: MODELO_DICTAMEN,
       max_tokens: MAX_TOKENS_DICTAMEN,
       messages: [{ role: 'user', content: prompt }],
+    })
+    // Los números del precio siempre vienen del cálculo, aunque el modelo devuelva otros.
+    Object.assign(parsed, {
+      comparablesAnalizados: comparables.length,
+      precioPromedioM2Zona: precio.precioPromedioM2Zona,
+      rangoMinMXN: precio.rangoMinMXN,
+      rangoMaxMXN: precio.rangoMaxMXN,
+      precioSalidaRecomendadoMXN: precio.precioSalidaRecomendadoMXN,
+      percentilPosicionamiento: precio.percentilPosicionamiento,
     })
     parsed.grounded = grounded
     parsed.comparables = comparables
