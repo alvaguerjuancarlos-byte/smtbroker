@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
         const a = o.radar_anuncios
         // V8 (opción 2): lo leído de la página o capturado por el comprador; con precio y m² se analiza.
         bandeja.push({
-          clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || a.url, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia,
+          clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || `Anuncio de ${a.fuente}`, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia,
           precio: a.precio, superficie: a.superficie, url: a.url, fuente: a.fuente, opcionId: o.id, anuncioId: o.anuncio_id, lectura: a.lectura,
         })
       }
