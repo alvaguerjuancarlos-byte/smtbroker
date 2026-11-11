@@ -2,6 +2,7 @@
 // V8): todo empieza con lo que busca Patricia. Contra producción, en el MUNDO DEMO (no manda correos
 // ni toca datos reales). Tomas:
 //   r1 Patricia captura su ficha en /empezar (celular) y crea su cuenta al final        (escenas 4-6)
+//   r1b Patricia: su bandeja en "De portal" y "Leer el anuncio" de Spot2 (camino A)    (escena 6b)
 //   r2 Diego ve la necesidad en su pestaña Necesidades y propone su bodega             (escenas 7-8)
 //   r3 Patricia: su bandeja → "Me interesa" → su análisis → el comparativo             (escenas 9-13)
 //   r4 Patricia: "Quiero verla" → conversación con Diego → propone horarios            (escenas 14-15)
@@ -39,7 +40,7 @@ const CUENTAS = {
   ricardo: 'ricardo.villarreal@demo.smtbroker.mx', diego: 'diego.salinas@demo.smtbroker.mx',
   patricia: `recorrido.patricia.v9.${SUFIJO}@demo.smtbroker.mx`,
 }
-const creados = { activos: [], solicitud: null }
+const creados = { activos: [], solicitud: null, anuncio: null }
 
 const { data: lista } = await admin.auth.admin.listUsers({ perPage: 500 })
 const ids = { ricardo: lista.users.find((u) => u.email === CUENTAS.ricardo).id, diego: lista.users.find((u) => u.email === CUENTAS.diego).id }
@@ -47,6 +48,7 @@ const ids = { ricardo: lista.users.find((u) => u.email === CUENTAS.ricardo).id, 
 async function restaurar() {
   if (creados.activos.length) await admin.from('activos').delete().in('id', creados.activos) // cascada: propuestas, análisis, conexiones, cierres, diagnósticos
   if (creados.solicitud) await admin.from('solicitudes').delete().eq('id', creados.solicitud)
+  if (creados.anuncio) await admin.from('radar_anuncios').delete().eq('id', creados.anuncio)
   const { data: todas } = await admin.auth.admin.listUsers({ perPage: 1000 })
   for (const u of todas.users.filter((x) => x.email === CUENTAS.patricia)) {
     const { data: pf } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', u.id)
@@ -239,6 +241,31 @@ try {
 
   const { data: pu } = await admin.from('usuarios').select('id').eq('nombre', 'Patricia Longoria').eq('es_demo', true).order('created_at', { ascending: false }).limit(1).single()
   const { data: nec } = await admin.from('necesidades').select('id').eq('usuario_id', pu.id).single()
+
+  // Escena 6b (camino A): un anuncio real de Spot2 en su búsqueda, todavía sin leer. Spot2 se deja
+  // leer (Maestro V8.1 §18.1); Inmuebles24 y Mercado Libre no. Se inserta directo (como lo guardaría
+  // el motor) para que en cámara Patricia presione "Leer el anuncio".
+  const SPOT2 = 'https://spot2.mx/spots/bodega-industrial-en-venta-alberta-escamilla-apodaca/167709'
+  await admin.from('radar_anuncios').delete().eq('url', SPOT2).eq('es_demo', true)
+  const { data: an6b } = await admin.from('radar_anuncios').insert({
+    url: SPOT2, fuente: 'spot2', titulo: 'Nave Industrial en Venta en Carretera Apodaca - Juárez', tipo: 'Bodega', municipio: 'Apodaca', es_demo: true,
+  }).select('id').single()
+  creados.anuncio = an6b.id
+  const { data: pf6b } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', pu.id).single()
+  await admin.from('radar_opciones').insert({ perfil_id: pf6b.id, anuncio_id: an6b.id, origen: 'motor' })
+
+  // r1b · Patricia: su bandeja en "De portal" y la lectura del anuncio (celular)
+  await toma('r1b-patricia-portales', 'patricia', '/inicio', async (page, marca) => {
+    await esperar(page, 'Tu bandeja'); await sleep(500)
+    await irA(page, 'Tu bandeja', 90, 1400)
+    await clic(page, 'De portal'); await sleep(900)
+    marca('portales'); await sleep(3500)
+    await irA(page, 'Nave Industrial en Venta en Carretera Apodaca', 200, 1000)
+    marca('leer'); await sleep(1200)
+    await clic(page, 'Leer el anuncio', 'Nave Industrial en Venta en Carretera Apodaca')
+    await esperar(page, '915 m²', 120000); await sleep(600)
+    marca('leido'); await sleep(4500)
+  }, CEL)
 
   // r2 · Diego ve la necesidad y propone su bodega
   await toma('r2-diego-necesidades', 'diego', '/portal-broker?pestana=necesidades', async (page, marca) => {
