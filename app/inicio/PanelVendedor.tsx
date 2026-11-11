@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import ListaConexiones from '../components/ListaConexiones'
 
 interface Activo {
   id: string; nombre: string; colonia: string | null; municipio: string | null
@@ -208,6 +209,8 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
       </div>
 
       {!conBroker && tarjetaBroker}
+      {/* V8 Parte 3: compradores que pidieron ver su propiedad (validados por Operación) */}
+      <ListaConexiones titulo="Compradores que quieren verla" vacio="" acento="#d9b45a" ocultarVacia />
     </>
   )
 }

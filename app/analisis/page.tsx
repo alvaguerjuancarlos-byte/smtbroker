@@ -7,6 +7,7 @@
 //   - lo que depende del tipo y del propósito: costo total, mensualidad, uso de suelo, rendimiento
 //     por renta (§20.2);
 //   - lo legal: sello si está certificada o "no revisada legalmente" con el botón para pedirla (§20.3).
+//   - "Quiero verla" (V8 Parte 3, §21.1): abre la conexión con quien la ofrece y revela su nombre.
 // Con dos o más, el comparativo lado a lado (§20.4). Todo sale de app/api/analisis.
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -62,6 +63,16 @@ export default function AnalisisPage() {
     if (!filas?.length || !window.location.hash) return
     document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [filas])
+
+  // "Quiero verla": crea la conexión (o abre la que ya existe) y lleva a la conversación.
+  const quieroVerla = async (f: Fila) => {
+    setOcupado(f.id + 'ver'); setError(null)
+    const r = await fetch('/api/conexiones', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() }, body: JSON.stringify({ activoId: f.activo_id }) })
+    const j = await r.json().catch(() => ({}))
+    setOcupado(null)
+    if (!r.ok) { setError(j.error ?? 'No se pudo conectar'); return }
+    router.push(`/conexion/${j.id}`)
+  }
 
   const accion = async (f: Fila, tipo: 'quitar' | 'actualizar' | 'certificar') => {
     setOcupado(f.id + tipo); setError(null)
@@ -231,6 +242,13 @@ export default function AnalisisPage() {
                       {r.solidez.comparablesVenta} comparables de venta{r.solidez.comparablesRenta != null ? ` y ${r.solidez.comparablesRenta} de renta` : ''} de tamaño parecido · datos del {new Date(r.solidez.fechaDatos).toLocaleDateString('es-MX')}
                       {r.solidez.fuentes.length > 0 ? ` · fuentes: ${r.solidez.fuentes.join(', ')}` : ''}
                     </p>
+                  </div>
+
+                  <div className={bloque}>
+                    <button onClick={() => quieroVerla(f)} disabled={!!ocupado} className="w-full font-plex-mono text-[13px] font-medium px-4 py-3 text-navy-950 disabled:opacity-60" style={{ background: verde }}>
+                      {ocupado === f.id + 'ver' ? 'Conectando…' : 'Quiero verla'}
+                    </button>
+                    <p className="text-[12px] text-slate">Te conectamos con quien la ofrece para conversar y agendar la visita. Solo entonces sabrá tu nombre.</p>
                   </div>
 
                   <div className="flex gap-4 flex-wrap pt-1">

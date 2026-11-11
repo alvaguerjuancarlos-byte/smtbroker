@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { millones, MAX_NECESIDADES_ACTIVAS } from '@/lib/necesidad'
+import ListaConexiones from '../components/ListaConexiones'
 
 interface Busqueda {
   id: string; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
@@ -125,6 +126,9 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       </div>
 
       {conBroker && tarjetaBroker}
+
+      {/* V8 Parte 3: las propiedades que pidió ver ("Quiero verla") y en qué va cada una */}
+      <ListaConexiones titulo="Propiedades que pediste ver" vacio="" ocultarVacia />
 
       <div className="flex items-center justify-between gap-2">
         <span className={`${etiqueta} text-slate`}>Tus búsquedas</span>
