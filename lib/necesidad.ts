@@ -125,6 +125,23 @@ export const MAX_NECESIDADES_ACTIVAS = 3
 export const DIAS_VIGENCIA = 30
 export const MAX_PROPUESTAS_POR_BROKER = 3
 export const MARGEN_PRECIO = 0.10
+export const MAX_ZONAS = 3
+export const MEJORES_POR_ZONA = 3
+
+/**
+ * Una zona de búsqueda (Documento Maestro V9, §23.1): cada una con su municipio, así una ficha busca
+ * en Valle (San Pedro), Country y Carretera Nacional (Monterrey) a la vez. Las tres valen igual.
+ * `mercado` lo pone solo el servidor: "lo que rinde tu dinero" (§23.2).
+ */
+export interface ZonaBusqueda {
+  estado: string
+  municipio: string
+  nombre: string | null
+  colonias: string[]
+  mercado?: MercadoZona | null
+}
+
+export interface MercadoZona { precioM2: number | null; comparables: number; fecha: string }
 
 export interface Necesidad {
   tipo: TipoNecesidad
@@ -133,6 +150,8 @@ export interface Necesidad {
   municipio: string
   zona: string | null
   colonias: string[]
+  /** De 1 a 3 (V9). estado, municipio, zona y colonias repiten la primera, por compatibilidad. */
+  zonas: ZonaBusqueda[]
   presupuesto_min: number | null
   presupuesto_max: number
   forma_pago: FormaPago | null
@@ -164,11 +183,20 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
     else if (Array.isArray(v)) { const a = v.filter((y) => c.opciones!.includes(y)); if (a.length) caracteristicas[c.clave] = a }
   }
 
-  const estado = ESTADOS_MX.includes(x.estado as string) ? x.estado as string : 'Nuevo León'
-  const municipio = texto(x.municipio, 80)
-  if (municipio.length < 3) return { error: 'Escribe la ciudad o el municipio' }
-  const colonias = (Array.isArray(x.colonias) ? x.colonias : [])
-    .map((c) => texto(c, 60)).filter(Boolean).slice(0, 10)
+  // V9: hasta 3 zonas. Sin `zonas` (fichas y clientes de la V8) se arma una con los campos sueltos.
+  const crudas = (Array.isArray(x.zonas) && x.zonas.length ? x.zonas : [x]) as Record<string, unknown>[]
+  const zonas: ZonaBusqueda[] = []
+  for (const z of crudas.slice(0, MAX_ZONAS)) {
+    const municipio = texto(z?.municipio, 80)
+    if (municipio.length < 3) return { error: crudas.length > 1 ? `Escribe la ciudad o el municipio de la zona ${zonas.length + 1}` : 'Escribe la ciudad o el municipio' }
+    zonas.push({
+      estado: ESTADOS_MX.includes(z.estado as string) ? z.estado as string : 'Nuevo León',
+      municipio,
+      nombre: texto(z.nombre ?? z.zona, 80) || null,
+      colonias: [...new Set((Array.isArray(z.colonias) ? z.colonias : []).map((c) => texto(c, 60)).filter(Boolean))].slice(0, 10),
+    })
+  }
+  const { estado, municipio, colonias } = zonas[0]
 
   const presupuesto_max = numero(x.presupuesto_max)
   if (!presupuesto_max) return { error: 'Escribe tu presupuesto máximo' }
@@ -181,7 +209,7 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
 
   return {
     necesidad: {
-      tipo, caracteristicas, estado, municipio, zona: texto(x.zona, 80) || null, colonias,
+      tipo, caracteristicas, estado, municipio, zona: zonas[0].nombre, colonias, zonas,
       presupuesto_min, presupuesto_max,
       forma_pago: de(x.forma_pago, FORMAS_PAGO.map((f) => f.id)),
       plazo: de(x.plazo, PLAZOS.map((p) => p.id)),
@@ -208,7 +236,7 @@ export function resumenNecesidad(n: Necesidad): string {
   const rec = n.caracteristicas.recamaras
   if (typeof rec === 'number') partes.push(`${rec} rec`)
   if (typeof area === 'number') partes.push(`${area.toLocaleString('es-MX')} m²`)
-  partes.push(n.colonias.length ? `${n.municipio}: ${n.colonias.join(', ')}` : n.municipio)
+  partes.push(zonasDe(n).map(nombreZona).join(' · '))
   partes.push(presupuestoTexto(n))
   const pago = FORMAS_PAGO.find((f) => f.id === n.forma_pago)
   if (pago) partes.push(pago.etiqueta.toLowerCase())
@@ -228,6 +256,82 @@ export function detalleCaracteristicas(n: Pick<Necesidad, 'tipo' | 'caracteristi
 }
 
 const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+const mismoMun = (a: string | null, b: string | null) => !!a && !!b && sinAcentos(municipioCanonico(a)) === sinAcentos(municipioCanonico(b))
+const enColonia = (colonia: string | null | undefined, pedidas: string[]) =>
+  !!colonia && pedidas.some((c) => sinAcentos(colonia).includes(sinAcentos(c)) || sinAcentos(c).includes(sinAcentos(colonia)))
+
+type ConZonas = Pick<Necesidad, 'estado' | 'municipio' | 'zona' | 'colonias'> & { zonas?: ZonaBusqueda[] | null }
+
+/** Las zonas de una ficha: las de la V9 o, en una ficha vieja, la única que tenía. */
+export function zonasDe(n: ConZonas): ZonaBusqueda[] {
+  return n.zonas?.length ? n.zonas : [{ estado: n.estado, municipio: n.municipio, nombre: n.zona, colonias: n.colonias ?? [] }]
+}
+
+/** "Country", "Del Valle, Valle Oriente" o "Apodaca". */
+export const nombreZona = (z: ZonaBusqueda) => z.nombre || (z.colonias.length ? z.colonias.join(', ') : z.municipio)
+
+/**
+ * ¿En cuál de las zonas de la ficha cae la propiedad? Índice o -1. Primero la zona cuyas colonias
+ * la incluyen; si no, una zona del mismo municipio sin colonias ("cualquiera en este municipio").
+ * Así Country (con colonias) y Carretera Nacional (sin colonias), las dos en Monterrey, no se pisan.
+ */
+export function zonaDeActivo(a: { municipio: string | null; colonia?: string | null }, n: ConZonas): number {
+  const zs = zonasDe(n)
+  const porColonia = zs.findIndex((z) => mismoMun(a.municipio, z.municipio) && z.colonias.length > 0 && enColonia(a.colonia, z.colonias))
+  if (porColonia >= 0) return porColonia
+  return zs.findIndex((z) => mismoMun(a.municipio, z.municipio) && z.colonias.length === 0)
+}
+
+/**
+ * Qué tan cerca está una opción de la ficha, de 0 a 100, con sus razones (§23.4). Ordena las
+ * opciones DENTRO de cada zona; la zona no da puntos porque las tres valen igual.
+ *   tipo 15 · precio dentro del presupuesto 40 (dentro del margen de ±10 %: 20) · superficie mínima
+ *   25 (sin pedirla: 20 si se conoce, 10 si no) · en las colonias pedidas 20 (zona sin colonias: 20).
+ */
+export function puntajeOpcion(
+  a: { tipo: string | null; municipio: string | null; colonia?: string | null; precio_total: number | null; superficie: number | null },
+  n: Necesidad,
+): { puntaje: number; razones: string[] } {
+  const razones: string[] = []
+  let p = 0
+  if ([...normalizarTipos(a.tipo)].includes(n.tipo)) p += 15
+  if (a.precio_total) {
+    const min = n.presupuesto_min ?? 0, max = n.presupuesto_max
+    if (a.precio_total >= min && a.precio_total <= max) {
+      p += 40
+      const abajo = Math.round((1 - a.precio_total / max) * 100)
+      razones.push(abajo >= 3 ? `${abajo} % abajo de tu tope` : 'dentro de tu presupuesto')
+    } else if (a.precio_total >= min * (1 - MARGEN_PRECIO) && a.precio_total <= max * (1 + MARGEN_PRECIO)) {
+      p += 20
+      razones.push(a.precio_total > max ? `${Math.round((a.precio_total / max - 1) * 100)} % arriba de tu tope` : 'cerca de tu presupuesto')
+    }
+  }
+  const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
+  if (typeof area === 'number' && a.superficie) {
+    if (a.superficie >= area) { p += 25; razones.push(`${a.superficie.toLocaleString('es-MX')} m², pediste ${area.toLocaleString('es-MX')}`) }
+    else if (a.superficie >= area * 0.9) p += 12
+  } else p += a.superficie ? 20 : 10
+  const i = zonaDeActivo(a, n)
+  const z = i >= 0 ? zonasDe(n)[i] : null
+  if (z && (z.colonias.length === 0 || enColonia(a.colonia, z.colonias))) {
+    p += 20
+    if (z.colonias.length && a.colonia) razones.push(`en ${a.colonia}`)
+  }
+  return { puntaje: Math.min(100, p), razones }
+}
+
+/**
+ * "Lo que rinde tu dinero" en una zona (§23.2): con el precio por m² típico, cuántos m² alcanza el
+ * presupuesto y, si pidió una superficie mínima, qué porcentaje le falta (negativo: le sobra).
+ */
+export function rindeDinero(precioM2: number | null | undefined, n: Pick<Necesidad, 'tipo' | 'caracteristicas' | 'presupuesto_max'>):
+  { m2: number; faltaPct: number | null } | null {
+  if (!precioM2 || precioM2 <= 0) return null
+  const m2 = Math.round(n.presupuesto_max / precioM2 / 5) * 5
+  const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
+  const faltaPct = typeof area === 'number' && area > 0 ? Math.round((1 - n.presupuesto_max / (precioM2 * area)) * 100) : null
+  return { m2, faltaPct }
+}
 
 export interface ActivoPropuesta {
   tipo: string | null
@@ -245,9 +349,12 @@ export interface ActivoPropuesta {
 export function cumpleNecesidad(a: ActivoPropuesta, n: Necesidad): { cumple: boolean; motivos: string[] } {
   const motivos: string[] = []
   if (![...normalizarTipos(a.tipo)].includes(n.tipo)) motivos.push(`No es ${etiquetaTipo(n.tipo).toLowerCase()}`)
-  if (sinAcentos(municipioCanonico(a.municipio)) !== sinAcentos(municipioCanonico(n.municipio))) motivos.push(`No está en ${n.municipio}`)
-  else if (n.colonias.length && !n.colonias.some((c) => a.colonia && sinAcentos(a.colonia).includes(sinAcentos(c)))) {
-    motivos.push(`No está en las colonias que pidió (${n.colonias.join(', ')})`)
+  if (zonaDeActivo(a, n) < 0) {
+    const zs = zonasDe(n)
+    const mismoMunicipio = zs.some((z) => mismoMun(a.municipio, z.municipio))
+    motivos.push(mismoMunicipio
+      ? `No está en las colonias que pidió (${zs.flatMap((z) => z.colonias).join(', ')})`
+      : zs.length > 1 ? `No está en sus zonas (${zs.map(nombreZona).join(', ')})` : `No está en ${zs[0].municipio}`)
   }
   if (!a.precio_total) motivos.push('No tiene precio')
   else {

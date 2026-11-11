@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { validarNecesidad } from '@/lib/necesidad'
-import { inventarioQueCumple, anunciosDePortales } from '@/lib/necesidadServidor'
+import { inventarioQueCumple, anunciosDePortales, mercadoDeZonas } from '@/lib/necesidadServidor'
 
 // Búsqueda directa ANTES de crear la cuenta (Documento Maestro V8, §19.2 y §19.5 regla 1: se pide
 // cuenta después de la ficha, cuando el cliente ya vio sus primeros resultados). Sin sesión.
@@ -29,11 +29,13 @@ export async function POST(req: NextRequest) {
     const conPortales = recientes.length < MAX_POR_IP_HORA
     if (conPortales) usos.set(ip, [...recientes, ahora])
 
-    const [plataforma, portales] = await Promise.all([
+    // V9 (§23): todo por zona, más "lo que rinde tu dinero" en cada una (cuesta igual que los portales).
+    const [plataforma, portales, mercado] = await Promise.all([
       inventarioQueCumple(getSupabaseAdmin(), n, { esDemo: false, incluirBrokers: false }),
       conPortales ? anunciosDePortales(n) : Promise.resolve([]),
+      conPortales ? mercadoDeZonas(n) : Promise.resolve(n.zonas.map(() => null)),
     ])
-    return NextResponse.json({ plataforma, portales })
+    return NextResponse.json({ zonas: n.zonas.map((z, i) => ({ ...z, mercado: mercado[i] })), plataforma, portales })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

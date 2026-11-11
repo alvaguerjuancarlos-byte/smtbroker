@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { perfilesBrokers } from '@/lib/nivelServidor'
-import { municipioCanonico } from '@/lib/matching'
+import { municipioCanonico, normalizarTipos } from '@/lib/matching'
 import {
   validarNecesidad, cumpleNecesidad, resumenNecesidad, detalleCaracteristicas, MAX_PROPUESTAS_POR_BROKER,
+  zonasDe, nombreZona, zonaDeActivo, puntajeOpcion, rindeDinero,
 } from '@/lib/necesidad'
 import { guardarNecesidad, inventarioQueCumple, vigente, COLS_NECESIDAD, type FilaNecesidad } from '@/lib/necesidadServidor'
 
@@ -12,6 +13,8 @@ import { guardarNecesidad, inventarioQueCumple, vigente, COLS_NECESIDAD, type Fi
 // GET  comprador → sus fichas y su BANDEJA (§19.4): todas sus opciones en un solo lugar, con la
 //                  etiqueta de origen: propuesta por broker verificado, certificada, particular o
 //                  de portal (no certificada).
+//                  V9 (§23.4): cada opción dice en qué zona de su ficha cae, su puntaje (0-100) y por
+//                  qué; la pantalla muestra las 3 mejores de cada zona.
 //      broker    → el PANEL DE NECESIDADES (§19.3): fichas vigentes publicadas, ANÓNIMAS (sin nombre
 //                  ni contacto del comprador: §19.5 regla 2), con las propiedades de su cartera que
 //                  cumplen cada ficha y cuántas propuestas lleva.
@@ -49,7 +52,7 @@ export async function GET(req: NextRequest) {
         return {
           id: n.id, resumen: resumenNecesidad(n), detalle: detalleCaracteristicas(n), tipo: n.tipo,
           proposito: n.proposito, plazo: n.plazo, created_at: n.created_at,
-          enMiZona: misZonas.has(municipioCanonico(n.municipio)),
+          enMiZona: zonasDe(n).some((z) => misZonas.has(municipioCanonico(z.municipio))),
           propuestasTotal: P.filter((p) => p.necesidad_id === n.id).length,
           misPropuestas: mias,
           // §20.5 regla 4: de su propuesta, el broker ve solo el precio contra mercado.
@@ -95,6 +98,14 @@ export async function GET(req: NextRequest) {
       municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
       broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
+      zona?: number; puntaje?: number; razones?: string[]
+    }
+    const necesidadDe = new Map(N.map((n) => [n.id, n]))
+    // Zona y puntaje contra la ficha a la que pertenece la opción (V9, §23.4).
+    const ubicar = (a: { tipo: string | null; municipio: string | null; colonia?: string | null; precio_total: number | null; superficie: number | null }, necesidadId: string) => {
+      const n = necesidadDe.get(necesidadId)
+      if (!n) return {}
+      return { zona: zonaDeActivo(a, n), ...puntajeOpcion(a, n) }
     }
     const bandeja: Opcion[] = []
     const vistos = new Set<string>()
@@ -106,7 +117,7 @@ export async function GET(req: NextRequest) {
       bandeja.push({
         clave: `p:${a.id}`, origen: 'broker', titulo: a.nombre, tipo: a.tipo, municipio: a.municipio, precio: a.precio_total,
         superficie: a.superficie, broker: { nombre: b?.nombre ?? 'Broker verificado', nivel: b?.nivel.nombre ?? '' },
-        certificada: certificadas.has(a.id), activoId: a.id, necesidadId: x.necesidad_id,
+        certificada: certificadas.has(a.id), activoId: a.id, necesidadId: x.necesidad_id, colonia: a.colonia, ...ubicar(a, x.necesidad_id),
       })
     }
     // Búsqueda directa en la plataforma (camino A). Por su cuenta solo particulares; con broker, toda la red (V7.2).
@@ -117,7 +128,7 @@ export async function GET(req: NextRequest) {
         bandeja.push({
           clave: `a:${o.activoId}`, origen: o.certificada ? 'certificada' : 'particular', titulo: o.nombre, tipo: o.tipo,
           municipio: o.municipio, precio: o.precio_total, superficie: o.superficie, certificada: o.certificada,
-          activoId: o.activoId, necesidadId: n.id,
+          activoId: o.activoId, necesidadId: n.id, colonia: o.colonia, zona: o.zona, puntaje: o.puntaje, razones: o.razones,
         })
       }
     }
@@ -129,7 +140,11 @@ export async function GET(req: NextRequest) {
       for (const o of (radar as unknown as { id: string; anuncio_id: string; radar_anuncios: Anuncio }[]) || []) {
         const a = o.radar_anuncios
         // V8 (opción 2): lo leído de la página o capturado por el comprador; con precio y m² se analiza.
+        // V9: el anuncio va a la búsqueda vigente más reciente del mismo tipo en cuya zona cae.
+        const dueña = N.find((n) => vigente(n) && (!a.tipo || normalizarTipos(a.tipo).has(n.tipo))
+          && zonaDeActivo({ municipio: a.municipio, colonia: a.colonia }, n) >= 0)
         bandeja.push({
+          ...(dueña ? { necesidadId: dueña.id, ...ubicar({ ...a, precio_total: a.precio }, dueña.id) } : {}),
           clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || `Anuncio de ${a.fuente}`, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia,
           precio: a.precio, superficie: a.superficie, url: a.url, fuente: a.fuente, opcionId: o.id, anuncioId: o.anuncio_id, lectura: a.lectura,
         })
@@ -144,6 +159,11 @@ export async function GET(req: NextRequest) {
         id: n.id, resumen: resumenNecesidad(n), detalle: detalleCaracteristicas(n), activa: n.activa, vigente: vigente(n),
         vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers,
         propuestas: P.filter((x) => x.necesidad_id === n.id).length,
+        // V9 (§23.2): sus zonas con "lo que rinde tu dinero".
+        zonas: zonasDe(n).map((z) => ({
+          nombre: nombreZona(z), municipio: z.municipio, precioM2: z.mercado?.precioM2 ?? null,
+          comparables: z.mercado?.comparables ?? 0, rinde: rindeDinero(z.mercado?.precioM2, n),
+        })),
       })),
       bandeja,
     })

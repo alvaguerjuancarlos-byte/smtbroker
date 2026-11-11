@@ -10,23 +10,28 @@
 //     /analisis (comparativo). Un anuncio de portal se analiza cuando tiene precio y m²: la plataforma
 //     lee esa página a petición del comprador o, si el portal no lo permite, él los escribe (opción 2,
 //     10-nov-2026). Las páginas de resultados no se analizan.
+//   - V9 (§23.4): la bandeja se muestra POR ZONA de cada búsqueda vigente: una columna por zona con lo
+//     que rinde su dinero (§23.2) y las 3 mejores opciones; "Ver todas" abre el resto. Una zona sin
+//     opciones queda en blanco. Lo que no cae en ninguna zona va al final, en "Otras opciones".
 // Todo sale de app/api/necesidades (GET), que arma la bandeja en el servidor.
 import { EncabezadoPantalla } from '../components/Banda'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { millones, MAX_NECESIDADES_ACTIVAS } from '@/lib/necesidad'
+import { millones, MAX_NECESIDADES_ACTIVAS, MEJORES_POR_ZONA } from '@/lib/necesidad'
 import ListaConexiones from '../components/ListaConexiones'
 
 interface Busqueda {
   id: string; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
   busqueda_directa: boolean; publicada_brokers: boolean; propuestas: number
+  zonas: { nombre: string; municipio: string; precioM2: number | null; comparables: number; rinde: { m2: number; faltaPct: number | null } | null }[]
 }
 interface Opcion {
   clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
   broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
+  zona?: number; puntaje?: number; razones?: string[]
 }
 interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
@@ -42,12 +47,15 @@ const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
   portal: { texto: 'De portal · no certificada', color: 'var(--c-gris)' },
 }
 
+// Columnas por número de zonas (clases completas para que Tailwind las genere).
+const COLUMNAS: Record<number, string> = { 1: '', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3' }
+
 const diasPara = (fecha: string) => Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 86400_000))
 
 export default function PanelComprador({ nombre, conBroker }: { uid: string; nombre: string; conBroker: boolean }) {
   const [datos, setDatos] = useState<Datos | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [filtro, setFiltro] = useState<Opcion['origen'] | 'todas'>('todas')
+  const [abiertas, setAbiertas] = useState<Set<string>>(new Set())
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [analizando, setAnalizando] = useState<string | null>(null)
   const [captura, setCaptura] = useState<{ clave: string; precio: string; superficie: string } | null>(null)
@@ -149,8 +157,39 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
 
   const activas = datos.necesidades.filter((n) => n.vigente)
   const porSuCuenta = !datos.conBroker
-  const opciones = datos.bandeja.filter((o) => filtro === 'todas' || o.origen === filtro)
-  const cuenta = (o: Opcion['origen']) => datos.bandeja.filter((x) => x.origen === o).length
+  // V9: cada búsqueda vigente con sus zonas; dentro de cada zona, de la más cercana a la menos.
+  const porPuntaje = (a: Opcion, b: Opcion) => (b.puntaje ?? 0) - (a.puntaje ?? 0)
+  const enZona = (nid: string, k: number) => datos.bandeja.filter((o) => o.necesidadId === nid && o.zona === k).sort(porPuntaje)
+  const conZona = activas.filter((n) => n.zonas?.length)
+  const otras = datos.bandeja.filter((o) => !conZona.some((n) => n.id === o.necesidadId && o.zona != null && o.zona >= 0))
+  const alternar = (clave: string) => setAbiertas((x) => { const y = new Set(x); if (y.has(clave)) y.delete(clave); else y.add(clave); return y })
+
+  const verOpcion = (o: Opcion) => (
+    <div key={o.clave} className="border-t border-linea pt-2.5 flex flex-col gap-1" data-opcion={o.clave}>
+      <span className="font-sans text-[13px]" style={{ color: ORIGEN[o.origen].color }}>
+        {ORIGEN[o.origen].texto}{o.origen === 'broker' && o.broker ? ` · ${o.broker.nombre}${o.broker.nivel ? ` (${o.broker.nivel})` : ''}` : ''}{o.origen === 'broker' && o.certificada ? ' · certificada' : ''}
+      </span>
+      {o.url
+        ? <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-[17px] underline underline-offset-2 decoration-linea-fuerte">{o.titulo}</a>
+        : <span className="text-[17px]">{o.titulo}</span>}
+      <span className="text-[15px] text-tenue">
+        {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
+      </span>
+      {o.puntaje != null && o.origen !== 'portal' && (
+        <span className="text-[14px] text-tinta-2"><b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>{o.razones?.length ? ` · ${o.razones.join(' · ')}` : ''}</span>
+      )}
+      {o.origen === 'portal' && accionesAnuncio(o)}
+      {(o.activoId || (o.anuncioId && o.precio && o.superficie)) && (() => {
+        const id = (o.activoId ?? o.anuncioId)!
+        return (
+          <button onClick={() => meInteresa(o)} disabled={!!analizando} className="w-fit mt-1 px-3 py-2 text-[15px] font-sans border disabled:opacity-60 rounded-lg"
+            style={datos.analizados.includes(id) ? { borderColor: verde, color: verde } : { borderColor: verde, background: verde, color: '#ffffff' }}>
+            {analizando === id ? 'Analizando… (hasta 1 min)' : datos.analizados.includes(id) ? 'Ver su análisis →' : 'Me interesa'}
+          </button>
+        )
+      })()}
+    </div>
+  )
 
   const tarjetaBroker = porSuCuenta && (
     <div className={`${tarjeta} ${conBroker ? '' : 'border-linea'}`} style={conBroker ? { borderColor: verde } : undefined}>
@@ -220,47 +259,53 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       ))}
       {error && <p className="text-[15px] text-error">{error}</p>}
 
-      <div className={`${tarjeta} border-linea`}>
+      <div className="flex flex-col gap-3" data-bandeja>
         <span className={`${etiqueta} text-tenue`}>Tu bandeja · {datos.bandeja.length}</span>
-        {datos.bandeja.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {(['todas', 'broker', 'certificada', 'particular', 'portal'] as const).map((f) => {
-              const n = f === 'todas' ? datos.bandeja.length : cuenta(f)
-              if (f !== 'todas' && n === 0) return null
-              return (
-                <button key={f} onClick={() => setFiltro(f)} className="px-2.5 py-1.5 text-[15px] border rounded-lg"
-                  style={filtro === f ? { borderColor: verde, background: 'var(--c-verde-suave)' } : { borderColor: 'var(--c-linea)', color: 'var(--c-gris)' }}>
-                  {f === 'todas' ? 'Todas' : ORIGEN[f].texto.split(' ·')[0]} {n}
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {datos.bandeja.length === 0 ? (
+        {datos.bandeja.length === 0 && conZona.length === 0 && (
           <p className="text-[16px] text-tinta-2">Todavía no hay opciones. Te avisamos en cuanto un broker te proponga algo o aparezca una coincidencia.</p>
-        ) : opciones.map((o) => (
-          <div key={o.clave} className="border-t border-linea pt-2.5 flex flex-col gap-1">
-            <span className="font-sans text-[13px]" style={{ color: ORIGEN[o.origen].color }}>
-              {ORIGEN[o.origen].texto}{o.origen === 'broker' && o.broker ? ` · ${o.broker.nombre}${o.broker.nivel ? ` (${o.broker.nivel})` : ''}` : ''}{o.origen === 'broker' && o.certificada ? ' · certificada' : ''}
-            </span>
-            {o.url
-              ? <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-[17px] underline underline-offset-2 decoration-white/30">{o.titulo}</a>
-              : <span className="text-[17px]">{o.titulo}</span>}
-            <span className="text-[15px] text-tenue">
-              {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
-            </span>
-            {o.origen === 'portal' && accionesAnuncio(o)}
-            {(o.activoId || (o.anuncioId && o.precio && o.superficie)) && (() => {
-              const id = (o.activoId ?? o.anuncioId)!
-              return (
-                <button onClick={() => meInteresa(o)} disabled={!!analizando} className="w-fit mt-1 px-3 py-2 text-[15px] font-sans border disabled:opacity-60 rounded-lg"
-                  style={datos.analizados.includes(id) ? { borderColor: verde, color: verde } : { borderColor: verde, background: verde, color: '#ffffff' }}>
-                  {analizando === id ? 'Analizando… (hasta 1 min)' : datos.analizados.includes(id) ? 'Ver su análisis →' : 'Me interesa'}
-                </button>
-              )
-            })()}
+        )}
+        {conZona.map((n) => (
+          <div key={n.id} className="flex flex-col gap-2" data-bandeja-busqueda={n.id}>
+            {conZona.length > 1 && <span className="text-[16px] font-medium text-tinta-2">{n.resumen}</span>}
+            <div className={`grid grid-cols-1 gap-3 ${COLUMNAS[n.zonas.length] ?? ''}`}>
+              {n.zonas.map((z, k) => {
+                const lista = enZona(n.id, k)
+                const clave = `${n.id}:${k}`
+                const visibles = abiertas.has(clave) ? lista : lista.slice(0, MEJORES_POR_ZONA)
+                return (
+                  <div key={k} className={`${tarjeta} border-linea`} data-zona-bandeja={k}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-display text-[20px] font-medium">{z.nombre}</span>
+                      <span className="text-[15px] text-tenue">
+                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m²` : ''}
+                      </span>
+                      {z.rinde && (
+                        <span className="text-[15px] text-tinta-2">
+                          Con tu presupuesto, ~{z.rinde.m2.toLocaleString('es-MX')} m²
+                          {z.rinde.faltaPct != null && z.rinde.faltaPct > 0 && <span className="text-aviso"> · {z.rinde.faltaPct} % abajo de lo que pides aquí</span>}
+                        </span>
+                      )}
+                    </div>
+                    {lista.length === 0
+                      ? <p className="text-[15px] text-tenue border-t border-linea pt-2.5">Aún no hay opciones en {z.nombre}.</p>
+                      : visibles.map(verOpcion)}
+                    {lista.length > MEJORES_POR_ZONA && (
+                      <button onClick={() => alternar(clave)} className="w-fit font-sans text-[15px]" style={{ color: verde }}>
+                        {abiertas.has(clave) ? 'Ver solo las 3 mejores' : `Ver las ${lista.length} →`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         ))}
+        {otras.length > 0 && (
+          <div className={`${tarjeta} border-linea`} data-otras-opciones>
+            <span className={`${etiqueta} text-tenue`}>{conZona.length ? 'Otras opciones' : 'Tus opciones'} · {otras.length}</span>
+            {otras.map(verOpcion)}
+          </div>
+        )}
         <p className="text-[15px] text-tenue">Marca &quot;Me interesa&quot; y recibe el análisis: precio contra mercado, plusvalía y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
       </div>
 

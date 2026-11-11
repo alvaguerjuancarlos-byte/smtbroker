@@ -6,6 +6,8 @@
 //   cuándo y para qué) → resultados de la búsqueda directa y los dos caminos.
 // La cuenta se pide AL FINAL, cuando el cliente ya vio sus primeros resultados (§19.5, regla 1).
 // Con sesión (un comprador que crea otra búsqueda, /buscar) se salta la cuenta y se guarda directo.
+// V9 (§23): la ubicación tiene hasta 3 zonas, cada una con su municipio; los resultados se muestran
+// por zona, con "lo que rinde tu dinero" en cada una.
 import { useState } from 'react'
 import { BandaPaso, Avance } from '../components/Banda'
 import { useRouter } from 'next/navigation'
@@ -13,16 +15,21 @@ import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
 import {
   TIPOS_NECESIDAD, CARACTERISTICAS, ESTADOS_MX, MUNICIPIOS_NL, FORMAS_PAGO, PLAZOS, PROPOSITOS,
-  millones, type TipoNecesidad,
+  millones, rindeDinero, MAX_ZONAS, MEJORES_POR_ZONA, type TipoNecesidad, type MercadoZona,
 } from '@/lib/necesidad'
 
 type Paso = 'tipo' | 'caract' | 'ubicacion' | 'presupuesto' | 'buscar'
 const PASOS: Paso[] = ['tipo', 'caract', 'ubicacion', 'presupuesto', 'buscar']
 
 interface Resultados {
-  plataforma: { activoId: string; nombre: string; municipio: string; precio_total: number | null; superficie: number | null; certificada: boolean }[]
-  portales: { url: string; titulo: string; fuente: string }[]
+  zonas: { municipio: string; nombre: string | null; colonias: string[]; mercado: MercadoZona | null }[]
+  plataforma: { activoId: string; nombre: string; municipio: string; precio_total: number | null; superficie: number | null; certificada: boolean; zona: number; puntaje: number; razones: string[] }[]
+  portales: { url: string; titulo: string; fuente: string; zona: number }[]
 }
+
+interface ZonaCaptura { estado: string; municipio: string; nombre: string; colonia: string; colonias: string[] }
+const zonaVacia = (estado = 'Nuevo León'): ZonaCaptura => ({ estado, municipio: '', nombre: '', colonia: '', colonias: [] })
+const nombreDe = (z: { nombre: string | null; colonias: string[]; municipio: string }) => z.nombre || (z.colonias.length ? z.colonias.join(', ') : z.municipio)
 
 const verde = 'var(--c-verde)'
 const cls = inputCls(false, 'oscuro')
@@ -42,8 +49,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   const [paso, setPaso] = useState<Paso>('tipo')
   const [tipo, setTipo] = useState<TipoNecesidad | null>(null)
   const [car, setCar] = useState<Record<string, string | string[]>>({})
-  const [ubic, setUbic] = useState({ estado: 'Nuevo León', municipio: '', zona: '', colonia: '' })
-  const [colonias, setColonias] = useState<string[]>([])
+  const [zonas, setZonas] = useState<ZonaCaptura[]>([zonaVacia()])
   const [pres, setPres] = useState({ min: '', max: '' })
   const [formaPago, setFormaPago] = useState<string | null>(null)
   const [plazo, setPlazo] = useState<string | null>(null)
@@ -62,7 +68,8 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   const atras = () => (i === 0 ? onAtras() : ir(PASOS[i - 1]))
 
   const necesidad = () => ({
-    tipo, estado: ubic.estado, municipio: ubic.municipio, zona: ubic.zona, colonias,
+    tipo,
+    zonas: zonas.map((z) => ({ estado: z.estado, municipio: z.municipio, nombre: z.nombre, colonias: z.colonias })),
     caracteristicas: Object.fromEntries(Object.entries(car).filter(([, v]) => (Array.isArray(v) ? v.length : v !== ''))),
     presupuesto_min: pres.min || null, presupuesto_max: pres.max, forma_pago: formaPago, plazo, proposito,
     busqueda_directa: directa, publicada_brokers: brokers,
@@ -170,38 +177,58 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
       {paso === 'ubicacion' && (
         <>
-          {titulo('¿Dónde?', 'Puedes elegir varias colonias o buscar en todo el municipio.')}
-          <div className="flex flex-col gap-3.5">
-            <Field label="Estado" required tema="oscuro">
-              <select value={ubic.estado} onChange={(e) => setUbic((x) => ({ ...x, estado: e.target.value }))} className={cls}>
-                {ESTADOS_MX.map((e) => <option key={e}>{e}</option>)}
-              </select>
-            </Field>
-            <Field label="Ciudad o municipio" required tema="oscuro">
-              <input value={ubic.municipio} onChange={(e) => setUbic((x) => ({ ...x, municipio: e.target.value }))} list="municipios-nl"
-                placeholder={ubic.estado === 'Nuevo León' ? 'San Pedro Garza García' : ''} className={cls} />
-              {ubic.estado === 'Nuevo León' && <datalist id="municipios-nl">{MUNICIPIOS_NL.map((m) => <option key={m} value={m} />)}</datalist>}
-            </Field>
-            <Field label="Zona (opcional)" tema="oscuro">
-              <input value={ubic.zona} onChange={(e) => setUbic((x) => ({ ...x, zona: e.target.value }))} placeholder="Poniente, Carretera Nacional…" className={cls} />
-            </Field>
-            <Field label="Colonias (opcional)" tema="oscuro">
-              <div className="flex gap-2">
-                <input value={ubic.colonia} onChange={(e) => setUbic((x) => ({ ...x, colonia: e.target.value }))} placeholder="Del Valle" className={cls}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarColonia() } }} />
-                <button type="button" onClick={agregarColonia} className="px-4 border border-linea text-[16px] text-tinta-2 hover:border-linea-fuerte">Agregar</button>
+          {titulo('¿Dónde?', 'Hasta tres zonas, aunque estén en municipios distintos. Te mostramos lo mejor de cada una.')}
+          <div className="flex flex-col gap-3">
+            {zonas.map((z, k) => (
+              <div key={k} className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col gap-3.5 rounded-xl" data-zona={k}>
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-[19px] font-medium">Zona {k + 1}</span>
+                  {k > 0 && <button type="button" onClick={() => setZonas((x) => x.filter((_, j) => j !== k))} className="text-[15px] text-tenue hover:text-tinta">Quitar</button>}
+                </div>
+                <Field label="Nombre de la zona (opcional)" tema="oscuro">
+                  <input value={z.nombre} onChange={(e) => cambiarZona(k, { nombre: e.target.value })} placeholder={['Valle', 'Country', 'Carretera Nacional'][k]} className={cls} name={`zona-${k}-nombre`} />
+                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <Field label="Estado" required tema="oscuro">
+                    <select value={z.estado} onChange={(e) => cambiarZona(k, { estado: e.target.value })} className={cls}>
+                      {ESTADOS_MX.map((e) => <option key={e}>{e}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Ciudad o municipio" required tema="oscuro">
+                    <input value={z.municipio} onChange={(e) => cambiarZona(k, { municipio: e.target.value })} list="municipios-nl" name={`zona-${k}-municipio`}
+                      placeholder={z.estado === 'Nuevo León' ? ['San Pedro Garza García', 'Monterrey', 'Monterrey'][k] : ''} className={cls} />
+                  </Field>
+                </div>
+                <Field label="Colonias (opcional)" tema="oscuro">
+                  <div className="flex gap-2">
+                    <input value={z.colonia} onChange={(e) => cambiarZona(k, { colonia: e.target.value })} placeholder={['Del Valle', 'Contry', ''][k]} className={cls} name={`zona-${k}-colonia`}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarColonia(k) } }} />
+                    <button type="button" onClick={() => agregarColonia(k)} className="px-4 border border-linea text-[16px] text-tinta-2 hover:border-linea-fuerte rounded-lg">Agregar</button>
+                  </div>
+                </Field>
+                <div className="flex flex-wrap gap-1.5">
+                  {z.colonias.length === 0
+                    ? <span className="text-[16px] text-tenue">Sin colonias: buscamos en todo el municipio.</span>
+                    : z.colonias.map((c) => (
+                      <button key={c} type="button" onClick={() => cambiarZona(k, { colonias: z.colonias.filter((y) => y !== c) })} className={chip(true)} style={estiloOn(true)}>{c} ✕</button>
+                    ))}
+                </div>
               </div>
-            </Field>
-            <div className="flex flex-wrap gap-1.5">
-              {colonias.length === 0
-                ? <span className="text-[16px] text-tenue">Sin colonias: buscamos en todo el municipio.</span>
-                : colonias.map((c) => (
-                  <button key={c} type="button" onClick={() => setColonias((x) => x.filter((y) => y !== c))} className={chip(true)} style={estiloOn(true)}>{c} ✕</button>
-                ))}
-            </div>
+            ))}
+            {ubic_datalist()}
+            {zonas.length < MAX_ZONAS && (
+              <button type="button" onClick={() => setZonas((x) => [...x, zonaVacia(x[x.length - 1].estado)])}
+                className="border border-dashed border-linea-fuerte p-4 text-[17px] text-tinta-2 hover:text-tinta rounded-xl">
+                + Agregar otra zona <span className="text-tenue">({zonas.length} de {MAX_ZONAS})</span>
+              </button>
+            )}
           </div>
           {error && <p className="text-[16px] text-error">{error}</p>}
-          {continuar(() => (ubic.municipio.trim().length < 3 ? setError('Escribe la ciudad o el municipio') : ir('presupuesto')))}
+          {continuar(() => {
+            const mala = zonas.findIndex((z) => z.municipio.trim().length < 3)
+            if (mala >= 0) setError(zonas.length > 1 ? `Escribe la ciudad o el municipio de la zona ${mala + 1}` : 'Escribe la ciudad o el municipio')
+            else { setZonas((x) => x.map((z) => (z.colonia.trim() ? { ...z, colonias: [...new Set([...z.colonias, z.colonia.trim()])].slice(0, 10), colonia: '' } : z))); ir('presupuesto') }
+          })}
         </>
       )}
 
@@ -235,25 +262,44 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
         <form onSubmit={terminar} className="flex flex-col gap-5">
           {/* Lo de portales son listados (ej. "89 bodegas en venta en Apodaca"), no propiedades: no se suman al conteo. */}
           {titulo(enPlataforma > 0 ? `Encontramos ${enPlataforma} ${enPlataforma === 1 ? 'propiedad' : 'propiedades'} para ti` : total > 0 ? 'Ya buscamos en el mercado' : 'Empezamos a buscar por ti',
-            enPlataforma > 0 ? 'Un primer vistazo. Al terminar las ves todas en tu bandeja.'
+            enPlataforma > 0 ? 'Un primer vistazo, lo mejor de cada zona. Al terminar las ves todas en tu bandeja.'
               : total > 0 ? 'Todavía no hay propiedades publicadas en la plataforma que cumplan. Te dejamos los listados de portales y, con tu necesidad en el panel, los brokers de la zona te traen opciones.'
                 : 'Todavía no hay coincidencias publicadas. Con tu necesidad en el panel, los brokers de la zona te traen opciones.')}
-          {total > 0 && (
-            <div className="bg-tarjeta border border-linea p-4 flex flex-col gap-2.5 rounded-xl">
-              {resultados.plataforma.slice(0, 3).map((o) => (
-                <div key={o.activoId} className="flex flex-col">
-                  <span className="text-[17px]">{o.nombre}</span>
-                  <span className="text-[15px] text-tenue">{o.precio_total ? millones(o.precio_total) : 'Sin precio'} · {o.certificada ? 'Certificada por SMTBROKER' : 'Particular'}</span>
+          {/* V9 (§23.2 y §23.4): una columna por zona, con lo que rinde su dinero y sus 3 mejores. */}
+          <div className="flex flex-col gap-3" data-resultados-zonas>
+            {resultados.zonas.map((z, k) => {
+              const plat = resultados.plataforma.filter((o) => o.zona === k)
+              const port = resultados.portales.filter((o) => o.zona === k)
+              const rinde = rindeDinero(z.mercado?.precioM2, { tipo: tipo!, caracteristicas: limpias(), presupuesto_max: Number(pres.max) })
+              return (
+                <div key={k} className="bg-tarjeta border border-linea p-4 flex flex-col gap-2.5 rounded-xl" data-zona-resultado={k}>
+                  <div className="flex flex-col">
+                    <span className="font-display text-[19px] font-medium">{nombreDe(z)}</span>
+                    <span className="text-[15px] text-tenue">{plat.length} {plat.length === 1 ? 'propiedad' : 'propiedades'}{z.mercado?.precioM2 ? ` · ~$${z.mercado.precioM2.toLocaleString('es-MX')}/m²` : ''}</span>
+                  </div>
+                  {rinde && (
+                    <p className="text-[15px] text-tinta-2" data-rinde>
+                      Te alcanzan ~{rinde.m2.toLocaleString('es-MX')} m²{rinde.faltaPct != null && rinde.faltaPct > 0 ? <span className="text-aviso"> · tu presupuesto está {rinde.faltaPct} % abajo de lo que pides aquí</span> : null}
+                    </p>
+                  )}
+                  {plat.length + port.length === 0 && <p className="text-[15px] text-tenue">Aún no hay opciones en {nombreDe(z)}.</p>}
+                  {plat.slice(0, MEJORES_POR_ZONA).map((o) => (
+                    <div key={o.activoId} className="flex flex-col border-t border-linea pt-2">
+                      <span className="text-[17px]">{o.nombre}</span>
+                      <span className="text-[15px] text-tenue">{o.precio_total ? millones(o.precio_total) : 'Sin precio'} · {o.puntaje} % · {o.certificada ? 'Certificada' : 'Particular'}</span>
+                      {o.razones.length > 0 && <span className="text-[14px] text-tenue">{o.razones.join(' · ')}</span>}
+                    </div>
+                  ))}
+                  {port.slice(0, Math.max(0, MEJORES_POR_ZONA - plat.length)).map((o) => (
+                    <div key={o.url} className="flex flex-col border-t border-linea pt-2">
+                      <span className="text-[16px] line-clamp-2">{o.titulo}</span>
+                      <span className="text-[14px] text-tenue">De portal ({o.fuente}) · no certificada</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {resultados.portales.slice(0, 3).map((o) => (
-                <div key={o.url} className="flex flex-col">
-                  <span className="text-[17px] line-clamp-1">{o.titulo}</span>
-                  <span className="text-[15px] text-tenue">De portal ({o.fuente}) · no certificada</span>
-                </div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
 
           <div className="flex flex-col gap-2.5">
             <span className="font-sans text-[13px] font-medium text-tenue">¿Cómo quieres buscar?</span>
@@ -291,9 +337,22 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     </>
   )
 
-  function agregarColonia() {
-    const c = ubic.colonia.trim()
-    if (c && !colonias.includes(c)) setColonias((x) => [...x, c].slice(0, 10))
-    setUbic((x) => ({ ...x, colonia: '' }))
+  function cambiarZona(k: number, cambio: Partial<ZonaCaptura>) {
+    setZonas((x) => x.map((z, j) => (j === k ? { ...z, ...cambio } : z)))
+  }
+
+  function agregarColonia(k: number) {
+    const z = zonas[k]
+    const c = z.colonia.trim()
+    cambiarZona(k, { colonia: '', colonias: c && !z.colonias.includes(c) ? [...z.colonias, c].slice(0, 10) : z.colonias })
+  }
+
+  function limpias() {
+    return Object.fromEntries(Object.entries(car).filter(([, v]) => (Array.isArray(v) ? v.length : v !== ''))
+      .map(([k, v]) => [k, Array.isArray(v) ? v : Number(v) || v])) as Record<string, number | string | string[]>
+  }
+
+  function ubic_datalist() {
+    return <datalist id="municipios-nl">{MUNICIPIOS_NL.map((m) => <option key={m} value={m} />)}</datalist>
   }
 }
