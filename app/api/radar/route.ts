@@ -3,11 +3,13 @@ import { sesionServidor } from '@/lib/sesionServidor'
 import { perfilDelComprador } from '@/lib/radarServidor'
 import { avisarOperacion } from '@/lib/avisos'
 import { estadoParaComprador, normalizarLiga, type EstadoInvitacion } from '@/lib/radar'
+import { leerYGuardar } from '@/lib/lecturaAnuncioServidor'
 
 // Radar de mercado del comprador que va por su cuenta (Documento Maestro V7.1 §18, fase 1).
 //   GET  -> sus opciones del Radar (las que pegó él y las que le agregó Operación), NO certificadas.
 //   POST -> {url, nota?}: pega la liga de un anuncio que vio. Cuenta como "me interesa": Operación
-//           invita al anunciante a certificar.
+//           invita al anunciante a certificar. V8 (opción 2): la plataforma lee ese anuncio en segundo plano
+//           (precio, m², colonia; lib/lecturaAnuncioServidor.ts) para poder analizarlo.
 // El comprador con broker no tiene Radar: su broker busca por él (§17). Nunca se le devuelve el
 // contacto del anunciante.
 
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'perfil_id,anuncio_id', ignoreDuplicates: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    after(() => leerYGuardar(s.admin, anuncio!.id).then(() => undefined))
     after(() => avisarOperacion({
       asunto: `Radar: un comprador pegó un anuncio de ${liga.fuente}`,
       titulo: 'Hay un anuncio por invitar a certificar',

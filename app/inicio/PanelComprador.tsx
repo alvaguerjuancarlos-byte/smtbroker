@@ -7,7 +7,9 @@
 //   - Tu bandeja (§19.4): todas las opciones en un solo lugar, con su etiqueta de origen.
 //   - Su Radar (pegar ligas de otros portales) y, si va por su cuenta, el broker.
 //   - V8 Parte 2 (§20): "Me interesa" en cada propiedad de la bandeja dispara su análisis y lleva a
-//     /analisis (comparativo). Los listados de portales no se analizan: son páginas de resultados.
+//     /analisis (comparativo). Un anuncio de portal se analiza cuando tiene precio y m²: la plataforma
+//     lee esa página a petición del comprador o, si el portal no lo permite, él los escribe (opción 2,
+//     10-nov-2026). Las páginas de resultados no se analizan.
 // Todo sale de app/api/necesidades (GET), que arma la bandeja en el servidor.
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -23,6 +25,7 @@ interface Opcion {
   clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
   broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
+  opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
 }
 interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
@@ -46,6 +49,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   const [filtro, setFiltro] = useState<Opcion['origen'] | 'todas'>('todas')
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [analizando, setAnalizando] = useState<string | null>(null)
+  const [captura, setCaptura] = useState<{ clave: string; precio: string; superficie: string } | null>(null)
   const router = useRouter()
 
   const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
@@ -73,17 +77,71 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
 
   // "Me interesa": el análisis tarda (busca comparables reales); al terminar abre el comparativo.
   const meInteresa = async (o: Opcion) => {
-    if (!o.activoId) return
-    if (datos?.analizados.includes(o.activoId)) { router.push(`/analisis#${o.activoId}`); return }
-    setAnalizando(o.activoId); setError(null)
+    const id = o.activoId ?? o.anuncioId
+    if (!id) return
+    if (datos?.analizados.includes(id)) { router.push(`/analisis#${id}`); return }
+    setAnalizando(id); setError(null)
     const r = await fetch('/api/analisis', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() },
-      body: JSON.stringify({ activoId: o.activoId, necesidadId: o.necesidadId }),
+      body: JSON.stringify(o.activoId ? { activoId: o.activoId, necesidadId: o.necesidadId } : { anuncioId: o.anuncioId }),
     })
     const j = await r.json().catch(() => ({}))
     setAnalizando(null)
     if (!r.ok) { setError(j.error ?? 'No se pudo analizar'); return }
-    router.push(`/analisis#${o.activoId}`)
+    router.push(`/analisis#${id}`)
+  }
+
+  // Anuncio de portal (opción 2): leer esa página, o escribir lo que vio si el portal no deja.
+  const datosAnuncio = async (o: Opcion, cuerpo: Record<string, unknown>) => {
+    if (!o.opcionId) return
+    setAnalizando(o.clave); setError(null)
+    const r = await fetch(`/api/radar/${o.opcionId}/datos`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() }, body: JSON.stringify(cuerpo),
+    })
+    const j = await r.json().catch(() => ({}))
+    setAnalizando(null)
+    if (!r.ok) { setError(j.error ?? 'No se pudo'); return }
+    setCaptura(null)
+    await cargar()
+  }
+
+  // Lo que se puede hacer con un anuncio de portal, según cómo va su lectura.
+  const accionesAnuncio = (o: Opcion) => {
+    const completo = !!(o.precio && o.superficie)
+    const leyendo = analizando === o.clave
+    if (o.lectura === 'listado') {
+      return <p className="text-[12px] text-slate">Es una página de resultados. Abre el anuncio que te guste y pega su liga en tu Radar para leerlo.</p>
+    }
+    if (captura?.clave === o.clave) {
+      return (
+        <div className="flex flex-col gap-1.5 mt-1">
+          <div className="grid grid-cols-2 gap-1.5">
+            <input value={captura.precio ? Number(captura.precio).toLocaleString('es-MX') : ''} onChange={(e) => setCaptura({ ...captura, precio: e.target.value.replace(/[^0-9]/g, '') })}
+              inputMode="numeric" placeholder="Precio (MXN)" className="px-2.5 py-2 bg-navy-950/60 border border-white/15 text-[13px] text-paper" />
+            <input value={captura.superficie} onChange={(e) => setCaptura({ ...captura, superficie: e.target.value.replace(/[^0-9.]/g, '') })}
+              inputMode="numeric" placeholder="m²" className="px-2.5 py-2 bg-navy-950/60 border border-white/15 text-[13px] text-paper" />
+          </div>
+          <button onClick={() => datosAnuncio(o, { accion: 'capturar', precio: captura.precio, superficie: captura.superficie })} disabled={leyendo}
+            className="w-fit px-3 py-1.5 text-[12px] font-plex-mono border disabled:opacity-60" style={{ borderColor: verde, color: verde }}>Guardar</button>
+        </div>
+      )
+    }
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+        {o.lectura === 'bloqueado' && <span className="text-[12px] text-slate">Este portal no deja leer el anuncio.</span>}
+        {o.lectura === 'leido' && !completo && <span className="text-[12px] text-slate">No pudimos leer todo del anuncio.</span>}
+        {o.lectura === 'capturado' && <span className="text-[12px] text-slate">Datos que escribiste tú.</span>}
+        {(!o.lectura || o.lectura === 'fallo') && (
+          <button onClick={() => datosAnuncio(o, { accion: 'leer' })} disabled={!!analizando} className="font-plex-mono text-[12px] disabled:opacity-60" style={{ color: verde }}>
+            {leyendo ? 'Leyendo el anuncio… (hasta 1 min)' : 'Leer el anuncio →'}
+          </button>
+        )}
+        {(o.lectura === 'bloqueado' || o.lectura === 'fallo' || (o.lectura === 'leido' && !completo) || o.lectura === 'capturado') && (
+          <button onClick={() => setCaptura({ clave: o.clave, precio: o.precio ? String(o.precio) : '', superficie: o.superficie ? String(o.superficie) : '' })}
+            className="font-plex-mono text-[12px]" style={{ color: verde }}>{o.lectura === 'capturado' ? 'Corregir precio y m²' : 'Escribir el precio y los m² que viste'}</button>
+        )}
+      </div>
+    )
   }
 
   if (!datos) return error ? <p className="text-[13px] text-[#f3a3a3]">{error}</p> : <p className="text-slate text-[13px] font-plex-mono">Cargando tu búsqueda…</p>
@@ -194,12 +252,16 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
             <span className="text-[12px] text-slate">
               {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
             </span>
-            {o.activoId && (
-              <button onClick={() => meInteresa(o)} disabled={!!analizando} className="w-fit mt-1 px-3 py-2 text-[12.5px] font-plex-mono border disabled:opacity-60"
-                style={datos.analizados.includes(o.activoId) ? { borderColor: verde, color: verde } : { borderColor: verde, background: verde, color: '#070f1c' }}>
-                {analizando === o.activoId ? 'Analizando… (hasta 1 min)' : datos.analizados.includes(o.activoId) ? 'Ver su análisis →' : 'Me interesa'}
-              </button>
-            )}
+            {o.origen === 'portal' && accionesAnuncio(o)}
+            {(o.activoId || (o.anuncioId && o.precio && o.superficie)) && (() => {
+              const id = (o.activoId ?? o.anuncioId)!
+              return (
+                <button onClick={() => meInteresa(o)} disabled={!!analizando} className="w-fit mt-1 px-3 py-2 text-[12.5px] font-plex-mono border disabled:opacity-60"
+                  style={datos.analizados.includes(id) ? { borderColor: verde, color: verde } : { borderColor: verde, background: verde, color: '#070f1c' }}>
+                  {analizando === id ? 'Analizando… (hasta 1 min)' : datos.analizados.includes(id) ? 'Ver su análisis →' : 'Me interesa'}
+                </button>
+              )
+            })()}
           </div>
         ))}
         <p className="text-[12px] text-slate">Marca &quot;Me interesa&quot; y recibe el análisis: precio contra mercado, plusvalía y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>

@@ -6,13 +6,14 @@ import { avisarOperacion, avisarUsuario } from '@/lib/avisos'
 //   PATCH {descartar: true}              lo quita de su comparativo (libera lugar de los 5)
 //   POST  {accion: 'pedir_certificacion'} la propiedad no está certificada y el comprador pide que se
 //         certifique (§20.3). Se avisa a Operación y a quien la ofrece SIN decir quién es el
-//         comprador: "un comprador interesado" (§20.5 regla 2).
+//         comprador: "un comprador interesado" (§20.5 regla 2). Si es un anuncio de portal, es la
+//         invitación del Radar al anunciante (§18): Operación lo invita una sola vez.
 
 async function propio(req: NextRequest, id: string) {
   const s = await sesionServidor(req)
   if (!s) return { error: NextResponse.json({ error: 'No autenticado' }, { status: 401 }) }
-  const { data } = await s.admin.from('analisis').select('id, activo_id, resultado').eq('id', id).eq('usuario_id', s.uid).maybeSingle()
-  const a = data as { id: string; activo_id: string; resultado: Record<string, unknown> } | null
+  const { data } = await s.admin.from('analisis').select('id, activo_id, anuncio_id, resultado').eq('id', id).eq('usuario_id', s.uid).maybeSingle()
+  const a = data as { id: string; activo_id: string | null; anuncio_id: string | null; resultado: Record<string, unknown> } | null
   if (!a) return { error: NextResponse.json({ error: 'Análisis no encontrado' }, { status: 404 }) }
   return { s, a }
 }
@@ -22,7 +23,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if ('error' in r) return r.error
   const b = await req.json().catch(() => ({})) as { descartar?: boolean }
   if (b.descartar !== true) return NextResponse.json({ error: 'Nada que cambiar' }, { status: 400 })
-  await r.s.admin.from('analisis').update({ descartado: true }).eq('usuario_id', r.s.uid).eq('activo_id', r.a.activo_id)
+  await r.s.admin.from('analisis').update({ descartado: true }).eq('usuario_id', r.s.uid)
+    .eq(r.a.activo_id ? 'activo_id' : 'anuncio_id', (r.a.activo_id ?? r.a.anuncio_id)!)
   return NextResponse.json({ ok: true })
 }
 
@@ -34,7 +36,25 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if ((r.a.resultado.legal as { certificada?: boolean } | undefined)?.certificada) return NextResponse.json({ error: 'Esta propiedad ya está certificada' }, { status: 409 })
   if (r.a.resultado.certificacionPedidaAt) return NextResponse.json({ ok: true, yaPedida: true })
 
-  const { data } = await r.s.admin.from('activos').select('nombre, usuario_id, broker_id, es_demo').eq('id', r.a.activo_id).maybeSingle()
+  if (r.a.anuncio_id) {
+    // Anuncio de portal: "Me interesa" en su Radar, que pone la invitación a certificar en la fila de Operación.
+    const { data: pf } = await r.s.admin.from('perfiles_intencion').select('id').eq('usuario_id', r.s.uid).maybeSingle()
+    const { data: an } = await r.s.admin.from('radar_anuncios').select('url, fuente, invitacion_estado, es_demo').eq('id', r.a.anuncio_id).single()
+    const x = an as { url: string; fuente: string; invitacion_estado: string; es_demo: boolean }
+    const ahora = new Date().toISOString()
+    if (pf) await r.s.admin.from('radar_opciones').update({ interesado_at: ahora }).eq('perfil_id', (pf as { id: string }).id).eq('anuncio_id', r.a.anuncio_id).is('interesado_at', null)
+    if (x.invitacion_estado === 'sin_invitar') await r.s.admin.from('radar_anuncios').update({ invitacion_estado: 'pendiente', actualizado_at: ahora }).eq('id', r.a.anuncio_id)
+    await r.s.admin.from('analisis').update({ resultado: { ...r.a.resultado, certificacionPedidaAt: ahora } }).eq('id', r.a.id)
+    after(() => avisarOperacion({
+      asunto: `Radar: un comprador pidió certificar un anuncio de ${x.fuente}`,
+      titulo: 'Hay un anuncio por invitar a certificar',
+      lineas: [`Liga: ${x.url}`, 'El comprador ya lo analizó y quiere que se certifique.'],
+      enlace: { texto: 'Abrir el Radar en la consola', ruta: '/panel#radar' },
+    }, { esDemo: x.es_demo }))
+    return NextResponse.json({ ok: true })
+  }
+
+  const { data } = await r.s.admin.from('activos').select('nombre, usuario_id, broker_id, es_demo').eq('id', r.a.activo_id!).maybeSingle()
   const activo = data as { nombre: string; usuario_id: string; broker_id: string | null; es_demo: boolean } | null
   if (!activo) return NextResponse.json({ error: 'Propiedad no encontrada' }, { status: 404 })
   await r.s.admin.from('analisis').update({ resultado: { ...r.a.resultado, certificacionPedidaAt: new Date().toISOString() } }).eq('id', r.a.id)

@@ -94,6 +94,7 @@ export async function GET(req: NextRequest) {
       clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
       municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
       broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
+      opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
     }
     const bandeja: Opcion[] = []
     const vistos = new Set<string>()
@@ -123,17 +124,22 @@ export async function GET(req: NextRequest) {
     // Anuncios de portales del Radar (los del motor, los que pegó él y los que agregó Operación).
     if (p) {
       const { data: radar } = await s.admin.from('radar_opciones')
-        .select('id, radar_anuncios(url, fuente, titulo, precio, tipo, municipio)').eq('perfil_id', p.id).order('created_at', { ascending: false }).limit(20)
-      for (const o of (radar as unknown as { id: string; radar_anuncios: { url: string; fuente: string; titulo: string | null; precio: number | null; tipo: string | null; municipio: string | null } }[]) || []) {
+        .select('id, anuncio_id, radar_anuncios(url, fuente, titulo, precio, superficie, tipo, municipio, colonia, lectura)').eq('perfil_id', p.id).order('created_at', { ascending: false }).limit(20)
+      type Anuncio = { url: string; fuente: string; titulo: string | null; precio: number | null; superficie: number | null; tipo: string | null; municipio: string | null; colonia: string | null; lectura: string | null }
+      for (const o of (radar as unknown as { id: string; anuncio_id: string; radar_anuncios: Anuncio }[]) || []) {
         const a = o.radar_anuncios
-        bandeja.push({ clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || a.url, tipo: a.tipo, municipio: a.municipio, precio: a.precio, superficie: null, url: a.url, fuente: a.fuente })
+        // V8 (opción 2): lo leído de la página o capturado por el comprador; con precio y m² se analiza.
+        bandeja.push({
+          clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || a.url, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia,
+          precio: a.precio, superficie: a.superficie, url: a.url, fuente: a.fuente, opcionId: o.id, anuncioId: o.anuncio_id, lectura: a.lectura,
+        })
       }
     }
 
-    const { data: an } = await s.admin.from('analisis').select('activo_id').eq('usuario_id', s.uid).eq('descartado', false)
+    const { data: an } = await s.admin.from('analisis').select('activo_id, anuncio_id').eq('usuario_id', s.uid).eq('descartado', false)
     return NextResponse.json({
       conBroker,
-      analizados: [...new Set(((an as { activo_id: string }[]) || []).map((x) => x.activo_id))],
+      analizados: [...new Set(((an as { activo_id: string | null; anuncio_id: string | null }[]) || []).map((x) => (x.activo_id ?? x.anuncio_id)!))],
       necesidades: N.map((n) => ({
         id: n.id, resumen: resumenNecesidad(n), detalle: detalleCaracteristicas(n), activa: n.activa, vigente: vigente(n),
         vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers,

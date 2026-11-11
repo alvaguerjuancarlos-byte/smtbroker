@@ -8,6 +8,8 @@
 //     por renta (§20.2);
 //   - lo legal: sello si está certificada o "no revisada legalmente" con el botón para pedirla (§20.3).
 //   - "Quiero verla" (V8 Parte 3, §21.1): abre la conexión con quien la ofrece y revela su nombre.
+//   - Un anuncio de portal (opción 2, 10-nov-2026) se analiza igual, marcado "De portal · no
+//     certificada", con su liga original; en vez de "Quiero verla", se invita al anunciante a certificar.
 // Con dos o más, el comparativo lado a lado (§20.4). Todo sale de app/api/analisis.
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,8 +18,9 @@ import Topbar from '../components/Topbar'
 import { millones } from '@/lib/necesidad'
 import type { ResultadoAnalisis } from '@/lib/analisisServidor'
 
-type Resultado = ResultadoAnalisis & { topeMensual?: string; certificacionPedidaAt?: string }
-interface Fila { id: string; activo_id: string; resultado: Resultado; created_at: string }
+type Resultado = ResultadoAnalisis & { topeMensual?: string; certificacionPedidaAt?: string; origen?: { portal: string; url: string; lectura: string | null } }
+interface Fila { id: string; activo_id: string | null; anuncio_id: string | null; resultado: Resultado; created_at: string }
+const clave = (f: Fila) => (f.activo_id ?? f.anuncio_id)!
 
 const verde = '#7fd1b9'
 const GRID_BG = {
@@ -81,7 +84,7 @@ export default function AnalisisPage() {
       ? await fetch(`/api/analisis/${f.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ descartar: true }) })
       : tipo === 'certificar'
         ? await fetch(`/api/analisis/${f.id}`, { method: 'POST', headers: h, body: JSON.stringify({ accion: 'pedir_certificacion' }) })
-        : await fetch('/api/analisis', { method: 'POST', headers: h, body: JSON.stringify({ activoId: f.activo_id, actualizar: true }) })
+        : await fetch('/api/analisis', { method: 'POST', headers: h, body: JSON.stringify(f.activo_id ? { activoId: f.activo_id, actualizar: true } : { anuncioId: f.anuncio_id, actualizar: true }) })
     const j = await r.json().catch(() => ({}))
     setOcupado(null)
     if (!r.ok) { setError(j.error ?? 'No se pudo completar'); return }
@@ -119,7 +122,7 @@ export default function AnalisisPage() {
                     <thead>
                       <tr>
                         <th className="text-left font-normal text-slate py-1.5 pr-3" />
-                        {filas.map((f) => <th key={f.id} className="text-left font-medium py-1.5 pr-3 align-bottom"><a href={`#${f.activo_id}`} className="hover:underline">{f.resultado.activo.nombre}</a></th>)}
+                        {filas.map((f) => <th key={f.id} className="text-left font-medium py-1.5 pr-3 align-bottom"><a href={`#${clave(f)}`} className="hover:underline">{f.resultado.activo.nombre}</a></th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -148,12 +151,14 @@ export default function AnalisisPage() {
               const sem = r.mercado.semaforo
               const p = r.mercado.precio
               return (
-                <div key={f.id} id={f.activo_id} className="bg-navy-800 border p-4 md:p-5 flex flex-col gap-3 scroll-mt-32" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
+                <div key={f.id} id={clave(f)} className="bg-navy-800 border p-4 md:p-5 flex flex-col gap-3 scroll-mt-32" style={{ borderColor: 'rgba(127,209,185,0.5)' }}>
                   <div className="flex flex-col gap-0.5">
+                    {r.origen && <span className="font-plex-mono text-[10.5px] tracking-[0.06em] uppercase text-[#8a93a3]">De portal ({r.origen.portal}) · no certificada{r.origen.lectura === 'capturado' ? ' · datos que escribiste' : ''}</span>}
                     <h2 className="font-display text-[21px] font-medium leading-tight">{r.activo.nombre}</h2>
                     <span className="text-[12.5px] text-slate">
                       {[r.activo.precio_total ? millones(r.activo.precio_total) : null, r.activo.superficie ? `${r.activo.superficie.toLocaleString('es-MX')} m²` : null, [r.activo.colonia, r.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
                     </span>
+                    {r.origen && <a href={r.origen.url} target="_blank" rel="noopener noreferrer" className="font-plex-mono text-[12px] w-fit" style={{ color: verde }}>Ver el anuncio original →</a>}
                   </div>
 
                   <div className={bloque}>
@@ -226,11 +231,11 @@ export default function AnalisisPage() {
                       </>
                     ) : (
                       <>
-                        <span className="text-[14px] text-paper-dim">No revisada legalmente</span>
+                        <span className="text-[14px] text-paper-dim">{r.origen ? 'Anuncio de portal: no revisado legalmente' : 'No revisada legalmente'}</span>
                         {r.certificacionPedidaAt
-                          ? <p className="text-[12.5px] text-slate">Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.</p>
+                          ? <p className="text-[12.5px] text-slate">{r.origen ? 'Pediste que el anunciante la certifique. SMTBROKER lo invita una sola vez; si acepta, te avisamos y podrás verla con las reglas de siempre.' : 'Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.'}</p>
                           : <button onClick={() => accion(f, 'certificar')} disabled={!!ocupado} className="w-fit px-3 py-2 text-[12.5px] font-plex-mono border disabled:opacity-60" style={{ borderColor: verde, color: verde }}>
-                              {ocupado === f.id + 'certificar' ? 'Enviando…' : 'Pedir que se certifique'}
+                              {ocupado === f.id + 'certificar' ? 'Enviando…' : r.origen ? 'Pedir que el anunciante la certifique' : 'Pedir que se certifique'}
                             </button>}
                       </>
                     )}
@@ -244,12 +249,12 @@ export default function AnalisisPage() {
                     </p>
                   </div>
 
-                  <div className={bloque}>
+                  {f.activo_id && <div className={bloque}>
                     <button onClick={() => quieroVerla(f)} disabled={!!ocupado} className="w-full font-plex-mono text-[13px] font-medium px-4 py-3 text-navy-950 disabled:opacity-60" style={{ background: verde }}>
                       {ocupado === f.id + 'ver' ? 'Conectando…' : 'Quiero verla'}
                     </button>
                     <p className="text-[12px] text-slate">Te conectamos con quien la ofrece para conversar y agendar la visita. Solo entonces sabrá tu nombre.</p>
-                  </div>
+                  </div>}
 
                   <div className="flex gap-4 flex-wrap pt-1">
                     <button onClick={() => accion(f, 'actualizar')} disabled={!!ocupado} className="font-plex-mono text-[12px] disabled:opacity-60" style={{ color: verde }}>
