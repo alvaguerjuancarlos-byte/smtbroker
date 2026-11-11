@@ -17,6 +17,7 @@ import { statusCfg, formatDate, ESTADOS_ACTIVO } from '@/lib/estadoActivo'
 import { calcularNivel, NIVELES, ORDEN_NIVEL } from '@/lib/nivelesBroker'
 import { tieneDocumentacion } from '@/lib/expediente'
 import Topbar from '../components/Topbar'
+import PanelNecesidades from './PanelNecesidades'
 import { Field, inputCls } from '../components/FormField'
 
 interface ActivoPortafolio {
@@ -90,7 +91,7 @@ const ORIGENES = [
   { v: 'fuera_de_plataforma', l: 'Fuera de la plataforma' },
 ]
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-type Pestana = 'portafolio' | 'oportunidades' | 'clientes' | 'matches' | 'desempeno'
+type Pestana = 'portafolio' | 'necesidades' | 'oportunidades' | 'clientes' | 'matches' | 'desempeno'
 
 // Cliente que eligió a este broker (V6.3 §15, app/api/oportunidades): un propietario con su
 // propiedad o, desde la V7, un comprador que llegó directo con lo que busca.
@@ -210,6 +211,8 @@ export default function PortalBrokerPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+      // El aviso de "nueva necesidad en tu zona" abre directo esta pestaña (V8 §19.3).
+      if (new URLSearchParams(window.location.search).get('pestana') === 'necesidades') setPestana('necesidades')
 
       const { data: cuenta } = await supabase.from('usuarios').select('nombre, pionero').eq('id', user.id).single()
       setUserName((cuenta as { nombre: string } | null)?.nombre || user.email || 'Usuario')
@@ -375,9 +378,10 @@ export default function PortalBrokerPage() {
           </div>
 
           {/* Pestañas */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
             {([
               { id: 'portafolio', label: 'Mi portafolio', n: activos.length },
+              { id: 'necesidades', label: 'Necesidades', n: null },
               { id: 'oportunidades', label: 'Oportunidades', n: oportunidades.filter(o => o.estado === 'ofrecida').length },
               { id: 'clientes',   label: 'Mis clientes',  n: clientes.length },
               { id: 'matches',    label: 'Matches',       n: matches ? matches.paraMisClientes.length + matches.paraMiPortafolio.length : null },
@@ -660,6 +664,9 @@ export default function PortalBrokerPage() {
               )}
             </div>
           )}
+
+          {/* Necesidades: lo que buscan los compradores; el broker propone de su cartera (V8 §19.3) */}
+          {pestana === 'necesidades' && <PanelNecesidades />}
 
           {/* Oportunidades: propietarios y compradores que te eligieron para representarlos (V6.3 §15, V7) */}
           {pestana === 'oportunidades' && (

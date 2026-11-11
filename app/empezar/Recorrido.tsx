@@ -8,10 +8,15 @@
 // Smart Bróker le entrega lo que preparó: el precio realista y la invitación a certificar (quien
 // vende) o afinar su búsqueda (quien compra). JC, 1-nov: el precio inmediato en el recorrido "se
 // sentía raro"; la certificación pasó de paso a invitación en el panel.
+//
+// V8 (Documento Maestro §19, JC 10-nov-2026): quien compra ya no llena "tus datos" ni elige camino
+// aquí: captura su ficha de necesidad en FichaNecesidad.tsx (tipo, características, ubicación,
+// presupuesto), ve los primeros resultados y al final crea su cuenta. Quien vende sigue igual.
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
+import FichaNecesidad from './FichaNecesidad'
 
 type Quiere = 'vender' | 'comprar'
 type Paso = 'que' | 'datos' | 'camino'
@@ -87,7 +92,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative w-full max-w-[460px] mx-auto px-5 py-6 flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          {paso === 'datos' && !inicial ? (
+          {paso === 'datos' && !inicial && quiere !== 'comprar' ? (
             <button onClick={() => setPaso('que')} className="font-plex-mono text-[12px] text-gold-400 py-3">← Atrás</button>
           ) : (
             <a href="/bienvenida" className="font-plex-mono text-[12px] text-gold-400 py-3">SMTBROKER</a>
@@ -95,6 +100,10 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
           <a href="/login" className="font-plex-mono text-[12px] text-gold-400 py-3">Iniciar sesión</a>
         </div>
 
+        {quiere === 'comprar' && paso !== 'que' ? (
+          <FichaNecesidad conSesion={false} onAtras={() => (inicial ? router.push('/bienvenida') : setPaso('que'))}
+            pasoBase={inicial ? 0 : 1} totalPasos={inicial ? 5 : 6} />
+        ) : <>
         <div className="flex flex-col gap-2">
           <div className="flex gap-1.5">
             {Array.from({ length: totalPasos }, (_, i) => (
@@ -209,6 +218,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
             </div>
           </>
         )}
+        </>}
       </div>
     </div>
   )

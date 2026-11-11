@@ -1,167 +1,184 @@
 'use client'
 
-// Panel de quien compra (ver app/inicio/page.tsx): afinar la búsqueda (perfiles_intencion.detalles,
-// migración 20261101000300), lo que coincide, su Radar y, si va por su cuenta, el broker.
-import { useEffect, useState } from 'react'
+// Panel de quien compra (ver app/inicio/page.tsx), Documento Maestro V8, Parte 1:
+//   - Tus búsquedas (§19.1, §19.5): cada ficha con sus dos caminos (búsqueda directa y publicada a
+//     brokers), su vigencia de 30 días y cuántas propuestas lleva; pausar, renovar y crear otra
+//     (hasta 3 activas, en /buscar).
+//   - Tu bandeja (§19.4): todas las opciones en un solo lugar, con su etiqueta de origen.
+//   - Su Radar (pegar ligas de otros portales) y, si va por su cuenta, el broker.
+// Todo sale de app/api/necesidades (GET), que arma la bandeja en el servidor.
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { inputCls } from '../components/FormField'
+import { millones, MAX_NECESIDADES_ACTIVAS } from '@/lib/necesidad'
 
-interface Detalles {
-  recamaras?: string; banos?: string; m2Min?: string; zonas?: string; estacionamientos?: string; imprescindibles?: string[]
+interface Busqueda {
+  id: string; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
+  busqueda_directa: boolean; publicada_brokers: boolean; propuestas: number
 }
-interface Perfil { id: string; tipo_activo_interes: string | null; zona: string | null; presupuesto: string | null; detalles: Detalles | null; representado_por: string | null }
-interface Coincidencia { activoId: string; score: number; activo: { nombre: string; precio_total: number | null } }
+interface Opcion {
+  clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
+  municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
+  broker?: { nombre: string; nivel: string }; certificada?: boolean
+}
+interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[] }
 
-const TIPOS = ['Casa', 'Departamento', 'Terreno', 'Local', 'Oficina']
-const IMPRESCINDIBLES = ['Terraza', 'Jardín', 'Alberca', 'Amenidades', 'Seguridad 24 h']
-const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+const verde = '#7fd1b9'
 const tarjeta = 'bg-navy-800 border p-4 md:p-5 flex flex-col gap-2.5'
 const etiqueta = 'font-plex-mono text-[11px] tracking-[0.08em] uppercase'
-const verde = '#7fd1b9'
-const cls = inputCls(false, 'oscuro')
 
-export default function PanelComprador({ uid, nombre, conBroker }: { uid: string; nombre: string; conBroker: boolean }) {
-  const [perfil, setPerfil] = useState<Perfil | null | undefined>(undefined)
-  const [tipo, setTipo] = useState<string | null>(null)
-  const [d, setD] = useState<Detalles>({})
-  const [guardando, setGuardando] = useState(false)
-  const [guardado, setGuardado] = useState(false)
+// §19.4: la etiqueta dice de dónde viene cada opción.
+const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
+  broker: { texto: 'Propuesta por broker verificado', color: '#d9b45a' },
+  certificada: { texto: 'Certificada por SMTBROKER', color: verde },
+  particular: { texto: 'Particular', color: '#9fb0c8' },
+  portal: { texto: 'De portal · no certificada', color: '#8a93a3' },
+}
+
+const diasPara = (fecha: string) => Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 86400_000))
+
+export default function PanelComprador({ nombre, conBroker }: { uid: string; nombre: string; conBroker: boolean }) {
+  const [datos, setDatos] = useState<Datos | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [coincidencias, setCoincidencias] = useState<Coincidencia[] | null>(null)
+  const [filtro, setFiltro] = useState<Opcion['origen'] | 'todas'>('todas')
+  const [ocupado, setOcupado] = useState<string | null>(null)
 
-  const cargarCoincidencias = async () => {
-    const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
-    const r = await fetch('/api/matches', { headers: { Authorization: 'Bearer ' + token } })
+  const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? ''
+  const cargar = useCallback(async () => {
+    const r = await fetch('/api/necesidades', { headers: { Authorization: 'Bearer ' + await token() } })
     const j = await r.json().catch(() => ({}))
-    setCoincidencias(r.ok && Array.isArray(j.coincidencias) ? j.coincidencias : [])
-  }
-
+    if (!r.ok) { setError(j.error ?? 'No se pudo cargar tu búsqueda'); return }
+    setDatos(j as Datos)
+  }, [])
   useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.from('perfiles_intencion')
-        .select('id, tipo_activo_interes, zona, presupuesto, detalles, representado_por').eq('usuario_id', uid).maybeSingle()
-      const p = data as Perfil | null
-      setPerfil(p)
-      if (!p) return
-      setD(p.detalles ?? {})
-      setTipo(TIPOS.find((t) => (p.tipo_activo_interes || '').toLowerCase().startsWith(t.toLowerCase())) ?? null)
-      await cargarCoincidencias()
-    }
+    const init = async () => { await cargar() }
     init()
-  }, [uid])
+  }, [cargar])
 
-  const set = (k: keyof Detalles) => (e: React.ChangeEvent<HTMLInputElement>) => { setD((x) => ({ ...x, [k]: e.target.value })); setGuardado(false) }
-  const alternar = (i: string) => {
-    setD((x) => {
-      const a = x.imprescindibles ?? []
-      return { ...x, imprescindibles: a.includes(i) ? a.filter((y) => y !== i) : [...a, i] }
+  const cambiar = async (id: string, cuerpo: Record<string, unknown>) => {
+    setOcupado(id); setError(null)
+    const r = await fetch(`/api/necesidades/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() }, body: JSON.stringify(cuerpo),
     })
-    setGuardado(false)
+    const j = await r.json().catch(() => ({}))
+    setOcupado(null)
+    if (!r.ok) { setError(j.error ?? 'No se pudo guardar'); return }
+    await cargar()
   }
 
-  const guardar = async () => {
-    if (!perfil) return
-    setGuardando(true); setError(null)
-    const { error: e } = await supabase.from('perfiles_intencion')
-      .update({ detalles: d, ...(tipo ? { tipo_activo_interes: tipo } : {}) }).eq('id', perfil.id)
-    setGuardando(false)
-    if (e) { setError(e.message); return }
-    setGuardado(true)
-    await cargarCoincidencias()
-  }
+  if (!datos) return error ? <p className="text-[13px] text-[#f3a3a3]">{error}</p> : <p className="text-slate text-[13px] font-plex-mono">Cargando tu búsqueda…</p>
 
-  if (perfil === undefined) return null
-  if (perfil === null) {
-    return (
-      <div className={`${tarjeta} border-white/10`}>
-        <p className="text-[15px]">Aún no nos dices qué buscas.</p>
-        <a href="/portal-inversion" className="text-[13px] underline underline-offset-2" style={{ color: verde }}>Describir lo que busco</a>
-      </div>
-    )
-  }
+  const activas = datos.necesidades.filter((n) => n.vigente)
+  const porSuCuenta = !datos.conBroker
+  const opciones = datos.bandeja.filter((o) => filtro === 'todas' || o.origen === filtro)
+  const cuenta = (o: Opcion['origen']) => datos.bandeja.filter((x) => x.origen === o).length
 
-  const porSuCuenta = !perfil.representado_por
-  const chip = (activo: boolean) => `px-3 py-2 text-[13px] border transition-colors ${activo ? 'text-paper' : 'border-white/15 text-paper-dim hover:border-white/30'}`
   const tarjetaBroker = porSuCuenta && (
     <div className={`${tarjeta} ${conBroker ? '' : 'border-white/10'}`} style={conBroker ? { borderColor: verde } : undefined}>
-      <span className={etiqueta} style={{ color: conBroker ? verde : undefined }}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres ver toda la red?'}</span>
-      <p className="text-[14px]">Con un broker verificado accedes también a las propiedades de todos los brokers, y te acompaña en visitas, negociación y cierre.</p>
+      <span className={etiqueta} style={{ color: conBroker ? verde : undefined }}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres que un broker te acompañe?'}</span>
+      <p className="text-[14px]">Con un broker verificado accedes a toda la red y te acompaña en visitas, negociación y cierre.</p>
       <a href="/portal-inversion?broker=1" className={conBroker ? 'font-plex-mono text-[13px] font-medium px-4 py-3 text-center text-navy-950' : 'font-plex-mono text-[12px]'}
         style={conBroker ? { background: verde } : { color: verde }}>{conBroker ? 'Ver brokers de mi zona' : 'Ver brokers de mi zona →'}</a>
     </div>
   )
 
+  if (datos.necesidades.length === 0) {
+    return (
+      <>
+        <div className="flex flex-col gap-1.5 mb-1">
+          <h1 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Hola{nombre ? `, ${nombre}` : ''}.</h1>
+          <p className="text-[14.5px] text-paper-dim">Cuéntanos qué buscas y ponemos a trabajar a la plataforma y a los brokers verificados.</p>
+        </div>
+        <div className={tarjeta} style={{ borderColor: verde }}>
+          <p className="text-[15px]">Describe lo que buscas: tipo, características, ubicación y presupuesto.</p>
+          <a href="/buscar" className="font-plex-mono text-[13px] font-medium px-4 py-3 text-center text-navy-950" style={{ background: verde }}>Describir lo que busco</a>
+        </div>
+        {tarjetaBroker}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="flex flex-col gap-1.5 mb-1">
         <h1 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Listo{nombre ? `, ${nombre}` : ''}.</h1>
-        <p className="text-[14.5px] text-paper-dim">Smart Bróker ya está buscando por ti. Afinemos tu búsqueda para encontrar mejores opciones.</p>
+        <p className="text-[14.5px] text-paper-dim">Smart Bróker ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los brokers.</p>
       </div>
 
       {conBroker && tarjetaBroker}
 
-      <div className={tarjeta} style={{ borderColor: verde }}>
-        <span className={etiqueta} style={{ color: verde }}>Cuéntanos más de lo que buscas</span>
-        <div className="flex flex-wrap gap-1.5">
-          {TIPOS.map((t) => (
-            <button key={t} type="button" onClick={() => { setTipo(t); setGuardado(false) }} className={chip(tipo === t)}
-              style={tipo === t ? { borderColor: verde, background: 'rgba(127,209,185,0.12)' } : undefined}>{t}</button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {([['recamaras', 'Recámaras'], ['banos', 'Baños'], ['m2Min', 'm² mín.']] as const).map(([k, l]) => (
-            <label key={k} className="flex flex-col gap-1">
-              <span className="font-plex-mono text-[10px] text-slate uppercase">{l}</span>
-              <input value={d[k] ?? ''} onChange={set(k)} inputMode="numeric" className={cls} />
-            </label>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="font-plex-mono text-[10px] text-slate uppercase">Zonas preferidas</span>
-            <input value={d.zonas ?? ''} onChange={set('zonas')} placeholder="Valle Oriente, Del Valle" className={cls} />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-plex-mono text-[10px] text-slate uppercase">Estacionamientos</span>
-            <input value={d.estacionamientos ?? ''} onChange={set('estacionamientos')} inputMode="numeric" className={cls} />
-          </label>
-        </div>
-        <span className="font-plex-mono text-[10px] text-slate uppercase">Imprescindibles</span>
-        <div className="flex flex-wrap gap-1.5">
-          {IMPRESCINDIBLES.map((i) => {
-            const on = (d.imprescindibles ?? []).includes(i)
-            return <button key={i} type="button" onClick={() => alternar(i)} className={chip(on)}
-              style={on ? { borderColor: verde, background: 'rgba(127,209,185,0.12)' } : undefined}>{i}</button>
-          })}
-        </div>
-        {error && <p className="text-[12.5px] text-[#f3a3a3]">{error}</p>}
-        <button onClick={guardar} disabled={guardando} className="font-plex-mono text-[13px] font-medium px-4 py-3 text-center text-navy-950 disabled:opacity-60" style={{ background: verde }}>
-          {guardando ? 'Guardando…' : guardado ? 'Guardado ✓' : 'Guardar y afinar mi búsqueda'}
-        </button>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`${etiqueta} text-slate`}>Tus búsquedas</span>
+        {activas.length < MAX_NECESIDADES_ACTIVAS && <a href="/buscar" className="font-plex-mono text-[12px]" style={{ color: verde }}>+ Nueva búsqueda</a>}
       </div>
+      {datos.necesidades.map((n) => (
+        <div key={n.id} className={tarjeta} style={{ borderColor: n.vigente ? verde : 'rgba(255,255,255,0.1)', opacity: n.vigente ? 1 : 0.75 }}>
+          <p className="text-[15px] font-medium">{n.resumen}</p>
+          {n.detalle.length > 0 && <p className="text-[12.5px] text-slate">{n.detalle.join(' · ')}</p>}
+          <div className="flex flex-wrap gap-1.5">
+            {([['busqueda_directa', 'Búsqueda directa'], ['publicada_brokers', 'Publicada a brokers']] as const).map(([k, t]) => (
+              <button key={k} disabled={ocupado === n.id || !n.vigente} onClick={() => cambiar(n.id, { [k]: !n[k] })}
+                className="px-3 py-2 text-[12.5px] border disabled:opacity-60"
+                style={n[k] ? { borderColor: verde, background: 'rgba(127,209,185,0.12)' } : { borderColor: 'rgba(255,255,255,0.15)', color: '#8a93a3' }}>
+                {n[k] ? '✓ ' : ''}{t}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-2 flex-wrap text-[12.5px] text-slate">
+            <span>
+              {n.vigente ? `Vigente ${diasPara(n.vence_at)} días más` : n.activa ? 'Venció' : 'En pausa'}
+              {n.publicada_brokers ? ` · ${n.propuestas} ${n.propuestas === 1 ? 'propuesta' : 'propuestas'} de brokers` : ''}
+            </span>
+            <span className="flex gap-3">
+              {n.vigente
+                ? <>
+                    {diasPara(n.vence_at) <= 7 && <button onClick={() => cambiar(n.id, { accion: 'renovar' })} disabled={ocupado === n.id} style={{ color: verde }}>Renovar</button>}
+                    <button onClick={() => cambiar(n.id, { accion: 'pausar' })} disabled={ocupado === n.id} className="text-slate hover:text-paper">Pausar</button>
+                  </>
+                : <button onClick={() => cambiar(n.id, { accion: n.activa ? 'renovar' : 'activar' })} disabled={ocupado === n.id} style={{ color: verde }}>{n.activa ? 'Renovar 30 días' : 'Reactivar'}</button>}
+            </span>
+          </div>
+        </div>
+      ))}
+      {error && <p className="text-[12.5px] text-[#f3a3a3]">{error}</p>}
 
       <div className={`${tarjeta} border-white/10`}>
-        <span className={`${etiqueta} text-slate`}>Lo que coincide contigo</span>
-        {coincidencias === null ? (
-          <p className="text-[13px] text-slate">Buscando…</p>
-        ) : coincidencias.length === 0 ? (
-          <p className="text-[13.5px] text-paper-dim">Todavía nada coincide. Te avisamos en cuanto aparezca algo.</p>
-        ) : coincidencias.slice(0, 3).map((c) => (
-          <div key={c.activoId} className="flex items-center gap-3">
-            <span className="font-display text-[22px] w-11 shrink-0" style={{ color: verde }}>{c.score}</span>
-            <span className="flex flex-col">
-              <span className="text-[14px]">{c.activo.nombre}</span>
-              {c.activo.precio_total != null && <span className="text-[12px] text-slate">{mxn(c.activo.precio_total)}{porSuCuenta ? ' · particular' : ''}</span>}
+        <span className={`${etiqueta} text-slate`}>Tu bandeja · {datos.bandeja.length}</span>
+        {datos.bandeja.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {(['todas', 'broker', 'certificada', 'particular', 'portal'] as const).map((f) => {
+              const n = f === 'todas' ? datos.bandeja.length : cuenta(f)
+              if (f !== 'todas' && n === 0) return null
+              return (
+                <button key={f} onClick={() => setFiltro(f)} className="px-2.5 py-1.5 text-[12px] border"
+                  style={filtro === f ? { borderColor: verde, background: 'rgba(127,209,185,0.12)' } : { borderColor: 'rgba(255,255,255,0.15)', color: '#8a93a3' }}>
+                  {f === 'todas' ? 'Todas' : ORIGEN[f].texto.split(' ·')[0]} {n}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {datos.bandeja.length === 0 ? (
+          <p className="text-[13.5px] text-paper-dim">Todavía no hay opciones. Te avisamos en cuanto un broker te proponga algo o aparezca una coincidencia.</p>
+        ) : opciones.map((o) => (
+          <div key={o.clave} className="border-t border-white/10 pt-2.5 flex flex-col gap-1">
+            <span className="font-plex-mono text-[10.5px] tracking-[0.06em] uppercase" style={{ color: ORIGEN[o.origen].color }}>
+              {ORIGEN[o.origen].texto}{o.origen === 'broker' && o.broker ? ` · ${o.broker.nombre}${o.broker.nivel ? ` (${o.broker.nivel})` : ''}` : ''}{o.origen === 'broker' && o.certificada ? ' · certificada' : ''}
+            </span>
+            {o.url
+              ? <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-[14px] underline underline-offset-2 decoration-white/30">{o.titulo}</a>
+              : <span className="text-[14px]">{o.titulo}</span>}
+            <span className="text-[12px] text-slate">
+              {[o.precio ? millones(o.precio) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
             </span>
           </div>
         ))}
-        <p className="text-[12.5px] text-slate">Mientras más detalles nos des, mejores coincidencias. <a href="/portal-inversion" className="underline underline-offset-2" style={{ color: verde }}>Ver todas</a></p>
+        <p className="text-[12px] text-slate">Pronto podrás marcar &quot;Me interesa&quot; y recibir el análisis de cada una: precio contra mercado y plusvalía.</p>
       </div>
 
       {porSuCuenta && (
         <div className={`${tarjeta} border-white/10`}>
-          <span className={`${etiqueta} text-slate`}>Tu Radar de mercado</span>
-          <p className="text-[14px]">¿Viste algo en otro portal? Pega la liga y le pedimos al anunciante que la certifique.</p>
+          <span className={`${etiqueta} text-slate`}>¿Viste algo en otro portal?</span>
+          <p className="text-[14px]">Pega la liga y le pedimos al anunciante que la certifique.</p>
           <a href="/portal-inversion#radar" className="font-plex-mono text-[12px]" style={{ color: verde }}>Abrir mi Radar →</a>
         </div>
       )}

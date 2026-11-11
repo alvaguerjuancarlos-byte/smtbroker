@@ -2,6 +2,8 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarOperacion } from '@/lib/avisos'
+import { validarNecesidad, resumenNecesidad } from '@/lib/necesidad'
+import { guardarNecesidad } from '@/lib/necesidadServidor'
 
 // Registro inmediato de un cliente desde el recorrido guiado /empezar (Documento Maestro V7.2,
 // decisión de JC del 1-nov-2026). Sin sesión. Crea en un paso:
@@ -53,7 +55,11 @@ export async function POST(req: NextRequest) {
     if (quiere === 'vender' && (!propiedad.tipo || !propiedad.municipio || !propiedad.precio)) {
       return NextResponse.json({ error: 'Faltan el tipo, el municipio o el precio de tu propiedad' }, { status: 400 })
     }
-    if (quiere === 'comprar' && (!busqueda.busca || !busqueda.zona || !busqueda.presupuesto)) {
+    // V8 (§19): quien compra llega con su ficha de necesidad completa. La forma vieja (qué busca,
+    // zona y presupuesto en texto) se acepta mientras quede alguna página que la mande.
+    const ficha = quiere === 'comprar' && b.necesidad ? validarNecesidad(b.necesidad) : null
+    if (ficha && 'error' in ficha) return NextResponse.json({ error: ficha.error }, { status: 400 })
+    if (quiere === 'comprar' && !ficha && (!busqueda.busca || !busqueda.zona || !busqueda.presupuesto)) {
       return NextResponse.json({ error: 'Falta qué buscas, la zona o el presupuesto' }, { status: 400 })
     }
 
@@ -87,6 +93,9 @@ export async function POST(req: NextRequest) {
       }).select('id').single()
       if (error) { await deshacer(); return NextResponse.json({ error: error.message }, { status: 500 }) }
       activoId = (data as { id: string }).id
+    } else if (ficha) {
+      const g = await guardarNecesidad(admin, uid, ficha.necesidad, { esDemo })
+      if ('error' in g) { await deshacer(); return NextResponse.json({ error: g.error }, { status: g.status }) }
     } else {
       const { error } = await admin.from('perfiles_intencion').insert({
         usuario_id: uid, tipo_activo_interes: busqueda.busca, zona: busqueda.zona, presupuesto: busqueda.presupuesto,
@@ -100,7 +109,7 @@ export async function POST(req: NextRequest) {
       titulo: `Se registró un cliente que quiere ${quiere}`,
       lineas: [quiere === 'vender'
         ? `${propiedad.tipo} en ${propiedad.colonia ? `${propiedad.colonia}, ` : ''}${propiedad.municipio}.`
-        : `Busca ${busqueda.busca} en ${busqueda.zona} · ${busqueda.presupuesto}.`],
+        : ficha && 'necesidad' in ficha ? `${resumenNecesidad(ficha.necesidad)}.` : `Busca ${busqueda.busca} en ${busqueda.zona} · ${busqueda.presupuesto}.`],
       enlace: { texto: 'Abrir la consola', ruta: '/panel' },
     }, { esDemo }))
     return NextResponse.json({ ok: true, activoId })
