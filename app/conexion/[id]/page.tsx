@@ -118,8 +118,8 @@ export default function ConexionPage() {
   const renta = d.operacion === 'renta'
   const visitaPasada = !!c.visita_at && new Date(c.visita_at).getTime() <= ahora
   const otraParte = ladoComprador
-    ? `${d.partes.contraparte}${d.partes.contraparteEsBroker ? ' (broker verificado)' : ' (dueño)'}`
-    : `${d.partes.comprador}${d.partes.brokerComprador ? `, con su broker ${d.partes.brokerComprador}` : ''}`
+    ? `${d.partes.contraparte}${d.partes.contraparteEsBroker ? ' (asesor verificado)' : ' (dueño)'}`
+    : `${d.partes.comprador}${d.partes.brokerComprador ? `, con su asesor ${d.partes.brokerComprador}` : ''}`
   const volver = d.rol === 'operacion' ? '/panel' : rolUsuario === 'broker' ? '/portal-broker?pestana=conexiones' : '/inicio'
 
   return (
@@ -236,7 +236,7 @@ export default function ConexionPage() {
                     <button onClick={() => accion({ accion: 'oferta', monto: oferta.monto, ...solicitud })} disabled={ocupado || !oferta.monto || !solicitud.plazo_contrato} className={botonPrimario} style={{ background: verde }}>
                       {c.oferta_at ? 'Actualizar solicitud de renta' : 'Enviar solicitud de renta'}
                     </button>
-                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. El contrato y la firma van por su cuenta{d.partes.brokerComprador ? ' con tu broker' : ''}.</p>
+                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. El contrato y la firma van por su cuenta{d.partes.brokerComprador ? ' con tu asesor' : ''}.</p>
                   </>
                 )}
               </div>
@@ -261,7 +261,7 @@ export default function ConexionPage() {
                     <button onClick={() => accion({ accion: 'oferta', monto: oferta.monto, formaPago: oferta.formaPago })} disabled={ocupado || !oferta.monto} className={botonPrimario} style={{ background: verde }}>
                       {c.oferta_at ? 'Actualizar intención de oferta' : 'Enviar intención de oferta'}
                     </button>
-                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. La negociación, el contrato y la notaría van por su cuenta{d.partes.brokerComprador ? ' con tu broker' : '; para eso te conviene un broker verificado'}.</p>
+                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. La negociación, el contrato y la notaría van por su cuenta{d.partes.brokerComprador ? ' con tu asesor' : '; para eso te conviene un asesor verificado'}.</p>
                   </>
                 )}
               </div>
@@ -289,7 +289,7 @@ export default function ConexionPage() {
                 )}
                 {d.puedeCalificar && (
                   <div className="flex flex-col gap-2 border-t border-linea pt-2.5">
-                    <p className="text-[17px] font-medium">Califica al broker</p>
+                    <p className="text-[17px] font-medium">Califica al asesor</p>
                     {(['atencion', 'rapidez', 'honestidad'] as const).map((k) => (
                       <div key={k} className="flex items-center gap-3">
                         <span className="text-[16px] w-24 capitalize">{k === 'atencion' ? 'Atención' : k}</span>

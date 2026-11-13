@@ -41,7 +41,7 @@ const etiqueta = 'font-sans text-[14px]'
 
 // §19.4: la etiqueta dice de dónde viene cada opción.
 const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
-  broker: { texto: 'Propuesta por broker verificado', color: 'var(--c-oro)' },
+  broker: { texto: 'Propuesta por asesor verificado', color: 'var(--c-oro)' },
   certificada: { texto: 'Certificada por Ciertix', color: verde },
   particular: { texto: 'Particular', color: 'var(--c-gris)' },
   portal: { texto: 'De portal · no certificada', color: 'var(--c-gris)' },
@@ -194,10 +194,10 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
 
   const tarjetaBroker = porSuCuenta && (
     <div className={`${tarjeta} ${conBroker ? '' : 'border-linea'}`} style={conBroker ? { borderColor: verde } : undefined}>
-      <span className={etiqueta} style={{ color: conBroker ? verde : undefined }}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres que un broker te acompañe?'}</span>
-      <p className="text-[17px]">Con un broker verificado accedes a toda la red y te acompaña en visitas, negociación y cierre.</p>
+      <span className={etiqueta} style={{ color: conBroker ? verde : undefined }}>{conBroker ? 'Elige tu asesor verificado' : '¿Quieres que un asesor te ayude?'}</span>
+      <p className="text-[17px]">Con un asesor verificado accedes a toda la red y te acompaña en visitas, negociación y cierre.</p>
       <a href="/portal-inversion?broker=1" className={conBroker ? 'font-sans text-[16px] font-medium px-4 py-3 text-center text-white' : 'font-sans text-[15px]'}
-        style={conBroker ? { background: verde } : { color: verde }}>{conBroker ? 'Ver brokers de mi zona' : 'Ver brokers de mi zona →'}</a>
+        style={conBroker ? { background: verde } : { color: verde }}>{conBroker ? 'Ver asesores de mi zona' : 'Ver asesores de mi zona →'}</a>
     </div>
   )
 
@@ -205,7 +205,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     return (
       <>
         <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Hola${nombre ? `, ${nombre}` : ''}.`}
-          subtitulo="Cuéntanos qué buscas y ponemos a trabajar a la plataforma y a los brokers verificados." />
+          subtitulo="Cuéntanos qué buscas y ponemos a trabajar a la plataforma y a los asesores verificados." />
         <div className={tarjeta} style={{ borderColor: verde }}>
           <p className="text-[18px]">Describe lo que buscas: tipo, características, ubicación y presupuesto.</p>
           <a href="/buscar" className="font-sans text-[16px] font-medium px-4 py-3 text-center text-white" style={{ background: verde }}>Describir lo que busco</a>
@@ -218,7 +218,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   return (
     <>
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
-        subtitulo="Ciertix ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los brokers." />
+        subtitulo="Ciertix ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los asesores." />
 
       {conBroker && tarjetaBroker}
 
@@ -234,7 +234,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
           <p className="text-[18px] font-medium">{n.resumen}</p>
           {n.detalle.length > 0 && <p className="text-[15px] text-tenue">{n.detalle.join(' · ')}</p>}
           <div className="flex flex-wrap gap-1.5">
-            {([['busqueda_directa', 'Búsqueda directa'], ['publicada_brokers', 'Publicada a brokers']] as const).map(([k, t]) => (
+            {([['busqueda_directa', 'Búsqueda directa'], ['publicada_brokers', 'Propuestas de asesores']] as const).map(([k, t]) => (
               <button key={k} disabled={ocupado === n.id || !n.vigente} onClick={() => cambiar(n.id, { [k]: !n[k] })}
                 className="px-3 py-2 text-[15px] border disabled:opacity-60 rounded-lg"
                 style={n[k] ? { borderColor: verde, background: 'var(--c-verde-suave)' } : { borderColor: 'var(--c-linea)', color: 'var(--c-gris)' }}>
@@ -245,7 +245,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
           <div className="flex items-center justify-between gap-2 flex-wrap text-[15px] text-tenue">
             <span>
               {n.vigente ? `Vigente ${diasPara(n.vence_at)} días más` : n.activa ? 'Venció' : 'En pausa'}
-              {n.publicada_brokers ? ` · ${n.propuestas} ${n.propuestas === 1 ? 'propuesta' : 'propuestas'} de brokers` : ''}
+              {n.publicada_brokers ? ` · ${n.propuestas} ${n.propuestas === 1 ? 'propuesta' : 'propuestas'} de asesores` : ''}
             </span>
             <span className="flex gap-3">
               {n.vigente
@@ -263,7 +263,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       <div className="flex flex-col gap-3" data-bandeja>
         <span className={`${etiqueta} text-tenue`}>Tu bandeja · {datos.bandeja.length}</span>
         {datos.bandeja.length === 0 && conZona.length === 0 && (
-          <p className="text-[16px] text-tinta-2">Todavía no hay opciones. Te avisamos en cuanto un broker te proponga algo o aparezca una coincidencia.</p>
+          <p className="text-[16px] text-tinta-2">Todavía no hay opciones. Te avisamos en cuanto un asesor te proponga algo o aparezca una coincidencia.</p>
         )}
         {conZona.map((n) => (
           <div key={n.id} className="flex flex-col gap-2" data-bandeja-busqueda={n.id}>

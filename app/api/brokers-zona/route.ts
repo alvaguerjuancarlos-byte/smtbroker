@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     })
     if (asignadoId) {
       const b = todos.find((x) => x.id === asignadoId)
-      return NextResponse.json({ zona, asignado: b ? publico(b) : { id: asignadoId, nombre: 'Tu broker' }, brokers: [], oportunidades: [] })
+      return NextResponse.json({ zona, asignado: b ? publico(b) : { id: asignadoId, nombre: 'Tu asesor' }, brokers: [], oportunidades: [] })
     }
 
     const brokers = todos

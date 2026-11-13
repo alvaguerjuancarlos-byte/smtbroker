@@ -141,8 +141,8 @@ export default function LeadsPage() {
             {porSuCuenta && (leads.length > 0 || motor.length > 0) && (
               <div className="bg-tarjeta border border-linea p-4 mb-3 rounded-xl">
                 <p className="text-[17px] text-tinta">Vendes por tu cuenta: tú atiendes a tus interesados.</p>
-                <p className="text-[15px] text-tenue mt-1">Si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un broker de tu zona.</p>
-                <button onClick={() => router.push(`/activo/${id}`)} className="font-sans text-[14px] text-acento underline underline-offset-2 mt-2">Elegir un broker</button>
+                <p className="text-[15px] text-tenue mt-1">Si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un asesor de tu zona.</p>
+                <button onClick={() => router.push(`/activo/${id}`)} className="font-sans text-[14px] text-acento underline underline-offset-2 mt-2">Elegir un asesor</button>
               </div>
             )}
             {leads.length === 0 ? (
@@ -203,7 +203,7 @@ export default function LeadsPage() {
                       )}
                       {m.contacto && (
                         <p className="text-[16px] text-tinta">
-                          {m.contacto.nombre}{m.contacto.esBroker ? ' (su broker)' : ''}
+                          {m.contacto.nombre}{m.contacto.esBroker ? ' (su asesor)' : ''}
                           {m.contacto.correo && <> · <a href={`mailto:${m.contacto.correo}`} className="text-acento hover:text-acento-2">{m.contacto.correo}</a></>}
 {m.contacto.telefono && <> · <a href={`https://wa.me/52${m.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-acento hover:text-acento-2">WhatsApp {m.contacto.telefono}</a></>}
                         </p>

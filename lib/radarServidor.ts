@@ -8,6 +8,6 @@ export async function perfilDelComprador(s: SesionServidor) {
   const { data } = await s.admin.from('perfiles_intencion').select('id, representado_por').eq('usuario_id', s.uid).maybeSingle()
   const p = data as { id: string; representado_por: string | null } | null
   if (!p) return { error: NextResponse.json({ error: 'Primero describe lo que buscas' }, { status: 409 }) }
-  if (p.representado_por) return { error: NextResponse.json({ error: 'Tu broker busca por ti', conBroker: true }, { status: 409 }) }
+  if (p.representado_por) return { error: NextResponse.json({ error: 'Tu asesor busca por ti', conBroker: true }, { status: 409 }) }
   return { perfilId: p.id }
 }

@@ -268,8 +268,8 @@ export default function PortalInversionPage() {
               ) : (
                 <div className="bg-tarjeta border border-linea p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl">
                   <div className="flex-1">
-                    <p className="text-[17px] text-tinta">¿Quieres un broker que te represente?</p>
-                    <p className="text-[15px] text-tenue mt-0.5">Puedes buscar y conectarte por tu cuenta. Un broker te acompaña en visitas, negociación y cierre.</p>
+                    <p className="text-[17px] text-tinta">¿Quieres un asesor que te represente?</p>
+                    <p className="text-[15px] text-tenue mt-0.5">Puedes buscar y conectarte por tu cuenta. Un asesor te acompaña en visitas, negociación y cierre.</p>
                   </div>
                   <button onClick={() => setPedirBroker(true)}
                     className="font-sans text-[14px] border border-gold-500/50 text-acento px-3 py-2 hover:bg-gold-500/10 transition-colors shrink-0 rounded-lg">
@@ -286,8 +286,8 @@ export default function PortalInversionPage() {
               <h2 className="font-display text-[19px] font-medium text-tinta mb-1">{tieneBroker ? 'Coinciden con lo que buscas' : 'Propiedades de particulares que coinciden'}</h2>
               <p className="text-[15px] text-tenue mb-4">
                 Por tipo de propiedad, zona y presupuesto. {tieneBroker
-                  ? 'Si te interesa alguna, tu broker se conecta con quien la vende.'
-                  : 'Si te interesa alguna, nuestro equipo valida la conexión y te pasa el contacto de quien la vende. Las propiedades que traen los brokers se ven con un broker.'}
+                  ? 'Si te interesa alguna, tu asesor se conecta con quien la vende.'
+                  : 'Si te interesa alguna, nuestro equipo valida la conexión y te pasa el contacto de quien la vende. Las propiedades que traen los asesores se ven con un asesor.'}
               </p>
               {coincidencias.length === 0 ? (
                 <div className="bg-tarjeta border border-linea px-8 py-8 text-center rounded-xl">
@@ -306,7 +306,7 @@ export default function PortalInversionPage() {
                         <p className="text-[14px] text-tinta-2 mt-1">{c.razones.join(' · ')}</p>
                         {c.contacto && (
                           <p className="text-[15px] text-tinta mt-1.5">
-                            Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (broker de la propiedad)' : ' (vende por su cuenta)'}
+                            Contacto: {c.contacto.nombre}{c.contacto.esBroker ? ' (asesor de la propiedad)' : ' (vende por su cuenta)'}
                             {c.contacto.correo && <> · <a href={`mailto:${c.contacto.correo}`} className="text-acento hover:text-acento-2">{c.contacto.correo}</a></>}
 {c.contacto.telefono && <> · <a href={`https://wa.me/52${c.contacto.telefono.replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noopener noreferrer" className="text-acento hover:text-acento-2">WhatsApp {c.contacto.telefono}</a></>}
                           </p>
@@ -314,7 +314,7 @@ export default function PortalInversionPage() {
                       </div>
                       {c.solicitud ? (
                         <span className="font-sans text-[13px] text-acento border border-gold-500/30 px-2.5 py-1 shrink-0 rounded-lg">
-                          {c.solicitud === 'solicitado' ? (tieneBroker ? 'Solicitado · tu broker te avisa' : 'Solicitado · Operación la revisa') : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
+                          {c.solicitud === 'solicitado' ? (tieneBroker ? 'Solicitado · tu asesor te avisa' : 'Solicitado · Operación la revisa') : c.solicitud === 'en_contacto' ? 'En contacto' : c.solicitud === 'cerrado' ? 'Cerrado' : 'No disponible'}
                         </span>
                       ) : (
                         <button disabled={solicitando === c.activoId} onClick={() => meInteresa(c)}

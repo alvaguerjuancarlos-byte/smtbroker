@@ -26,7 +26,7 @@ export async function contactoDe(admin: SupabaseClient, lado: { id: string; esBr
     admin.auth.admin.getUserById(lado.id),
     lado.esBroker ? Promise.resolve({ data: null }) : admin.from('contactos_cliente').select('telefono').eq('usuario_id', lado.id).maybeSingle(),
   ])
-  const nombre = (u as { nombre: string | null } | null)?.nombre || (lado.esBroker ? 'Broker' : 'Cliente')
+  const nombre = (u as { nombre: string | null } | null)?.nombre || (lado.esBroker ? 'Asesor' : 'Cliente')
   const telefono = (c as { telefono: string | null } | null)?.telefono ?? null
   return { nombre, correo: auth?.user?.email ?? null, esBroker: lado.esBroker, ...(telefono ? { telefono } : {}) }
 }

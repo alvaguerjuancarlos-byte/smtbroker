@@ -133,7 +133,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
                 </span>
               </button>
             </div>
-            <p className="text-[16px] text-tenue text-center">¿Eres broker? <a href="/bienvenida?broker=1" className="text-acento underline underline-offset-2">Regístrate aquí</a></p>
+            <p className="text-[16px] text-tenue text-center">¿Eres asesor inmobiliario? <a href="/bienvenida?broker=1" className="text-acento underline underline-offset-2">Regístrate aquí</a></p>
           </>
         )}
 
@@ -205,25 +205,25 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
               avance={<Avance total={totalPasos} hechos={numPaso} color={quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'} />} etiqueta={etiquetaPaso} />
             <div className={`bg-tarjeta border ${quiere === 'vender' ? 'border-gold-500' : 'border-verde'} p-5 flex flex-col gap-2.5 rounded-xl`}>
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="font-display text-[21px] font-medium">Con un broker verificado</span>
+                <span className="font-display text-[21px] font-medium">Con un asesor verificado</span>
                 <span className={`font-sans text-[13px] text-white px-2 py-1 ${quiere === 'vender' ? 'bg-gold-500' : 'bg-verde'} rounded-lg`}>MUY RECOMENDABLE</span>
               </div>
               <p className="text-[16px] text-tinta-2">
                 {quiere === 'vender'
-                  ? 'Tu broker presenta tu propiedad a los compradores de toda la red, filtra a los interesados, negocia y te acompaña hasta el cierre.'
-                  : 'Accedes a toda la red: las propiedades de particulares y de todos los brokers de la plataforma. Tu broker te acompaña en visitas, negociación y cierre.'}
+                  ? 'Tu asesor presenta tu propiedad a los compradores de toda la red, filtra a los interesados, negocia y te acompaña hasta el cierre.'
+                  : 'Accedes a toda la red: las propiedades de particulares y de todos los asesores de la plataforma. Tu asesor te acompaña en visitas, negociación y cierre.'}
               </p>
-              <p className="text-[15px] text-tenue">Te sugerimos brokers verificados de tu zona, con su desempeño a la vista.</p>
-              <button onClick={() => terminar(true)} className={`${boton} mt-1 text-white ${quiere === 'vender' ? 'bg-gold-500 hover:bg-gold-400' : 'bg-verde hover:opacity-90'} rounded-lg`}>Ver brokers de mi zona</button>
+              <p className="text-[15px] text-tenue">Te sugerimos asesores verificados de tu zona, con su desempeño a la vista.</p>
+              <button onClick={() => terminar(true)} className={`${boton} mt-1 text-white ${quiere === 'vender' ? 'bg-gold-500 hover:bg-gold-400' : 'bg-verde hover:opacity-90'} rounded-lg`}>Ver asesores de mi zona</button>
             </div>
             <div className="bg-tarjeta border border-linea p-5 flex flex-col gap-2.5 rounded-xl">
               <span className="font-display text-[21px] font-medium">Por mi cuenta</span>
               <p className="text-[16px] text-tinta-2">
                 {quiere === 'vender'
-                  ? 'Tu propiedad aparece en el Radar de los compradores directos y la ven todos los brokers de la plataforma. Tú atiendes a los interesados.'
+                  ? 'Tu propiedad aparece en el Radar de los compradores directos y la ven todos los asesores de la plataforma. Tú atiendes a los interesados.'
                   : 'Buscas en el Radar de mercado: propiedades de particulares y anuncios de otros portales. ¿Viste algo en otro lado? Pega la liga y le pedimos al anunciante que la certifique.'}
               </p>
-              {quiere === 'comprar' && <p className="text-[15px] text-tenue">Las propiedades que traen los brokers solo se ven con broker.</p>}
+              {quiere === 'comprar' && <p className="text-[15px] text-tenue">Las propiedades que traen los asesores solo se ven con un asesor.</p>}
               <button onClick={() => terminar(false)} className={`${boton} mt-1 border border-linea text-tinta hover:border-linea-fuerte`}>{quiere === 'vender' ? 'Continuar por mi cuenta' : 'Buscar por mi cuenta'}</button>
             </div>
           </>

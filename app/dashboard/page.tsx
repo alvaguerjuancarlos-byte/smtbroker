@@ -106,7 +106,7 @@ export default function DashboardPage() {
             {[
               { fase: '01', label: 'Diagnóstico', desc: 'Valuación + due diligence', chip: 'border-gold-500/40 text-acento bg-gold-500/10' },
               { fase: '02', label: 'Marketing',   desc: 'Media kit + captación de leads', chip: 'border-[#4F46E5]/40 text-violeta bg-[#4F46E5]/10' },
-              { fase: '03', label: 'Cierre',      desc: 'Lead scoring + entrega al broker', chip: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10' },
+              { fase: '03', label: 'Cierre',      desc: 'Lead scoring + entrega al asesor', chip: 'border-[#D97706]/40 text-aviso bg-[#D97706]/10' },
             ].map(f => (
               <div key={f.fase} className="bg-tarjeta border border-linea p-5 rounded-xl">
                 <span className={`font-sans text-[13px] font-medium px-2 py-0.5 border ${f.chip} rounded-lg`}>Fase {f.fase}</span>

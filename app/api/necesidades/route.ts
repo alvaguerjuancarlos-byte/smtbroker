@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       bandeja.push({
         clave: `p:${a.id}`, origen: 'broker', titulo: a.nombre, tipo: a.tipo, municipio: a.municipio, precio: precioPara(a, opDe(x.necesidad_id)),
         detalleRenta: opDe(x.necesidad_id) === 'renta' ? detalleRentaActivo(a.renta) : undefined,
-        superficie: a.superficie, broker: { nombre: b?.nombre ?? 'Broker verificado', nivel: b?.nivel.nombre ?? '' },
+        superficie: a.superficie, broker: { nombre: b?.nombre ?? 'Asesor verificado', nivel: b?.nivel.nombre ?? '' },
         certificada: certificadas.has(a.id), activoId: a.id, necesidadId: x.necesidad_id, colonia: a.colonia, ...ubicar(a, x.necesidad_id),
       })
     }

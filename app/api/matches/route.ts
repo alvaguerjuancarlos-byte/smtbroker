@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
     if (!esDueno) return NextResponse.json({ error: 'No autorizado para este match' }, { status: 403 })
     // V7.2: quien va por su cuenta solo se conecta con particulares; las propiedades de brokers, con broker.
     if (perfil.usuario_id && !perfil.representado_por && activo.broker_id) {
-      return NextResponse.json({ error: 'Las propiedades que traen los brokers se ven con un broker', necesitaBroker: true }, { status: 403 })
+      return NextResponse.json({ error: 'Las propiedades que traen los asesores se ven con un asesor', necesitaBroker: true }, { status: 403 })
     }
 
     const r = puntuarMatch(activo, perfil)

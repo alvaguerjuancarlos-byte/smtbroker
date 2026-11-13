@@ -78,34 +78,34 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
     await cargar()
   }
 
-  if (error && !brokers) return <div className="bg-tarjeta border border-error-linea p-5 text-[16px] text-tinta-2 rounded-xl">No se pudieron cargar los brokers ({error}).</div>
+  if (error && !brokers) return <div className="bg-tarjeta border border-error-linea p-5 text-[16px] text-tinta-2 rounded-xl">No se pudieron cargar los asesores ({error}).</div>
   if (!brokers) return null
 
   if (asignado) {
     return (
       <div className="bg-tarjeta border border-linea p-4 md:p-6 rounded-xl">
-        <p className="font-sans text-[13px] text-tenue mb-2">Tu broker</p>
+        <p className="font-sans text-[13px] text-tenue mb-2">Tu asesor</p>
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-[18px] font-medium text-tinta">{asignado.nombre}</p>
           <Nivel b={asignado} />
         </div>
-        <p className="text-[15px] text-tenue mt-1">Te representa en cada conexión: cuando te interese una propiedad, se pone en contacto con el broker que la representa.</p>
+        <p className="text-[15px] text-tenue mt-1">Te representa en cada conexión: cuando te interese una propiedad, se pone en contacto con el asesor que la representa.</p>
       </div>
     )
   }
 
   const abierta = ops.find(o => o.estado === 'ofrecida')
   const rechazaron = new Set(ops.filter(o => o.estado === 'rechazada').map(o => o.broker_id))
-  const nombreDe = (id: string) => brokers.find(b => b.id === id)?.nombre ?? 'el broker'
+  const nombreDe = (id: string) => brokers.find(b => b.id === id)?.nombre ?? 'el asesor'
 
   return (
     <div className="bg-tarjeta border border-gold-500/30 p-4 md:p-6 rounded-xl">
-      <p className="font-sans text-[13px] text-acento mb-1">Elige un broker verificado de tu zona</p>
+      <p className="font-sans text-[13px] text-acento mb-1">Elige un asesor verificado de tu zona</p>
       {motivo && <p className="text-[17px] text-tinta mb-2">{motivo}</p>}
       <p className="text-[16px] text-tinta-2 mb-4">
         {esComprador
-          ? 'Un broker verificado te representa: busca contigo, se conecta con el broker de cada propiedad y te acompaña hasta el cierre.'
-          : 'Un broker verificado representa tu propiedad, la presenta a sus compradores y a los de toda la red.'}
+          ? 'Un asesor verificado te representa: busca contigo, se conecta con el asesor de cada propiedad y te acompaña hasta el cierre.'
+          : 'Un asesor verificado representa tu propiedad, la presenta a sus compradores y a los de toda la red.'}
         {' '}Estos trabajan en {zona || 'tu municipio'}; el nivel refleja su desempeño verificado.
       </p>
 
@@ -115,7 +115,7 @@ export function ElegirBroker({ activoId, perfilId, onAsignado, motivo }: Props) 
           <p className="text-[15px] text-tenue mt-1">{esComprador ? 'Le enviamos lo que buscas' : 'Le enviamos tu propiedad'} como oportunidad. Si la acepta, pasará a representarte.</p>
         </div>
       ) : brokers.length === 0 ? (
-        <p className="text-[16px] text-tenue">Todavía no hay brokers verificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
+        <p className="text-[16px] text-tenue">Todavía no hay asesores verificados trabajando en {zona || 'tu municipio'}. Te avisaremos cuando haya uno disponible.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {brokers.map(b => (

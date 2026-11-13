@@ -104,10 +104,10 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
   const soloRenta = activo.operacion === 'renta'
   const tarjetaBroker = !activo.broker_id && (
     <div className={`${tarjeta} ${conBroker ? 'border-gold-500' : 'border-linea'}`}>
-      <span className={`${etiqueta} ${conBroker ? 'text-acento' : 'text-tenue'}`}>{conBroker ? 'Elige tu broker verificado' : '¿Quieres llegar a toda la red?'}</span>
-      <p className="text-[17px]">Un broker verificado presenta tu propiedad a {soloRenta ? 'quienes buscan rentar en' : 'los compradores de'} todos los brokers y te acompaña hasta {soloRenta ? 'la firma del contrato' : 'el cierre'}.</p>
+      <span className={`${etiqueta} ${conBroker ? 'text-acento' : 'text-tenue'}`}>{conBroker ? 'Elige tu asesor verificado' : '¿Quieres llegar a toda la red?'}</span>
+      <p className="text-[17px]">Un asesor verificado presenta tu propiedad a {soloRenta ? 'quienes buscan rentar en' : 'los compradores de'} todos los asesores y te acompaña hasta {soloRenta ? 'la firma del contrato' : 'el cierre'}.</p>
       <a href={`/activo/${activo.id}#elegir-broker`} className={conBroker ? `${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg` : 'font-sans text-[15px] text-acento'}>
-        {conBroker ? 'Ver brokers de mi zona' : 'Ver brokers de mi zona →'}
+        {conBroker ? 'Ver asesores de mi zona' : 'Ver asesores de mi zona →'}
       </a>
     </div>
   )
@@ -171,7 +171,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
         {activo.publicada_at ? (
           <>
             <span className={`${etiqueta} text-acento`}>Tu página está publicada</span>
-            <p className="text-[17px]">La ven los compradores que coinciden y todos los brokers de Ciertix. Compártela también por tus canales.</p>
+            <p className="text-[17px]">La ven los compradores que coinciden y todos los asesores de Ciertix. Compártela también por tus canales.</p>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/p/${activo.id}`); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }}
                 className="font-sans text-[15px] px-3 py-2.5 bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg">{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
@@ -198,7 +198,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
               <p className="font-display text-[18px] font-medium">{ficha.titular}</p>
               {ficha.puntos.map((p) => <p key={p} className="text-[15px] text-tinta-2">✓ {p}</p>)}
             </div>
-            <p className="text-[16px] text-tinta-2">Al publicarla, la ven los compradores que coinciden y todos los brokers de Ciertix.</p>
+            <p className="text-[16px] text-tinta-2">Al publicarla, la ven los compradores que coinciden y todos los asesores de Ciertix.</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={publicar} disabled={publicando} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60 rounded-lg`}>{publicando ? 'Publicando…' : 'Publicar'}</button>
               <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Revisar y editar</a>

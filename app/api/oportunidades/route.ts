@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       const { data } = await s.admin.from('perfiles_intencion').select('id, usuario_id, zona, presupuesto, tipo_activo_interes, representado_por').eq('id', perfilId).maybeSingle()
       const perfil = data as { usuario_id: string | null; zona: string | null; presupuesto: string | null; tipo_activo_interes: string | null; representado_por: string | null } | null
       if (!perfil || perfil.usuario_id !== s.uid) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
-      if (perfil.representado_por) return NextResponse.json({ error: 'Ya tienes un broker que te representa' }, { status: 409 })
+      if (perfil.representado_por) return NextResponse.json({ error: 'Ya tienes un asesor que te representa' }, { status: 409 })
       zona = municipioCanonico(perfil.zona)
       aviso = {
         asunto: 'Nueva oportunidad: un comprador te eligió',
@@ -142,14 +142,14 @@ export async function POST(req: NextRequest) {
     const broker = (await perfilesBrokers(s.admin, s.esDemo)).find((b) => b.id === brokerId)
     const elegible = broker && broker.id !== s.uid && broker.municipios.has(zona)
       && ORDEN_NIVEL[broker.nivel.id] >= ORDEN_NIVEL.plata
-    if (!elegible) return NextResponse.json({ error: 'Ese broker no está disponible en tu zona' }, { status: 422 })
+    if (!elegible) return NextResponse.json({ error: 'Ese asesor no está disponible en tu zona' }, { status: 422 })
 
     const { data: nueva, error } = await s.admin.from('oportunidades')
       .insert({ activo_id: activoId ?? null, perfil_id: activoId ? null : perfilId, propietario_id: s.uid, broker_id: brokerId })
       .select('id, broker_id, estado, created_at').single()
     if (error) {
       // 23505: ya hay una oportunidad abierta para este activo o perfil (índices únicos parciales).
-      if (error.code === '23505') return NextResponse.json({ error: 'Ya estás esperando la respuesta de un broker' }, { status: 409 })
+      if (error.code === '23505') return NextResponse.json({ error: 'Ya estás esperando la respuesta de un asesor' }, { status: 409 })
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     after(() => avisarUsuario(s.admin, brokerId, { ...aviso, enlace: { texto: 'Ver la oportunidad', ruta: '/portal-broker' } }, { esDemo: s.esDemo }))

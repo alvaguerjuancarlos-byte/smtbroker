@@ -10,7 +10,7 @@ import Link from 'next/link'
 const TEXTOS: Record<'directo' | 'prospeccion' | 'interesado', string> = {
   // 'interesado': "Me interesa" de la página pública de una propiedad (app/p/[id]).
   interesado:
-    'MindBridge tratará los datos de este formulario para hacerlos llegar al broker o al propietario de esta propiedad, que te contactará sobre ella. No los usaremos para otros fines sin tu consentimiento.',
+    'MindBridge tratará los datos de este formulario para hacerlos llegar al asesor o al propietario de esta propiedad, que te contactará sobre ella. No los usaremos para otros fines sin tu consentimiento.',
   directo:
     'MindBridge tratará los datos de este formulario para gestionar tu solicitud en Ciertix y, salvo que te opongas, para contactarte sobre oportunidades relacionadas con tu perfil.',
   prospeccion:

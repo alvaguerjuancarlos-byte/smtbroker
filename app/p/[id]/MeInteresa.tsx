@@ -33,7 +33,7 @@ export function MeInteresa({ activoId }: { activoId: string }) {
     return (
       <div className="border border-gold-500/40 bg-gold-500/[0.08] p-5">
         <p className="text-[18px] font-medium text-tinta">¡Gracias! Recibimos tu interés.</p>
-        <p className="text-[16px] text-tinta-2 mt-1">El broker que representa esta propiedad te contactará pronto.</p>
+        <p className="text-[16px] text-tinta-2 mt-1">El asesor que representa esta propiedad te contactará pronto.</p>
       </div>
     )
   }
@@ -71,7 +71,7 @@ export function MeInteresa({ activoId }: { activoId: string }) {
       <textarea className={campo} rows={2} placeholder="Mensaje (opcional)" value={f.mensaje} onChange={e => setF({ ...f, mensaje: e.target.value })} />
       <label className="flex gap-2.5 items-start text-[15px] text-tinta-2 cursor-pointer">
         <input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} className="mt-0.5" />
-        <span>Acepto que mis datos se compartan con el broker o propietario de esta propiedad.</span>
+        <span>Acepto que mis datos se compartan con el asesor o propietario de esta propiedad.</span>
       </label>
       <AvisoSimplificado contexto="interesado" />
       {error && <p className="text-[15px] text-error">{error}</p>}

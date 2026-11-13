@@ -60,7 +60,7 @@ try {
 
   const pp = await sesion(P.email)
   await pp.goto(`${BASE}/activo/${act.id}`, { waitUntil: 'domcontentloaded' })
-  check('el propietario ve "Elige un broker verificado"', await esperar(pp, 'Elige un broker verificado de tu zona'))
+  check('el propietario ve "Elige un asesor verificado"', await esperar(pp, 'Elige un asesor verificado de tu zona'))
   check('aparece el broker Pionero con nivel Plata', await esperar(pp, `Broker Pionero ${sufijo}`) && (await pp.evaluate(() => document.body.innerText)).toLowerCase().includes('nivel plata'))
   await pp.screenshot({ path: `${OUT}/1-propietario-elige.png`, fullPage: true })
   await (await pp.waitForSelector('::-p-text(Elegir)')).click()

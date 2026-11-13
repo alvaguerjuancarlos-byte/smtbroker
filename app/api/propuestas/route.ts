@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     })
     const precio = precioPara(a, n.operacion)
     after(() => avisarUsuario(s.admin, n.usuario_id, {
-      asunto: `Un broker verificado te propone una opción en ${a.municipio}: ${etiquetaTipo(n.tipo).toLowerCase()}`,
+      asunto: `Un asesor verificado te propone una opción en ${a.municipio}: ${etiquetaTipo(n.tipo).toLowerCase()}`,
       titulo: 'Tienes una propuesta nueva',
       lineas: [`${a.nombre}${precio ? ` · ${dinero(precio, n.operacion)}` : ''}.`, 'Cumple lo que buscas. Revísala en tu bandeja.'],
       enlace: { texto: 'Ver mi bandeja', ruta: '/inicio' },

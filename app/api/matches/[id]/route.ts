@@ -44,8 +44,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<'/api/matches/[id
       const vendedor = atiendeVendedor(activo)
       const comprador = atiendeComprador(perfil)
       const [cV, cC] = await Promise.all([contactoDe(s.admin, vendedor), contactoDe(s.admin, comprador)])
-      const datos = (c: Contacto) => `${c.nombre}${c.esBroker ? ' (broker)' : ''}${c.correo ? ` · ${c.correo}` : ''}`
-      const sugerencia = 'Vas por tu cuenta: si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un broker en la plataforma.'
+      const datos = (c: Contacto) => `${c.nombre}${c.esBroker ? ' (asesor)' : ''}${c.correo ? ` · ${c.correo}` : ''}`
+      const sugerencia = 'Vas por tu cuenta: si quieres que alguien te acompañe en visitas, negociación y cierre, puedes elegir un asesor en la plataforma.'
       after(async () => {
         await avisarUsuario(s.admin, vendedor.id, {
           asunto: `Conexión validada · ${activo.nombre}`,

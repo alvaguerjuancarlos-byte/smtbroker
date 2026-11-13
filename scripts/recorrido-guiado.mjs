@@ -133,10 +133,10 @@ try {
   await esperar(ric, 'Certificación en revisión')
   await escena(ric, 'ricardo-certificacion-en-revision', 'propietario', 'Uso de suelo y expediente legal')
   await esperar(ric, 'Diego Salinas')
-  await escena(ric, 'ricardo-elige-broker', 'propietario', 'Elige un broker verificado')
+  await escena(ric, 'ricardo-elige-broker', 'propietario', 'Elige un asesor verificado')
   await clic(ric, 'Elegir', 'Diego Salinas')
   await esperar(ric, 'Esperando respuesta de')
-  await escena(ric, 'ricardo-esperando', 'propietario', 'Elige un broker verificado')
+  await escena(ric, 'ricardo-esperando', 'propietario', 'Elige un asesor verificado')
 
   console.log('Diego (broker)')
   const die = await sesion('diego')

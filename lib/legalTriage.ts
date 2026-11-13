@@ -41,14 +41,14 @@ const TRIAGE: Record<EstadoDocumentacionLegal, TriageLegal> = {
   parcial: {
     ruta: 'hybrid',
     rutaLabel: 'Ruta híbrida',
-    rutaDesc: 'El diagnóstico de 90 segundos corre con lo disponible, en paralelo a validación manual del broker sobre lo faltante (folio, gravamen o escritura).',
+    rutaDesc: 'El diagnóstico de 90 segundos corre con lo disponible, en paralelo a validación manual del asesor sobre lo faltante (folio, gravamen o escritura).',
     verdictCls: 'warn',
     verdictBadge: 'PUBLICABLE CON NOTA',
     verdictTitle: 'Diagnóstico legal parcial',
-    verdictDesc: 'Documentación parcial. El diagnóstico corre con lo disponible, en paralelo a validación manual de un broker sobre lo faltante.',
+    verdictDesc: 'Documentación parcial. El diagnóstico corre con lo disponible, en paralelo a validación manual de un asesor sobre lo faltante.',
     score: '6.8',
     usoSuelo: { cls: 'ok', status: 'VERIFICADO', desc: 'Coincide con lo declarado por el propietario. Confirmado contra portal estatal / SEDUVI.', fuente: 'SIG estatal / SEDUVI, INEGI — datos abiertos' },
-    rpp: { cls: 'warn', status: 'EN VALIDACIÓN', desc: 'Folio en proceso de validación manual — un broker fue asignado para confirmar contra el RPP (ver Spike RPP Nuevo León: Go condicionado, requiere verificación caso por caso).', fuente: 'Registro Público de la Propiedad Nuevo León — sin API programática nacional' },
+    rpp: { cls: 'warn', status: 'EN VALIDACIÓN', desc: 'Folio en proceso de validación manual — un asesor fue asignado para confirmar contra el RPP (ver Spike RPP Nuevo León: Go condicionado, requiere verificación caso por caso).', fuente: 'Registro Público de la Propiedad Nuevo León — sin API programática nacional' },
   },
   no_localizada: {
     ruta: 'slow',

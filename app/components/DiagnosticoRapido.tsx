@@ -185,7 +185,7 @@ export function DiagnosticoRapido({
             <p className="text-[18px] font-medium text-tinta">{cert.estado === 'certificada' ? '★ ' : ''}{ETIQUETA_CERTIFICACION[cert.estado]}</p>
             <p className="text-[15px] text-tinta-2 mt-1">
               {cert.estado === 'en_revision' && 'Operación MindBridge está revisando el dictamen legal completo. Te avisamos al terminar.'}
-              {cert.estado === 'certificada' && 'El dictamen legal está abajo y en el reporte descargable. Las propiedades certificadas dan confianza al comprador y suben el nivel del broker.'}
+              {cert.estado === 'certificada' && 'El dictamen legal está abajo y en el reporte descargable. Las propiedades certificadas dan confianza al comprador y suben el nivel del asesor que la representa.'}
             </p>
           </>
         ) : (

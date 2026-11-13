@@ -42,7 +42,7 @@ export async function perfilesBrokers(admin: SupabaseClient, esDemo: boolean): P
     const cierresVerificados = C.filter((c) => c.broker_id === b.id).length
     return {
       id: b.id,
-      nombre: b.nombre || 'Broker',
+      nombre: b.nombre || 'Asesor',
       pionero: !!b.pionero,
       nivel: calcularNivel({
         propiedades: propios.length,

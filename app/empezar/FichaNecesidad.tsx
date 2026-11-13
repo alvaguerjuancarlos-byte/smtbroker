@@ -316,8 +316,8 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
           {/* Lo de portales son listados (ej. "89 bodegas en venta en Apodaca"), no propiedades: no se suman al conteo. */}
           {titulo(enPlataforma > 0 ? `Encontramos ${enPlataforma} ${enPlataforma === 1 ? 'propiedad' : 'propiedades'} para ti` : total > 0 ? 'Ya buscamos en el mercado' : 'Empezamos a buscar por ti',
             enPlataforma > 0 ? 'Un primer vistazo, lo mejor de cada zona. Al terminar las ves todas en tu bandeja.'
-              : total > 0 ? 'Todavía no hay propiedades publicadas en la plataforma que cumplan. Te dejamos los listados de portales y, con tu necesidad en el panel, los brokers de la zona te traen opciones.'
-                : 'Todavía no hay coincidencias publicadas. Con tu necesidad en el panel, los brokers de la zona te traen opciones.')}
+              : total > 0 ? 'Todavía no hay propiedades publicadas en la plataforma que cumplan. Te dejamos los listados de portales y, con tu necesidad en el panel, los asesores de la zona te traen opciones.'
+                : 'Todavía no hay coincidencias publicadas. Con tu necesidad en el panel, los asesores de la zona te traen opciones.')}
           {/* V9 (§23.2 y §23.4): una columna por zona, con lo que rinde su dinero y sus 3 mejores. */}
           <div className="flex flex-col gap-3" data-resultados-zonas>
             {resultados.zonas.map((z, k) => {
@@ -358,7 +358,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
             <span className="font-sans text-[13px] font-medium text-tenue">¿Cómo quieres buscar?</span>
             {([
               [directa, setDirecta, 'Búsqueda directa', 'Seguimos buscando en la plataforma y en portales, y te avisamos de lo nuevo.'],
-              [brokers, setBrokers, 'Publicar a brokers verificados', 'Tu necesidad aparece, sin tu nombre, en el panel de los brokers de la zona. Te proponen propiedades de su cartera, incluso las que no están en portales.'],
+              [brokers, setBrokers, 'Recibir propuestas de asesores', 'Tu necesidad aparece, sin tu nombre, en el panel de los asesores de la zona. Te proponen propiedades de su cartera, incluso las que no están en portales.'],
             ] as const).map(([on, set, t, d]) => (
               <button key={t} type="button" onClick={() => set(!on)} className="text-left bg-tarjeta border p-4 flex gap-3 rounded-xl" style={{ borderColor: on ? verde : 'var(--c-linea)' }}>
                 <span className="w-5 h-5 shrink-0 border flex items-center justify-center text-[15px] text-navy-950 mt-0.5" style={{ borderColor: verde, background: on ? verde : 'transparent' }}>{on ? '✓' : ''}</span>
@@ -378,7 +378,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
               <Field label="Correo" required tema="oscuro"><input type="email" value={cuenta.email} onChange={(e) => setCuenta((x) => ({ ...x, email: e.target.value }))} required autoComplete="email" className={cls} /></Field>
               <Field label="Crea una contraseña" required tema="oscuro"><input type="password" value={cuenta.password} onChange={(e) => setCuenta((x) => ({ ...x, password: e.target.value }))} required minLength={8} autoComplete="new-password" placeholder="Mínimo 8 caracteres" className={cls} /></Field>
               <input value={trampa} onChange={(e) => setTrampa(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" name="sitio_web" />
-              <p className="text-[15px] text-tenue">Los brokers no ven tu nombre ni tu WhatsApp hasta que tú pidas ver una propiedad. Usamos tu WhatsApp solo para avisarte de opciones nuevas. <a href="/aviso-privacidad" target="_blank" className="text-acento underline underline-offset-2">Aviso de privacidad</a></p>
+              <p className="text-[15px] text-tenue">Los asesores no ven tu nombre ni tu WhatsApp hasta que tú pidas ver una propiedad. Usamos tu WhatsApp solo para avisarte de opciones nuevas. <a href="/aviso-privacidad" target="_blank" className="text-acento underline underline-offset-2">Aviso de privacidad</a></p>
             </div>
           )}
           {error && <p className="text-[16px] text-error">{error}{yaExiste && <> · <a href="/login" className="text-acento underline underline-offset-2">Iniciar sesión</a></>}</p>}
