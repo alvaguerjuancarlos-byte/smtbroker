@@ -12,7 +12,7 @@
 // opcional, NEXT_PUBLIC_SITE_URL para los enlaces.
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const REMITENTE = 'SMTBROKER <notificaciones@mail.mindbridge.com.mx>'
+const REMITENTE = 'Ciertix <notificaciones@mail.mindbridge.com.mx>'
 // RESEND_API_URL solo para pruebas: scripts/verificar-avisos.mjs apunta a un receptor local.
 const URL_RESEND = process.env.RESEND_API_URL || 'https://api.resend.com/emails'
 const SITIO = (process.env.NEXT_PUBLIC_SITE_URL || 'https://smtbroker.vercel.app').replace(/\/$/, '')
@@ -32,11 +32,11 @@ function html(a: Aviso): string {
     ? `<p style="margin:24px 0"><a href="${SITIO}${a.enlace.ruta}" style="background:#c9a227;color:#070f1c;padding:12px 20px;text-decoration:none;font-family:monospace">${escapar(a.enlace.texto)}</a></p>`
     : ''
   return `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1a2233">
-<p style="font-family:monospace;font-size:12px;color:#8a6d14;letter-spacing:1px">SMTBROKER</p>
+<p style="font-family:monospace;font-size:12px;color:#8a6d14;letter-spacing:1px">Ciertix</p>
 <h2 style="font-weight:500">${escapar(a.titulo)}</h2>
 ${a.lineas.map((l) => `<p style="margin:6px 0">${escapar(l)}</p>`).join('\n')}
 ${boton}
-<p style="font-size:11px;color:#888;margin-top:32px">Aviso automático de SMTBROKER by MindBridge.</p>
+<p style="font-size:11px;color:#888;margin-top:32px">Aviso automático de Ciertix by MindBridge.</p>
 </div>`
 }
 

@@ -116,7 +116,7 @@ PRECIO DE MERCADO -- YA CALCULADO con los comparables (mediana y cuartiles del p
 - Precio de salida recomendado: ${mxn(precio.precioSalidaRecomendadoMXN)}
 - El precio del propietario queda en el percentil ${precio.percentilPosicionamiento ?? 'sin dato'} de los comparables.` : 'LA PROPIEDAD ESTÁ SOLO EN RENTA: no se valúa para venta.'}${bloqueRenta}`
 
-  const prompt = `Eres el Agente de Mercado de SMTBROKER -- analizas en qué rango se debería vender
+  const prompt = `Eres el Agente de Mercado de Ciertix -- analizas en qué rango se debería vender
 una propiedad YA CONSTRUIDA (reventa), comparada contra reventas similares reales en la zona. No
 analizas absorción de un desarrollo nuevo en preventa -- eso es un producto distinto.
 
@@ -202,7 +202,7 @@ Retorna ÚNICAMENTE el JSON.`
     }
     return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
-    console.error('Agente Mercado (SMTBROKER) error:', error)
+    console.error('Agente Mercado (Ciertix) error:', error)
     return NextResponse.json({ error: 'Error en Agente Mercado' }, { status: 500 })
   }
 }

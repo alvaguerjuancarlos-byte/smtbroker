@@ -139,7 +139,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
 
         {paso === 'datos' && quiere && (
           <form onSubmit={registrar} className="flex flex-col gap-5">
-            <BandaPaso barra={barra} titulo={quiere === 'vender' ? 'Cuéntanos de tu propiedad' : '¿Qué estás buscando?'} subtitulo={quiere === 'vender' ? 'Con esto, Smart Bróker empieza a analizar tu propiedad.' : 'Dínoslo una sola vez y te avisamos de lo que coincida.'} atras={atrasBtn}
+            <BandaPaso barra={barra} titulo={quiere === 'vender' ? 'Cuéntanos de tu propiedad' : '¿Qué estás buscando?'} subtitulo={quiere === 'vender' ? 'Con esto, Ciertix empieza a analizar tu propiedad.' : 'Dínoslo una sola vez y te avisamos de lo que coincida.'} atras={atrasBtn}
               avance={<Avance total={totalPasos} hechos={numPaso} color={quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'} />} etiqueta={etiquetaPaso} />
             <div className="flex flex-col gap-3.5">
               <Field label="Nombre" required tema="oscuro"><input value={f.nombre} onChange={set('nombre')} required autoComplete="name" className={cls} /></Field>

@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { cargarFichaPublica } from '@/lib/fichaPublica'
 import { MeInteresa } from './MeInteresa'
 import { RegistrarVisita } from './RegistrarVisita'
+import { Marca } from '@/app/components/Marca'
 
 // Página pública de una propiedad (Documento Maestro V6.3, §14.1): la que el broker comparte por
 // WhatsApp, EasyBroker o sus redes. Sin sesión. Muestra solo lo publicable (lib/fichaPublica.ts):
@@ -18,9 +19,9 @@ const mxn = (n: number | null | undefined) =>
 export async function generateMetadata(props: PageProps<'/p/[id]'>): Promise<Metadata> {
   const { id } = await props.params
   const f = await cargarFichaPublica(getSupabaseAdmin(), id)
-  if (!f) return { title: 'Propiedad no disponible · SMTBROKER' }
+  if (!f) return { title: 'Propiedad no disponible · Ciertix' }
   return {
-    title: `${f.ficha?.titular ?? f.nombre} · SMTBROKER`,
+    title: `${f.ficha?.titular ?? f.nombre} · Ciertix`,
     description: `${f.tipo} en ${[f.colonia, f.municipio].filter(Boolean).join(', ')}${f.precio ? ` · ${mxn(f.precio)}` : ''}`,
     openGraph: f.fotos[0] ? { images: [f.fotos[0]] } : undefined,
   }
@@ -48,7 +49,7 @@ export default async function PaginaPublica(props: PageProps<'/p/[id]'>) {
       )}
       <header className="border-b border-linea px-4 md:px-6 py-4">
         <div className="max-w-[920px] mx-auto flex items-center justify-between">
-          <span className="font-display text-[20px] text-tinta">SMT<span className="text-acento">BROKER</span></span>
+          <Marca texto={20} />
           {f.certificada && (
             <span className="font-sans text-[14px] text-acento border border-gold-500/50 px-3 py-1.5 rounded-lg">★ Inventario certificado</span>
           )}
@@ -117,7 +118,7 @@ export default async function PaginaPublica(props: PageProps<'/p/[id]'>) {
       </main>
 
       <footer className="border-t border-linea px-4 py-6 text-center text-[14px] text-tenue">
-        Diagnóstico con inteligencia artificial y datos públicos (comparables de portales, Índice SHF). SMTBROKER by MindBridge.
+        Diagnóstico con inteligencia artificial y datos públicos (comparables de portales, Índice SHF). Ciertix by MindBridge.
       </footer>
     </div>
   )

@@ -14,8 +14,8 @@ const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], 
 const display = Space_Grotesk({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-display' })
 
 export const metadata: Metadata = {
-  title: 'SMTBROKER — Plataforma IA de Ventas Inmobiliarias',
-  description: 'Valuación, marketing y cierre de activos inmobiliarios con inteligencia artificial',
+  title: 'Ciertix — Compra, vende o renta con certeza',
+  description: 'Ciertix by MindBridge: precio real, papeles revisados y las mejores opciones de tu zona. Compara y conecta con certeza.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

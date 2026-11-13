@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 Folio real: ${activo.folio_real || 'no capturado'}. Clave catastral: ${activo.clave_catastral || 'no capturada'}.
 Escritura pública: ${activo.escritura_publica || 'no capturada'}. Gravámenes conocidos declarados: ${activo.gravamenes_conocidos || 'ninguno declarado'}.`
 
-  const prompt = `Eres el Agente Legal de SMTBROKER -- evalúas si un activo YA EXISTENTE (no un
+  const prompt = `Eres el Agente Legal de Ciertix -- evalúas si un activo YA EXISTENTE (no un
 desarrollo nuevo) se puede vender limpio: uso de suelo, título/RPP, gravámenes, y restricciones
 ambientales/de infraestructura. No evalúas factibilidad de construcción nueva (COS/CUS/régimen de
 condominio) -- eso no aplica a una reventa.
@@ -168,7 +168,7 @@ de cerrar; (b) si falta folio o escritura, que no se puede avanzar sin ella. "VE
 status está PROHIBIDO para "rpp" -- usa "RESPALDADO POR DOCUMENTACIÓN", "EN VALIDACIÓN", o "NO
 LOCALIZADO" según corresponda.
 
-OUTPUT -- JSON EXACTO (sin texto adicional), mismo contrato que ya usa la UI de SMTBROKER:
+OUTPUT -- JSON EXACTO (sin texto adicional), mismo contrato que ya usa la UI de Ciertix:
 {
   "ruta": "fast" | "hybrid" | "slow",
   "rutaLabel": "Ruta rápida" | "Ruta híbrida" | "Ruta lenta",
@@ -197,7 +197,7 @@ Retorna ÚNICAMENTE el JSON.`
     const g = await guardar(supabaseAdmin, { activoId, agente: 'legal', resultado: parsed, modelo: MODELO_DICTAMEN, creadoPor: sesion.uid })
     return NextResponse.json(conGuardado(parsed, g, true))
   } catch (error: unknown) {
-    console.error('Agente Legal (SMTBROKER) error:', error)
+    console.error('Agente Legal (Ciertix) error:', error)
     return NextResponse.json({ error: 'Error en Agente Legal' }, { status: 500 })
   }
 }

@@ -12,9 +12,9 @@ const TEXTOS: Record<'directo' | 'prospeccion' | 'interesado', string> = {
   interesado:
     'MindBridge tratará los datos de este formulario para hacerlos llegar al broker o al propietario de esta propiedad, que te contactará sobre ella. No los usaremos para otros fines sin tu consentimiento.',
   directo:
-    'MindBridge tratará los datos de este formulario para gestionar tu solicitud en SMTBROKER y, salvo que te opongas, para contactarte sobre oportunidades relacionadas con tu perfil.',
+    'MindBridge tratará los datos de este formulario para gestionar tu solicitud en Ciertix y, salvo que te opongas, para contactarte sobre oportunidades relacionadas con tu perfil.',
   prospeccion:
-    'Este contacto usa datos que pueden haberse obtenido de un directorio público de un tercero, no proporcionados directamente por ti. MindBridge los trata únicamente para evaluarte como potencial broker aliado de SMTBROKER, salvo que te opongas.',
+    'Este contacto usa datos que pueden haberse obtenido de un directorio público de un tercero, no proporcionados directamente por ti. MindBridge los trata únicamente para evaluarte como potencial broker aliado de Ciertix, salvo que te opongas.',
 }
 
 export function AvisoSimplificado({

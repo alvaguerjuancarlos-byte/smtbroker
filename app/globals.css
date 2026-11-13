@@ -125,3 +125,9 @@ input[type="range"] {
 body {
   overflow-x: clip;
 }
+
+/* Marca Ciertix (app/components/Marca.tsx): símbolo azul y verde en fondo claro, blanco y verde
+   dentro de .tema-oscuro. */
+.marca-oscuro { display: none; }
+.tema-oscuro .marca-claro { display: none; }
+.tema-oscuro .marca-oscuro { display: block; }

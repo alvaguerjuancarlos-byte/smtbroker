@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un propietario te eligió para representar su propiedad',
         lineas: [
           `${activo.tipo} en ${activo.municipio}: ${activo.nombre}.`,
-          'Te eligió por tu nivel de Broker Verificado SMT. Acéptala o recházala desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado Ciertix. Acéptala o recházala desde tu portal.',
         ],
       }
     } else {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un comprador te eligió para representarlo',
         lineas: [
           `Busca ${perfil.tipo_activo_interes || 'propiedad'} en ${perfil.zona || 'tu zona'}${perfil.presupuesto ? `, presupuesto ${perfil.presupuesto}` : ''}.`,
-          'Te eligió por tu nivel de Broker Verificado SMT. Acéptalo o recházalo desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado Ciertix. Acéptalo o recházalo desde tu portal.',
         ],
       }
     }

@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Marca } from '@/app/components/Marca'
 
 type Estado = 'revisando' | 'porConfirmar' | 'confirmando' | 'listo' | 'invalido'
 
@@ -97,12 +98,8 @@ export default function EstablecerPasswordPage() {
       <div className="relative w-full max-w-[400px]">
 
         <div className="flex flex-col items-center mb-8">
-          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="mb-3">
-            <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
-            <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
-          </svg>
-          <h1 className="font-display font-semibold text-[21px] tracking-tight">SMT<span className="text-acento">BROKER</span></h1>
-          <p className="font-sans text-[13px] text-tenue mt-0.5">Plataforma IA de ventas inmobiliarias</p>
+          <h1><Marca texto={21} /></h1>
+          <p className="font-sans text-[13px] text-tenue mt-1.5">Compra, vende o renta con certeza</p>
         </div>
 
         <div className="relative before:content-[''] before:absolute before:inset-0 before:border before:border-gold-500/30 before:translate-x-2.5 before:translate-y-2.5 before:-z-10">

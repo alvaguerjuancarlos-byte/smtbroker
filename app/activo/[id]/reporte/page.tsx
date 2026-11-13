@@ -75,7 +75,7 @@ export default function ReportePage() {
         </div>
 
         <header className="border-b-2 border-gray-900 pb-4 mb-6">
-          <p className="font-sans text-[14px] text-gray-500">SMTBROKER · Reporte de Transparencia</p>
+          <p className="font-sans text-[14px] text-gray-500">Ciertix · Reporte de Transparencia</p>
           <h1 className="font-display text-[32px] font-medium mt-1">{activo.nombre}</h1>
           <p className="text-[17px] text-gray-600">{[activo.direccion, activo.colonia, activo.municipio, activo.estado].filter(Boolean).join(', ')}</p>
           <p className={`mt-3 inline-block font-sans text-[15px] px-3 py-1 border ${certificada ? 'border-amber-600 text-amber-700' : 'border-gray-400 text-gray-600'} rounded-lg`}>
@@ -144,7 +144,7 @@ export default function ReportePage() {
         <footer className="border-t border-gray-300 pt-3 text-[14px] text-gray-500 leading-relaxed">
           No existe una API pública del Registro Público de la Propiedad de Nuevo León: el dictamen de titularidad se basa en la
           documentación aportada y no sustituye la revisión notarial. Datos de mercado con comparables públicos de portales, Índice SHF y
-          SNIIV. Generado por SMTBROKER (MindBridge) el {new Date().toLocaleDateString('es-MX')}.
+          SNIIV. Generado por Ciertix (MindBridge) el {new Date().toLocaleDateString('es-MX')}.
         </footer>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Field, inputCls } from '../components/FormField'
 import { AvisoSimplificado } from '../components/AvisoSimplificado'
+import { Marca } from '@/app/components/Marca'
 
 type Rol = 'propietario' | 'inversionista' | 'broker' | null
 
@@ -46,7 +47,7 @@ const ROLES = [
   {
     id:     'broker' as Rol,
     titulo: 'Soy broker',
-    sub:    'Quiero ser aliado SMTBROKER',
+    sub:    'Quiero ser aliado Ciertix',
     desc:   'Certifica tu portafolio con diagnóstico IA y registra lo que buscan tus clientes. Tú eres la pieza clave del ecosistema.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -157,11 +158,7 @@ export default function BienvenidaPage() {
       <div className="relative">
         {/* Header público */}
         <header className="px-4 md:px-8 py-5 flex items-center gap-3">
-          <svg width="26" height="26" viewBox="0 0 30 30" fill="none" className="shrink-0">
-            <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
-            <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
-          </svg>
-          <span className="font-display font-semibold text-[18px] tracking-tight">SMT<span className="text-acento">BROKER</span></span>
+          <Marca texto={18} />
           <div className="ml-auto">
             <button onClick={() => router.push('/login')}
               className="font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3.5 py-2 transition-colors rounded-lg">
@@ -177,7 +174,7 @@ export default function BienvenidaPage() {
             <div className="max-w-[620px]">
               <span className="font-sans text-[14px] text-acento">Plataforma IA de ventas inmobiliarias</span>
               <h1 className="font-display font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
-                Únete al ecosistema<br /><span className="italic font-normal text-acento">SMTBROKER.</span>
+                Únete al ecosistema<br /><span className="italic font-normal text-acento">Ciertix.</span>
               </h1>
               <p className="text-[18px] text-tinta-2 mt-5 max-w-[52ch] leading-relaxed">
                 Conectamos propietarios, brokers y compradores con tecnología de agentes IA para cerrar operaciones más rápido y con mayor rentabilidad.

@@ -40,13 +40,13 @@ export default function AvisoPrivacidadPage() {
         <main className="flex-1 px-4 md:px-6 py-10 md:py-16">
           <div className="w-full max-w-[720px] mx-auto">
 
-            <span className="font-sans text-[14px] font-medium text-acento">SMTBROKER · Legal</span>
+            <span className="font-sans text-[14px] font-medium text-acento">Ciertix · Legal</span>
             <h1 className="font-display text-[32px] md:text-[42px] font-medium text-tinta mt-2 mb-1">Aviso de Privacidad Integral</h1>
             <p className="text-[15px] text-tenue mb-10">Última actualización: {ULTIMA_ACTUALIZACION}</p>
 
             <p className="text-[16px] leading-[1.75] text-tinta-2 mb-10">
               MindBridge ("el Responsable") es responsable del tratamiento de los datos personales que recaba a
-              través de la plataforma SMTBROKER (<span className="font-sans text-tinta">smtbroker.vercel.app</span>),
+              través de la plataforma Ciertix (<span className="font-sans text-tinta">smtbroker.vercel.app</span>),
               con domicilio en {DOMICILIO_RESPONSABLE}, en cumplimiento de la Ley Federal de Protección de Datos
               Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento. Este aviso te informa qué datos
               recabamos, para qué los usamos, y cómo puedes ejercer tus derechos sobre ellos.

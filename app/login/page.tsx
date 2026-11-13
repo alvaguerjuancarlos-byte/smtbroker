@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Marca } from '@/app/components/Marca'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -80,12 +81,8 @@ export default function LoginPage() {
           </svg>
 
           <div className="flex items-center gap-3 mb-14">
-            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="shrink-0">
-              <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
-              <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
-            </svg>
             <div>
-              <span className="font-display font-semibold text-[21px] tracking-tight">SMT<span className="text-acento">BROKER</span></span>
+              <Marca texto={21} />
               <span className="block font-sans text-[13px] text-tenue -mt-0.5">BY MINDBRIDGE</span>
             </div>
           </div>
@@ -97,7 +94,7 @@ export default function LoginPage() {
             Bienvenido<br /><span className="italic font-normal text-acento">de vuelta.</span>
           </h1>
           <p className="text-[18px] text-tinta-2 max-w-[42ch] mt-5 leading-relaxed">
-            Diagnóstico legal y de mercado, certificación de brokers, y el resto del ecosistema SMTBROKER — todo en un mismo lugar.
+            Diagnóstico legal y de mercado, certificación de brokers, y el resto del ecosistema Ciertix — todo en un mismo lugar.
           </p>
 
           <div className="hidden sm:flex items-center gap-3 mt-14 pt-6 border-t border-linea">

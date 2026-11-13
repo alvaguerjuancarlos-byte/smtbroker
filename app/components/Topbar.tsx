@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { HOME_POR_ROL, type Rol } from '@/lib/roles'
+import { Marca } from './Marca'
 
 // Navegación visible en el Topbar por rol — mismo componente y misma forma para los cuatro,
 // para que la barra se sienta consistente en toda la plataforma (antes cada rol tenía a lo más
@@ -50,13 +51,7 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
     <header className="tema-oscuro bg-superficie border-b border-linea sticky top-0 z-20">
       <div className="px-4 md:px-6 py-3 flex items-center gap-3 md:gap-5">
         <Link href={home} className="flex items-center gap-2.5 shrink-0 group">
-          <svg width="26" height="26" viewBox="0 0 30 30" fill="none" className="shrink-0">
-            <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4"/>
-            <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55"/>
-          </svg>
-          <span className="font-display font-semibold text-[18px] text-tinta tracking-tight group-hover:text-acento transition-colors">
-            SMT<span className="text-acento group-hover:text-tinta transition-colors">BROKER</span>
-          </span>
+          <Marca texto={18} />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

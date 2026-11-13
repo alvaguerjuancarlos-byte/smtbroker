@@ -240,14 +240,14 @@ export default function AnalisisPage() {
                     <span className={etiqueta}>Legal</span>
                     {r.legal.certificada ? (
                       <>
-                        <span className="text-[17px]" style={{ color: verde }}>✓ {enRenta(r) ? 'Certificada para renta por SMTBROKER' : 'Certificada por SMTBROKER'}</span>
+                        <span className="text-[17px]" style={{ color: verde }}>✓ {enRenta(r) ? 'Certificada para renta por Ciertix' : 'Certificada por Ciertix'}</span>
                         {'resumen' in r.legal && r.legal.resumen && <p className="text-[16px] text-tinta-2">{r.legal.resumen}</p>}
                       </>
                     ) : (
                       <>
                         <span className="text-[17px] text-tinta-2">{r.origen ? 'Anuncio de portal: no revisado legalmente' : 'No revisada legalmente'}</span>
                         {r.certificacionPedidaAt
-                          ? <p className="text-[15px] text-tenue">{r.origen ? 'Pediste que el anunciante la certifique. SMTBROKER lo invita una sola vez; si acepta, te avisamos y podrás verla con las reglas de siempre.' : 'Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.'}</p>
+                          ? <p className="text-[15px] text-tenue">{r.origen ? 'Pediste que el anunciante la certifique. Ciertix lo invita una sola vez; si acepta, te avisamos y podrás verla con las reglas de siempre.' : 'Pediste la certificación. Le avisamos a quien la ofrece; la plataforma se encarga.'}</p>
                           : <button onClick={() => accion(f, 'certificar')} disabled={!!ocupado} className="w-fit px-3 py-2 text-[15px] font-sans border disabled:opacity-60 rounded-lg" style={{ borderColor: verde, color: verde }}>
                               {ocupado === f.id + 'certificar' ? 'Enviando…' : r.origen ? 'Pedir que el anunciante la certifique' : 'Pedir que se certifique'}
                             </button>}

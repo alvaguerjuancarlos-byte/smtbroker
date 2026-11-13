@@ -115,7 +115,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
   return (
     <>
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
-        subtitulo={<>Smart Bróker ya está analizando tu propiedad: <span className="text-tinta">{activo.nombre}</span>{lugar && !activo.nombre.includes(lugar) ? `, ${lugar}` : ''}. Esto es lo que preparamos para ti:</>}>
+        subtitulo={<>Ciertix ya está analizando tu propiedad: <span className="text-tinta">{activo.nombre}</span>{lugar && !activo.nombre.includes(lugar) ? `, ${lugar}` : ''}. Esto es lo que preparamos para ti:</>}>
         {activos.length > 1 && (
           <label className="flex items-center gap-2 text-[15px] text-tenue mt-1">
             Ver otra propiedad:
@@ -171,7 +171,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
         {activo.publicada_at ? (
           <>
             <span className={`${etiqueta} text-acento`}>Tu página está publicada</span>
-            <p className="text-[17px]">La ven los compradores que coinciden y todos los brokers de Smart Bróker. Compártela también por tus canales.</p>
+            <p className="text-[17px]">La ven los compradores que coinciden y todos los brokers de Ciertix. Compártela también por tus canales.</p>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/p/${activo.id}`); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }}
                 className="font-sans text-[15px] px-3 py-2.5 bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg">{copiado ? '¡Copiado!' : 'Copiar enlace'}</button>
@@ -198,7 +198,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
               <p className="font-display text-[18px] font-medium">{ficha.titular}</p>
               {ficha.puntos.map((p) => <p key={p} className="text-[15px] text-tinta-2">✓ {p}</p>)}
             </div>
-            <p className="text-[16px] text-tinta-2">Al publicarla, la ven los compradores que coinciden y todos los brokers de Smart Bróker.</p>
+            <p className="text-[16px] text-tinta-2">Al publicarla, la ven los compradores que coinciden y todos los brokers de Ciertix.</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={publicar} disabled={publicando} className={`${boton} bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60 rounded-lg`}>{publicando ? 'Publicando…' : 'Publicar'}</button>
               <a href={`/activo/${activo.id}/marketing`} className={`${boton} border border-linea hover:border-linea-fuerte`}>Revisar y editar</a>

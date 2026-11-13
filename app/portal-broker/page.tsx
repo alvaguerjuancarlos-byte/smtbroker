@@ -458,7 +458,7 @@ export default function PortalBrokerPage() {
                   </select>
                 </Field>
               </div>
-              <p className="text-[15px] text-tenue">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Verificado SMT.</p>
+              <p className="text-[15px] text-tenue">Operación MindBridge verifica cada cierre. Los cierres verificados suben tu nivel de Broker Verificado Ciertix.</p>
               {errorCierre && <p className="text-[15px] text-error">{errorCierre}</p>}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setCierreDe(null)}
@@ -539,7 +539,7 @@ export default function PortalBrokerPage() {
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={consentimiento} onChange={e => setConsentimiento(e.target.checked)} className="mt-0.5 accent-[#c9a227]" />
                       <span className="text-[16px] text-tinta-2 leading-relaxed">
-                        Mi cliente me autorizó a registrar lo que busca en SMTBROKER.
+                        Mi cliente me autorizó a registrar lo que busca en Ciertix.
                       </span>
                     </label>
                   )}
@@ -758,7 +758,7 @@ export default function PortalBrokerPage() {
           {pestana === 'desempeno' && (
             <div className="flex flex-col gap-4">
               <div className="bg-tarjeta border border-gold-500/30 p-5 rounded-xl">
-                <p className="font-sans text-[13px] text-tenue">Broker Verificado SMT</p>
+                <p className="font-sans text-[13px] text-tenue">Broker Verificado Ciertix</p>
                 <p className="font-display text-[28px] font-medium text-acento mt-1">Nivel {nivel.actual.nombre}</p>
                 {pionero && (
                   <p className="text-[15px] text-acento mt-1">★ Broker Pionero · formas parte del grupo piloto: tienes al menos nivel Plata y prioridad cuando la plataforma abra a más brokers.</p>

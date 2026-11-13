@@ -336,7 +336,7 @@ export default function ConexionPage() {
                     <button disabled={ocupado || !texto.trim()} className="font-sans text-[15px] px-4 text-white disabled:opacity-50 shrink-0" style={{ background: verde }}>Enviar</button>
                   </form>
                 )}
-                <p className="text-[14px] text-tenue">Los teléfonos se comparten al confirmar la visita. SMTBROKER conecta y da seguimiento; no negocia ni cierra por nadie.</p>
+                <p className="text-[14px] text-tenue">Los teléfonos se comparten al confirmar la visita. Ciertix conecta y da seguimiento; no negocia ni cierra por nadie.</p>
               </div>
             )}
           </div>

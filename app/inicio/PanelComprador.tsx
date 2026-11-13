@@ -42,7 +42,7 @@ const etiqueta = 'font-sans text-[14px]'
 // §19.4: la etiqueta dice de dónde viene cada opción.
 const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
   broker: { texto: 'Propuesta por broker verificado', color: 'var(--c-oro)' },
-  certificada: { texto: 'Certificada por SMTBROKER', color: verde },
+  certificada: { texto: 'Certificada por Ciertix', color: verde },
   particular: { texto: 'Particular', color: 'var(--c-gris)' },
   portal: { texto: 'De portal · no certificada', color: 'var(--c-gris)' },
 }
@@ -218,7 +218,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   return (
     <>
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
-        subtitulo="Smart Bróker ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los brokers." />
+        subtitulo="Ciertix ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los brokers." />
 
       {conBroker && tarjetaBroker}
 

@@ -37,7 +37,7 @@ export function estadoParaComprador(o: { interesado: boolean; invitacion: Estado
 export function mensajeInvitacion(a: { fuente: string; titulo: string | null }, interesados: number, sitio: string): string {
   const quien = interesados > 1 ? `${interesados} compradores están interesados` : 'Un comprador está interesado'
   return `Hola. ${quien} en tu propiedad${a.titulo ? ` "${a.titulo}"` : ''} anunciada en ${a.fuente}. ` +
-    `En SMTBROKER certificamos la propiedad -- precio de mercado y revisión de documentos -- para que los compradores ` +
+    `En Ciertix certificamos la propiedad -- precio de mercado y revisión de documentos -- para que los compradores ` +
     `la vean con certeza y te contacten. Si te interesa, regístrala aquí: ${sitio}/bienvenida. ` +
     `Si prefieres que no te volvamos a escribir, responde "no" y no te contactaremos de nuevo por esta propiedad.`
 }

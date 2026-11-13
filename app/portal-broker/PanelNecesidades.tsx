@@ -148,8 +148,8 @@ export default function PanelNecesidades() {
                   <label className="flex items-start gap-2.5 text-[15px] text-tinta-2 cursor-pointer">
                     <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} className="mt-0.5" />
                     <span>{n.operacion === 'renta'
-                      ? 'Acepto los términos: mi comisión por esta renta es de un mes de renta y, si cierro el contrato con este cliente, SMTBROKER cobra un porcentaje de esa comisión, según los términos vigentes de la plataforma.'
-                      : 'Acepto los términos: si cierro la operación con este comprador, SMTBROKER cobra un porcentaje de mi comisión, según los términos vigentes de la plataforma.'}</span>
+                      ? 'Acepto los términos: mi comisión por esta renta es de un mes de renta y, si cierro el contrato con este cliente, Ciertix cobra un porcentaje de esa comisión, según los términos vigentes de la plataforma.'
+                      : 'Acepto los términos: si cierro la operación con este comprador, Ciertix cobra un porcentaje de mi comisión, según los términos vigentes de la plataforma.'}</span>
                   </label>
                   <button onClick={() => proponer(n.id)} disabled={!elegida || !acepto || enviando}
                     className="w-fit bg-gold-500 text-navy-950 font-sans text-[15px] px-4 py-2.5 hover:bg-gold-400 disabled:opacity-50 rounded-lg">

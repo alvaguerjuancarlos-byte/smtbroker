@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
     const op = (activo.operacion ?? 'venta') as 'venta' | 'renta' | 'ambas'
     const r = (m.renta ?? null) as { rentaRealistaMXN?: number | null; rangoMinMXN?: number | null; rangoMaxMXN?: number | null; comparablesAnalizados?: number } | null
-    const prompt = `Eres el Agente de Ficha de SMTBROKER. Escribes la ficha con la que un broker
+    const prompt = `Eres el Agente de Ficha de Ciertix. Escribes la ficha con la que un broker
 presentará esta propiedad ${op === 'renta' ? 'EN RENTA a quienes buscan rentar' : op === 'ambas' ? 'EN VENTA Y EN RENTA a compradores e inquilinos' : 'a compradores'} (página pública y WhatsApp), en español de México, tono
 profesional y cálido, sin exageraciones de folleto.${op === 'renta' ? ' Está SOLO en renta: no hables de venta, plusvalía ni inversión; habla de la renta mensual y sus condiciones.' : ''}
 
@@ -87,7 +87,7 @@ DIAGNÓSTICO DE MERCADO (guardado):
 - Plusvalía 3 años (SHF): ${m.plusvalia3AniosTexto ?? 'sin dato'}
 - Lectura del analista: ${m.interpretacion ?? ''}${r ? `
 - Renta realista de mercado: ${r.rentaRealistaMXN ?? 'sin dato'} MXN al mes (rango ${r.rangoMinMXN ?? '—'} a ${r.rangoMaxMXN ?? '—'}, ${r.comparablesAnalizados ?? 0} comparables de renta)` : ''}
-${legal ? `\nCERTIFICACIÓN LEGAL: la propiedad está CERTIFICADA por SMTBROKER (dictamen: "${(legal.resultado as { verdictTitle?: string }).verdictTitle ?? ''}"). Puedes mencionarlo como respaldo de confianza.` : '\nLa propiedad NO tiene certificación legal: no afirmes nada sobre su situación legal.'}
+${legal ? `\nCERTIFICACIÓN LEGAL: la propiedad está CERTIFICADA por Ciertix (dictamen: "${(legal.resultado as { verdictTitle?: string }).verdictTitle ?? ''}"). Puedes mencionarlo como respaldo de confianza.` : '\nLa propiedad NO tiene certificación legal: no afirmes nada sobre su situación legal.'}
 
 OUTPUT -- JSON EXACTO, sin texto adicional:
 {
@@ -108,7 +108,7 @@ OUTPUT -- JSON EXACTO, sin texto adicional:
     const g = await guardar(s.admin, { activoId, agente: 'ficha', resultado: ficha, modelo: MODELO_DICTAMEN, creadoPor: s.uid })
     return NextResponse.json(conGuardado(ficha, g, true))
   } catch (e) {
-    console.error('Agente Ficha (SMTBROKER) error:', e)
+    console.error('Agente Ficha (Ciertix) error:', e)
     return NextResponse.json({ error: mensajeError(e) }, { status: 500 })
   }
 }

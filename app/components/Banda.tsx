@@ -2,6 +2,8 @@
 // debajo del Topbar y lleva el título, el saludo o las pestañas. Dentro de .tema-oscuro los tokens
 // semánticos (text-tinta, text-tenue, border-linea…) toman sus valores oscuros; el resto de la
 // pantalla queda en claro.
+import { Marca } from './Marca'
+
 export default function Banda({ children, ancho = 'max-w-[1180px]', sinPie = false }: {
   children: React.ReactNode
   ancho?: string
@@ -97,11 +99,7 @@ export function BandaPaso({ barra, atras, avance, etiqueta, titulo, subtitulo, a
 export function MarcaBarra({ href = '/bienvenida' }: { href?: string }) {
   return (
     <a href={href} className="flex items-center gap-2.5">
-      <svg width="26" height="26" viewBox="0 0 30 30" fill="none" aria-hidden="true">
-        <path d="M15 2 L27 10 L15 18 L3 10 Z" stroke="#c9a227" strokeWidth="1.4" />
-        <path d="M15 12 L27 20 L15 28 L3 20 Z" stroke="#f4f0e6" strokeWidth="1.4" opacity="0.55" />
-      </svg>
-      <span className="font-display font-semibold text-[19px] text-tinta">SMT<span className="text-acento">BROKER</span></span>
+      <Marca texto={19} />
     </a>
   )
 }
