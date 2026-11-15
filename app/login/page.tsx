@@ -82,8 +82,7 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-3 mb-14">
             <div>
-              <Marca texto={24} slogan />
-              <span className="block font-sans text-[13px] text-tenue -mt-0.5">BY MINDBRIDGE</span>
+              <Marca texto={34} slogan />
             </div>
           </div>
 
