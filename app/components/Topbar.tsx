@@ -29,6 +29,7 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: '/panel', label: 'Operación' },
     { href: '/panel/prospectos-broker', label: 'Prospección' },
     { href: '/dashboard', label: 'Vista propietario' },
+    { href: '/activo/nuevo', label: 'Cargar propiedad' },
     { href: '/portal-inversion', label: 'Vista comprador' },
     { href: '/portal-broker', label: 'Vista broker' },
   ],
