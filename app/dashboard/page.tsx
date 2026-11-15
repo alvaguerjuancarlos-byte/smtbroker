@@ -96,7 +96,7 @@ export default function DashboardPage() {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M8 3v10M3 8h10" stroke="#070f1c" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
-                <span className="hidden sm:inline">Registrar activo</span>
+                <span className="hidden sm:inline">Cargar propiedad</span>
                 <span className="sm:hidden">Registrar</span>
               </button>
             } />
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                   onClick={() => router.push('/activo/nuevo')}
                   className="mt-2 text-[16px] font-medium text-acento hover:text-acento-2 transition-colors"
                 >
-                  Registrar activo →
+                  Cargar propiedad →
                 </button>
               </div>
             ) : (

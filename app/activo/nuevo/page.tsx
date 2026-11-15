@@ -181,7 +181,7 @@ export default function NuevoActivoPage() {
               </svg>
               Volver
             </button>
-            <h1 className="font-display text-[30px] font-medium text-tinta">{esBroker ? 'Cargar propiedad a tu portafolio' : 'Registrar activo'}</h1>
+            <h1 className="font-display text-[30px] font-medium text-tinta">{esBroker ? 'Cargar propiedad a tu portafolio' : 'Cargar propiedad'}</h1>
             <p className="text-[17px] text-tenue mt-1.5">Ingresa los datos del inmueble para iniciar el análisis</p>
           </div>
 
