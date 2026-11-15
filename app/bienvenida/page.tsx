@@ -47,7 +47,7 @@ const ROLES = [
   {
     id:     'broker' as Rol,
     titulo: 'Soy asesor inmobiliario',
-    sub:    'Quiero ser aliado Ciertix',
+    sub:    'Quiero ser aliado EslAix',
     desc:   'Certifica tu portafolio con diagnóstico IA y registra lo que buscan tus clientes. Tú eres la pieza clave del ecosistema.',
     icono: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -158,7 +158,7 @@ export default function BienvenidaPage() {
       <div className="relative">
         {/* Header público */}
         <header className="px-4 md:px-8 py-5 flex items-center gap-3">
-          <Marca texto={18} />
+          <Marca texto={20} slogan />
           <div className="ml-auto">
             <button onClick={() => router.push('/login')}
               className="font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3.5 py-2 transition-colors rounded-lg">
@@ -174,7 +174,7 @@ export default function BienvenidaPage() {
             <div className="max-w-[620px]">
               <span className="font-sans text-[14px] text-acento">Plataforma IA de ventas inmobiliarias</span>
               <h1 className="font-display font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
-                Únete al ecosistema<br /><span className="italic font-normal text-acento">Ciertix.</span>
+                Únete al ecosistema<br /><span className="marca-nombre">Esl<span className="marca-ai">Ai</span>x</span>.
               </h1>
               <p className="text-[18px] text-tinta-2 mt-5 max-w-[52ch] leading-relaxed">
                 Conectamos a quien compra, vende o renta con la propiedad correcta: precio real, papeles revisados y asesores verificados.

@@ -19,9 +19,9 @@ const mxn = (n: number | null | undefined) =>
 export async function generateMetadata(props: PageProps<'/p/[id]'>): Promise<Metadata> {
   const { id } = await props.params
   const f = await cargarFichaPublica(getSupabaseAdmin(), id)
-  if (!f) return { title: 'Propiedad no disponible · Ciertix' }
+  if (!f) return { title: 'Propiedad no disponible · EslAix' }
   return {
-    title: `${f.ficha?.titular ?? f.nombre} · Ciertix`,
+    title: `${f.ficha?.titular ?? f.nombre} · EslAix`,
     description: `${f.tipo} en ${[f.colonia, f.municipio].filter(Boolean).join(', ')}${f.precio ? ` · ${mxn(f.precio)}` : ''}`,
     openGraph: f.fotos[0] ? { images: [f.fotos[0]] } : undefined,
   }
@@ -118,7 +118,7 @@ export default async function PaginaPublica(props: PageProps<'/p/[id]'>) {
       </main>
 
       <footer className="border-t border-linea px-4 py-6 text-center text-[14px] text-tenue">
-        Diagnóstico con inteligencia artificial y datos públicos (comparables de portales, Índice SHF). Ciertix by MindBridge.
+        Diagnóstico con inteligencia artificial y datos públicos (comparables de portales, Índice SHF). EslAix by MindBridge.
       </footer>
     </div>
   )
