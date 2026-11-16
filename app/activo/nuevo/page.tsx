@@ -10,7 +10,12 @@ import { MapPicker } from '../../components/MapPicker'
 import { Field, inputCls } from '../../components/FormField'
 import { CatastroLegalSection, type CatastroLegalValue } from '../../components/CatastroLegalSection'
 
-const TIPOS = ['Terreno', 'Casa', 'Departamento', 'Local comercial', 'Edificio', 'Torre', 'Bodega', 'Otro']
+const TIPOS = ['Terreno', 'Casa', 'Departamento', 'Local comercial', 'Oficina', 'Edificio', 'Torre', 'Bodega', 'Otro']
+// V10 §29.3: amenidades con el vocabulario cerrado del buscador (MindBridge Search).
+const AMENIDADES: [string, string][] = [
+  ['jardin', 'Jardín'], ['alberca', 'Alberca'], ['terraza', 'Terraza'], ['roof_garden', 'Roof garden'], ['seguridad_24h', 'Seguridad 24 h'],
+  ['pet_friendly', 'Acepta mascotas'], ['gimnasio', 'Gimnasio'], ['elevador', 'Elevador'], ['cuarto_de_servicio', 'Cuarto de servicio'], ['area_de_juegos', 'Área de juegos'],
+]
 const ESTADOS_MX = ['Aguascalientes','Baja California','Baja California Sur','Campeche','Chiapas','Chihuahua','Ciudad de México','Coahuila','Colima','Durango','Estado de México','Guanajuato','Guerrero','Hidalgo','Jalisco','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas']
 
 const CATASTRO_INICIAL: CatastroLegalValue = {
@@ -61,13 +66,23 @@ export default function NuevoActivoPage() {
     garantia: '',
     amueblada: '',
     mascotas: '',
+    // V10 §29.3: lo que el buscador filtra. Vacío = sin dato (NULL), nunca un supuesto.
+    recamaras: '',
+    banos: '',
+    estacionamientos: '',
+    antiguedad_anios: '',
   })
+  const [amenidades, setAmenidades] = useState<string[]>([])
+  const toggleAmenidad = (a: string) => setAmenidades(xs => xs.includes(a) ? xs.filter(x => x !== a) : [...xs, a])
   const [catastro, setCatastro] = useState<CatastroLegalValue>(CATASTRO_INICIAL)
   const setCatastroPatch = (patch: Partial<CatastroLegalValue>) => setCatastro(c => ({ ...c, ...patch }))
 
   const set = (k: string, v: string | boolean) => setForm(f => ({ ...f, [k]: v }))
   const enRenta = form.operacion !== 'venta'
   const enVenta = form.operacion !== 'renta'
+  const habitacional = /^(casa|depa)/i.test(form.tipo)
+  const esTerreno = /^terreno/i.test(form.tipo)
+  const entero = (v: string) => (v.trim() === '' ? null : Math.max(0, Math.round(Number(v))))
 
   const addressForMap = [form.calle, form.numero, form.colonia, form.municipio, form.estado, 'México']
     .filter(Boolean).join(', ')
@@ -122,6 +137,11 @@ export default function NuevoActivoPage() {
           mascotas: form.mascotas === '' ? null : form.mascotas === 'si',
         } : null,
         descripcion:  form.descripcion,
+        recamaras:        habitacional ? entero(form.recamaras) : null,
+        banos:            habitacional || /^(oficina|local)/i.test(form.tipo) ? (form.banos.trim() === '' ? null : Math.max(0, Math.round(Number(form.banos) * 2) / 2)) : null,
+        estacionamientos: esTerreno ? null : entero(form.estacionamientos),
+        antiguedad_anios: esTerreno ? null : entero(form.antiguedad_anios),
+        amenidades:       esTerreno ? [] : amenidades,
         lat,
         lng,
         status: 'ingresado',
@@ -336,6 +356,42 @@ export default function NuevoActivoPage() {
                   </Field>
                 )}
               </div>
+
+              {/* V10 §29.3: datos con los que el buscador filtra ("3 recámaras con jardín"). Opcionales. */}
+              {!esTerreno && (
+                <div className="flex flex-col gap-4" data-datos-busqueda>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {habitacional && (
+                      <Field label="Recámaras">
+                        <input type="number" value={form.recamaras} onChange={e => set('recamaras', e.target.value)} placeholder="—" min="0" className={inputCls(false, 'oscuro')} name="recamaras" />
+                      </Field>
+                    )}
+                    {(habitacional || /^(oficina|local)/i.test(form.tipo)) && (
+                      <Field label="Baños">
+                        <input type="number" value={form.banos} onChange={e => set('banos', e.target.value)} placeholder="—" min="0" step="0.5" className={inputCls(false, 'oscuro')} name="banos" />
+                      </Field>
+                    )}
+                    <Field label="Estacionamientos">
+                      <input type="number" value={form.estacionamientos} onChange={e => set('estacionamientos', e.target.value)} placeholder="—" min="0" className={inputCls(false, 'oscuro')} name="estacionamientos" />
+                    </Field>
+                    <Field label="Antigüedad (años)">
+                      <input type="number" value={form.antiguedad_anios} onChange={e => set('antiguedad_anios', e.target.value)} placeholder="—" min="0" className={inputCls(false, 'oscuro')} name="antiguedad_anios" />
+                    </Field>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="font-sans text-[14px] text-tenue">Amenidades</p>
+                    <div className="flex flex-wrap gap-2">
+                      {AMENIDADES.map(([k, l]) => (
+                        <button key={k} type="button" onClick={() => toggleAmenidad(k)} aria-pressed={amenidades.includes(k)} data-amenidad={k}
+                          className={`font-sans text-[15px] px-3 py-1.5 rounded-full border transition-colors ${amenidades.includes(k) ? 'bg-gold-500 text-navy-950 border-gold-500' : 'border-linea text-tinta-2 hover:border-gold-500'}`}>
+                          {amenidades.includes(k) ? '✓ ' : ''}{l}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[13px] text-tenue">Medio baño cuenta como 0.5. Lo que dejes vacío se muestra como "sin dato", nunca se supone.</p>
+                  </div>
+                </div>
+              )}
 
               {enRenta && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-renta-activo>
