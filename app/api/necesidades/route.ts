@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
       municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
       broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
-      zona?: number; puntaje?: number; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
+      zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
     }
     const necesidadDe = new Map(N.map((n) => [n.id, n]))
     // Zona y puntaje contra la ficha a la que pertenece la opción (V9, §23.4).

@@ -176,8 +176,8 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
         {[o.precio ? dinero(o.precio, o.operacion) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
       </span>
       {o.detalleRenta && o.detalleRenta.length > 0 && <span className="text-[14px] text-tenue">{o.detalleRenta.join(' · ')}</span>}
-      {o.puntaje != null && o.origen !== 'portal' && (
-        <span className="text-[14px] text-tinta-2"><b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>{o.razones?.length ? ` · ${o.razones.join(' · ')}` : ''}</span>
+      {(o.puntaje != null || !!o.razones?.length) && o.origen !== 'portal' && (
+        <span className="text-[14px] text-tinta-2">{o.puntaje != null && <b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>}{o.razones?.length ? `${o.puntaje != null ? ' · ' : ''}${o.razones.join(' · ')}` : ''}</span>
       )}
       {o.origen === 'portal' && accionesAnuncio(o)}
       {(o.activoId || (o.anuncioId && o.precio && o.superficie)) && (() => {

@@ -28,7 +28,7 @@ const PASOS: Paso[] = ['operacion', 'tipo', 'caract', 'ubicacion', 'presupuesto'
 
 interface Resultados {
   zonas: { municipio: string; nombre: string | null; colonias: string[]; mercado: MercadoZona | null }[]
-  plataforma: { activoId: string; nombre: string; municipio: string; precio: number | null; superficie: number | null; certificada: boolean; zona: number; puntaje: number; razones: string[] }[]
+  plataforma: { activoId: string; nombre: string; municipio: string; precio: number | null; superficie: number | null; certificada: boolean; zona: number; puntaje: number | null; razones: string[] }[]
   portales: { url: string; titulo: string; fuente: string; zona: number }[]
 }
 
@@ -380,7 +380,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
                   {plat.slice(0, MEJORES_POR_ZONA).map((o) => (
                     <div key={o.activoId} className="flex flex-col border-t border-linea pt-2">
                       <span className="text-[17px]">{o.nombre}</span>
-                      <span className="text-[15px] text-tenue">{o.precio ? dinero(o.precio, operacion) : 'Sin precio'} · {o.puntaje} % · {o.certificada ? 'Certificada' : 'Particular'}</span>
+                      <span className="text-[15px] text-tenue">{o.precio ? dinero(o.precio, operacion) : 'Sin precio'}{o.puntaje != null ? ` · ${o.puntaje} %` : ''} · {o.certificada ? 'Certificada' : 'Particular'}</span>
                       {o.razones.length > 0 && <span className="text-[14px] text-tenue">{o.razones.join(' · ')}</span>}
                     </div>
                   ))}
