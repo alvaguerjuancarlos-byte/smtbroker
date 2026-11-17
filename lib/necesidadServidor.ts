@@ -104,9 +104,10 @@ export interface OpcionPlataforma {
   detalleRenta?: string[]
   certificada: boolean
   deBroker: boolean
-  /** V9: índice de la zona de la ficha donde cae, su puntaje (0-100) y por qué. */
+  /** V9: índice de la zona de la ficha donde cae, su puntaje (0-100) y por qué. Con el motor (§29), el
+   *  puntaje es su % de coincidencia; null = recién publicada, el motor todavía no la tiene. */
   zona: number
-  puntaje: number
+  puntaje: number | null
   razones: string[]
 }
 
@@ -146,24 +147,26 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
 }
 
 /**
- * Primero las propiedades en el orden del motor, con lo que cumple (recámaras, amenidades…) y los
- * datos que les faltan; después las que el motor no devolvió (p. ej. recién cargadas), en el orden
- * de siempre. Nada de lo que EslAix aprobó desaparece.
+ * Con el motor (§29): el porcentaje es el % de coincidencia del motor (lo pedido que cumple cada
+ * propiedad) y la lista se ordena por él; en los empates manda el orden del motor. Las que el motor
+ * todavía no tiene (recién cargadas) van al final, sin %, como "recién publicada". Nada de lo que
+ * EslAix aprobó desaparece.
  */
 function conOrdenDelMotor(opciones: OpcionPlataforma[], motor: Awaited<ReturnType<typeof ordenDelMotor>> & object): OpcionPlataforma[] {
   const pos = new Map(motor.map((m) => [m.activoId, m]))
-  const extra = (o: OpcionPlataforma) => {
+  const extra = (o: OpcionPlataforma): OpcionPlataforma => {
     const m = pos.get(o.activoId)
-    if (!m) return o
-    // Lo que el motor agrega a las razones de EslAix: características y datos faltantes.
+    if (!m) return { ...o, puntaje: null, razones: ['recién publicada', ...o.razones] }
+    // Lo que el motor agrega a las razones de EslAix: características, coincidencias y datos faltantes.
     const cumple = m.cumple.filter((c, i) => i > 0 && !c.startsWith('precio'))
     // "Sin descripción" solo si ninguna preferencia coincidió con lo que sí tiene el anuncio.
     const faltan = m.faltanDatos.flatMap((f) => (f.startsWith('sin dato: descripción') ? (m.preferencias.length ? [] : ['sin descripción para comparar con tus preferencias']) : [f.replace(/^sin dato: /, 'no indica ')]))
     const coincide = m.preferencias.length ? [`coincide con: ${m.preferencias.join(', ')}`] : []
-    return { ...o, razones: [...new Set([...o.razones, ...cumple, ...coincide, ...faltan])] }
+    return { ...o, puntaje: m.coincidencia ?? o.puntaje, razones: [...new Set([...o.razones, ...cumple, ...coincide, ...faltan])] }
   }
-  const conMotor = opciones.filter((o) => pos.has(o.activoId)).sort((x, y) => pos.get(x.activoId)!.posicion - pos.get(y.activoId)!.posicion)
-  return [...conMotor, ...opciones.filter((o) => !pos.has(o.activoId))].map(extra)
+  const conMotor = opciones.filter((o) => pos.has(o.activoId)).map(extra)
+    .sort((x, y) => (y.puntaje ?? 0) - (x.puntaje ?? 0) || pos.get(x.activoId)!.posicion - pos.get(y.activoId)!.posicion)
+  return [...conMotor, ...opciones.filter((o) => !pos.has(o.activoId)).map(extra)]
 }
 
 /** Guarda los anuncios del motor en el Radar del comprador (origen 'motor', sin "me interesa"). */

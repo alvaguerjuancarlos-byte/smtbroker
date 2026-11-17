@@ -26,6 +26,8 @@ export interface ResultadoMotor {
   faltanDatos: string[]
   /** Palabras de las preferencias que aparecen en el anuncio. */
   preferencias: string[]
+  /** % de coincidencia del motor (0-100), medido contra lo que pidió el cliente. */
+  coincidencia: number | null
 }
 
 const config = () => {
@@ -42,8 +44,9 @@ export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | n
   const amenidades = (Array.isArray(c.amenidades) ? c.amenidades : []).map((a) => AMENIDADES[a]).filter(Boolean)
   const filtros: Record<string, unknown> = {
     tipo: [n.tipo],
-    // El mismo margen de ±10 % que usa EslAix (MARGEN_PRECIO).
-    precio_mxn: { min: n.presupuesto_min ? Math.floor(n.presupuesto_min * 0.9) : null, max: Math.ceil(n.presupuesto_max * 1.1) },
+    // El presupuesto tal cual; el margen de ±10 % de EslAix (MARGEN_PRECIO) va como tolerancia_precio,
+    // así el motor muestra lo que cae en el margen pero le da medio punto en el %.
+    precio_mxn: { min: n.presupuesto_min ? Math.floor(n.presupuesto_min) : null, max: Math.ceil(n.presupuesto_max) },
     recamaras: minimo(c.recamaras, true),
     banos: minimo(c.banos, false),
     estacionamientos: minimo(c.estacionamientos, true),
@@ -71,18 +74,18 @@ export async function ordenDelMotor(n: Necesidad, sesionId?: string): Promise<Re
     const r = await fetch(`${cfg.url}/search/filtros`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': cfg.key },
-      body: JSON.stringify({ interpretacion, fuentes: ['eslaix'], limite: 50, sesion_id: sesionId ?? 'eslaix' }),
+      body: JSON.stringify({ interpretacion, fuentes: ['eslaix'], limite: 50, tolerancia_precio: 0.1, sesion_id: sesionId ?? 'eslaix' }),
       signal: AbortSignal.timeout(MAX_MS),
     })
     if (!r.ok) { console.error('motor de búsqueda:', r.status, (await r.text()).slice(0, 200)); return null }
-    const d = (await r.json()) as { resultados: { id_en_fuente: string | null; explicacion: { cumple: string[]; faltan_datos: string[]; preferencias: string[] } }[] }
+    const d = (await r.json()) as { resultados: { id_en_fuente: string | null; coincidencia?: number | null; explicacion: { cumple: string[]; faltan_datos: string[]; preferencias: string[] } }[] }
     const vistos = new Set<string>()
     const out: ResultadoMotor[] = []
     for (const x of d.resultados) {
       const id = (x.id_en_fuente ?? '').replace(/:(venta|renta)$/, '')
       if (!id || vistos.has(id)) continue
       vistos.add(id)
-      out.push({ activoId: id, posicion: out.length, cumple: x.explicacion.cumple, faltanDatos: x.explicacion.faltan_datos, preferencias: x.explicacion.preferencias ?? [] })
+      out.push({ activoId: id, posicion: out.length, cumple: x.explicacion.cumple, faltanDatos: x.explicacion.faltan_datos, preferencias: x.explicacion.preferencias ?? [], coincidencia: x.coincidencia ?? null })
     }
     return out
   } catch (e) {
