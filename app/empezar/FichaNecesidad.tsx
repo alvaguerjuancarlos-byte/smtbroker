@@ -104,6 +104,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     const c: Record<string, string | string[]> = {}
     for (const k of ['recamaras', 'banos', 'estacionamientos'] as const) if (campos.has(k) && f[k] != null) c[k] = String(f[k])
     if (campos.has('amenidades') && f.amenidades.length) c.amenidades = f.amenidades
+    if (f.preferencias.length) c.preferencias = f.preferencias // §29.2: ordenan los resultados
     return c
   }
   // En renta, "acepta mascotas" también es la pregunta de mascotas de la ficha de renta.
