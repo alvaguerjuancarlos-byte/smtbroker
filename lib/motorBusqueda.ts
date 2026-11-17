@@ -67,9 +67,13 @@ export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | n
 
 /** Orden y explicación del motor para una ficha. null = usar el orden de siempre. */
 export async function ordenDelMotor(n: Necesidad, sesionId?: string): Promise<ResultadoMotor[] | null> {
-  const cfg = config()
   const interpretacion = interpretacionDeFicha(n)
-  if (!cfg || !interpretacion) return null
+  return interpretacion ? buscarConInterpretacion(interpretacion, sesionId) : null
+}
+
+async function buscarConInterpretacion(interpretacion: Record<string, unknown>, sesionId?: string): Promise<ResultadoMotor[] | null> {
+  const cfg = config()
+  if (!cfg) return null
   try {
     const r = await fetch(`${cfg.url}/search/filtros`, {
       method: 'POST',
@@ -92,6 +96,57 @@ export async function ordenDelMotor(n: Necesidad, sesionId?: string): Promise<Re
     console.error('motor de búsqueda:', e instanceof Error ? e.message : e)
     return null
   }
+}
+
+// ── Perfiles en texto libre (sugerencias de app/api/matches; reemplaza a lib/matching.ts, §29.4) ──
+
+/** Lo que el motor dice de una propiedad para un perfil: su % y las razones, listas para mostrar. */
+export interface CoincidenciaPerfil { score: number; razones: string[] }
+
+/** Un perfil de asesor como frase para el motor: "Casa en San Pedro / Santa Catarina, presupuesto $5M – $15M". */
+export const fraseDePerfil = (p: { tipo_activo_interes: string | null; zona: string | null; presupuesto: string | null }) =>
+  [p.tipo_activo_interes, p.zona && `en ${p.zona}`, p.presupuesto && `presupuesto ${p.presupuesto}`].filter(Boolean).join(', ')
+
+// La interpretación de cada frase se pide una vez (llama a Claude, ~2.5 s) y se guarda en memoria de
+// la instancia; las búsquedas siguientes van directo con ella (sin Claude, ~1 s). Si falla, no se
+// guarda, para reintentar en la siguiente visita.
+const interpretaciones = new Map<string, Promise<Record<string, unknown> | null>>()
+function interpretacionDeFrase(frase: string): Promise<Record<string, unknown> | null> {
+  const cfg = config()
+  if (!cfg || !frase) return Promise.resolve(null)
+  if (!interpretaciones.has(frase)) {
+    const p = fetch(`${cfg.url}/search`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': cfg.key },
+      body: JSON.stringify({ consulta: frase, fuentes: ['eslaix'], limite: 1, sesion_id: 'eslaix-perfiles' }),
+      signal: AbortSignal.timeout(15_000),
+    }).then(async (r) => (r.ok ? ((await r.json()) as { interpretacion: Record<string, unknown> }).interpretacion : null))
+      .catch((e) => { console.error('motor (perfil):', e instanceof Error ? e.message : e); return null })
+    p.then((x) => { if (!x) interpretaciones.delete(frase) })
+    interpretaciones.set(frase, p)
+  }
+  return interpretaciones.get(frase)!
+}
+
+/** Umbral para sugerir una conexión: el mismo 60 que usaba lib/matching.ts, ahora sobre el % del motor. */
+export const UMBRAL_MOTOR = 60
+
+/**
+ * Propiedades de EslAix que el motor sugiere para un perfil (id → % y razones), con el umbral ya
+ * aplicado. null = el motor no está disponible: quien llama usa el emparejador viejo de respaldo.
+ */
+export async function coincidenciasDePerfil(p: { tipo_activo_interes: string | null; zona: string | null; presupuesto: string | null }): Promise<Map<string, CoincidenciaPerfil> | null> {
+  const interpretacion = await interpretacionDeFrase(fraseDePerfil(p))
+  if (!interpretacion) return null
+  const res = await buscarConInterpretacion(interpretacion, 'eslaix-perfiles')
+  if (!res) return null
+  const out = new Map<string, CoincidenciaPerfil>()
+  for (const m of res) {
+    if (m.coincidencia == null || m.coincidencia < UMBRAL_MOTOR) continue
+    const faltan = m.faltanDatos.filter((f) => !f.startsWith('sin dato: descripción')).map((f) => f.replace(/^sin dato: /, 'no indica '))
+    out.set(m.activoId, { score: m.coincidencia, razones: [...m.cumple, ...faltan] })
+  }
+  return out
 }
 
 /** Le pide al motor que vuelva a leer las propiedades (después de cargar o editar una). No bloquea. */
