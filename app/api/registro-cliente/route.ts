@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarOperacion } from '@/lib/avisos'
 import { validarNecesidad, resumenNecesidad, validarOperacionActivo } from '@/lib/necesidad'
 import { guardarNecesidad } from '@/lib/necesidadServidor'
+import { reindexarMotor } from '@/lib/motorBusqueda'
 
 // Registro inmediato de un cliente desde el recorrido guiado /empezar (Documento Maestro V7.2,
 // decisión de JC del 1-nov-2026). Sin sesión. Crea en un paso:
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
       }).select('id').single()
       if (error) { await deshacer(); return NextResponse.json({ error: error.message }, { status: 500 }) }
       activoId = (data as { id: string }).id
+      after(reindexarMotor) // el buscador (§29) indexa la propiedad nueva
     } else if (ficha) {
       const g = await guardarNecesidad(admin, uid, ficha.necesidad, { esDemo })
       if ('error' in g) { await deshacer(); return NextResponse.json({ error: g.error }, { status: g.status }) }

@@ -18,6 +18,7 @@ import { perfilesBrokers } from '@/lib/nivelServidor'
 import { municipioCanonico } from '@/lib/matching'
 import { buscarComparables } from '@/lib/comparables'
 import { calcularPrecioMercado } from '@/lib/precioMercado'
+import { ordenDelMotor } from '@/lib/motorBusqueda'
 import {
   cumpleNecesidad, resumenNecesidad, presupuestoPerfil, etiquetaTipo, TIPOS_NECESIDAD, zonasDe, nombreZona,
   zonaDeActivo, puntajeOpcion, precioPara, detalleRentaActivo, CAMPO_AREA, MAX_NECESIDADES_ACTIVAS, type Necesidad, type ZonaBusqueda, type MercadoZona,
@@ -125,12 +126,13 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
   let q = admin.from('activos').select(COLS_ACTIVO_FICHA)
     .neq('status', 'cerrado').eq('es_demo', opts.esDemo)
   if (!opts.incluirBrokers) q = q.is('broker_id', null)
-  const { data } = await q
+  // El motor (§29) se consulta en paralelo; solo reordena y explica lo que EslAix aprueba aquí.
+  const [{ data }, motor] = await Promise.all([q, ordenDelMotor(n)])
   const A = ((data as ActivoDirecta[]) || []).filter((a) => cumpleNecesidad(a, n).cumple)
   if (!A.length) return []
   const { data: certs } = await admin.from('certificaciones').select('activo_id').eq('estado', 'certificada').in('activo_id', A.map((a) => a.id))
   const certificadas = new Set(((certs as { activo_id: string }[]) || []).map((c) => c.activo_id))
-  return A.map((a) => {
+  const opciones = A.map((a) => {
     const { puntaje, razones } = puntajeOpcion(a, n)
     return {
       activoId: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie,
@@ -140,6 +142,25 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
       zona: zonaDeActivo(a, n), puntaje, razones,
     }
   }).sort((x, y) => y.puntaje - x.puntaje || Number(y.certificada) - Number(x.certificada))
+  return motor ? conOrdenDelMotor(opciones, motor) : opciones
+}
+
+/**
+ * Primero las propiedades en el orden del motor, con lo que cumple (recámaras, amenidades…) y los
+ * datos que les faltan; después las que el motor no devolvió (p. ej. recién cargadas), en el orden
+ * de siempre. Nada de lo que EslAix aprobó desaparece.
+ */
+function conOrdenDelMotor(opciones: OpcionPlataforma[], motor: Awaited<ReturnType<typeof ordenDelMotor>> & object): OpcionPlataforma[] {
+  const pos = new Map(motor.map((m) => [m.activoId, m]))
+  const extra = (o: OpcionPlataforma) => {
+    const m = pos.get(o.activoId)
+    if (!m) return o
+    // Lo que el motor agrega a las razones de EslAix: características y datos faltantes.
+    const cumple = m.cumple.filter((c, i) => i > 0 && !c.startsWith('precio'))
+    return { ...o, razones: [...new Set([...o.razones, ...cumple, ...m.faltanDatos.map((f) => f.replace(/^sin dato: /, 'no indica '))])] }
+  }
+  const conMotor = opciones.filter((o) => pos.has(o.activoId)).sort((x, y) => pos.get(x.activoId)!.posicion - pos.get(y.activoId)!.posicion)
+  return [...conMotor, ...opciones.filter((o) => !pos.has(o.activoId))].map(extra)
 }
 
 /** Guarda los anuncios del motor en el Radar del comprador (origen 'motor', sin "me interesa"). */
