@@ -10,7 +10,9 @@
 // por zona, con "lo que rinde tu dinero" en cada una.
 // V9 (§22): el primer paso es "¿Comprar o rentar?" (obligatorio, sin "me da igual"). En renta el
 // presupuesto es la renta mensual y se piden plazo, garantía, fecha de entrada, amueblada y mascotas.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import ChatFicha from './ChatFicha'
+import type { FichaChat } from '@/lib/chatFicha'
 import { BandaPaso, Avance } from '../components/Banda'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -21,7 +23,7 @@ import {
   CON_AMUEBLADA, CON_MASCOTAS, type TipoNecesidad, type MercadoZona, type Operacion,
 } from '@/lib/necesidad'
 
-type Paso = 'operacion' | 'tipo' | 'caract' | 'ubicacion' | 'presupuesto' | 'buscar'
+type Paso = 'chat' | 'operacion' | 'tipo' | 'caract' | 'ubicacion' | 'presupuesto' | 'buscar'
 const PASOS: Paso[] = ['operacion', 'tipo', 'caract', 'ubicacion', 'presupuesto', 'buscar']
 
 interface Resultados {
@@ -49,7 +51,9 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   totalPasos: number
 }) {
   const router = useRouter()
-  const [paso, setPaso] = useState<Paso>('operacion')
+  // V10 §29.2: se entra por el chat; "llenar a mano" lleva a los pasos de siempre.
+  const [paso, setPaso] = useState<Paso>('chat')
+  const [buscarAlLlenar, setBuscarAlLlenar] = useState(false)
   const [operacion, setOperacion] = useState<Operacion | null>(null)
   const [renta, setRenta] = useState<{ plazo_contrato: string | null; garantia: string | null; fecha_entrada: string | null; amueblada: string | null; mascotas: boolean | null }>(
     { plazo_contrato: null, garantia: null, fecha_entrada: null, amueblada: null, mascotas: null })
@@ -71,7 +75,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
   const i = PASOS.indexOf(paso)
   const ir = (p: Paso) => { setError(null); setPaso(p) }
-  const atras = () => (i === 0 ? onAtras() : ir(PASOS[i - 1]))
+  const atras = () => (paso === 'operacion' ? ir('chat') : i <= 0 ? onAtras() : ir(PASOS[i - 1]))
 
   const enRenta = operacion === 'renta'
   const necesidad = () => ({
@@ -94,6 +98,33 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     setResultados(j as Resultados)
     ir('buscar')
   }
+
+  // Lo que el chat llenó pasa a la misma ficha de siempre (el cliente la puede corregir a mano).
+  const aplicarChat = (f: FichaChat) => {
+    if (f.operacion !== operacion) setResultados(null)
+    setOperacion(f.operacion)
+    setTipo(f.tipo)
+    const campos = new Set(f.tipo ? CARACTERISTICAS[f.tipo].map((c) => c.clave) : [])
+    const c: Record<string, string | string[]> = {}
+    for (const k of ['recamaras', 'banos', 'estacionamientos'] as const) if (campos.has(k) && f[k] != null) c[k] = String(f[k])
+    if (campos.has('amenidades') && f.amenidades.length) c.amenidades = f.amenidades
+    setCar(c)
+    if (f.zonas.length) setZonas(f.zonas.map((z) => ({ ...zonaVacia(), municipio: z.municipio, colonias: z.colonias })))
+    // En renta, "acepta mascotas" también es la pregunta de mascotas de la ficha de renta.
+    if (f.operacion === 'renta' && f.amenidades.includes('Acepta mascotas')) setRenta((r) => ({ ...r, mascotas: true }))
+    setPres({ min: f.presupuesto_min ? String(Math.round(f.presupuesto_min)) : '', max: f.presupuesto_max ? String(Math.round(f.presupuesto_max)) : '' })
+  }
+  const buscarDesdeChat = (f: FichaChat) => {
+    aplicarChat(f)
+    if (f.presupuesto_max) setBuscarAlLlenar(true) // busca cuando el estado ya tenga la ficha
+    else ir('presupuesto')
+  }
+  useEffect(() => {
+    if (!buscarAlLlenar) return
+    setBuscarAlLlenar(false)
+    buscar()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buscarAlLlenar])
 
   const terminar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,6 +167,12 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
 
   return (
     <>
+      {paso === 'chat' && (
+        <ChatFicha barra={barra} onAtras={onAtras} cargando={cargando}
+          onAMano={(f) => { aplicarChat(f); ir('operacion') }} onBuscar={buscarDesdeChat} />
+      )}
+      {paso === 'chat' && error && <p className="text-[15px] text-center" style={{ color: 'var(--c-rojo, #b42318)' }}>{error}</p>}
+
       {paso === 'operacion' && (
         <>
           {titulo('¿Quieres comprar o rentar?', 'Una búsqueda por operación. Si estás entre las dos, al terminar puedes crear otra.')}
