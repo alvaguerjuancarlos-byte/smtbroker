@@ -169,6 +169,11 @@ export default function NuevoActivoPage() {
       return
     }
 
+    // El buscador (§29) indexa la propiedad nueva. Sin esperar: si falla, el cron diario la recoge.
+    supabase.auth.getSession().then(({ data: { session } }) => fetch('/api/motor/reindexar', {
+      method: 'POST', headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+    })).catch(() => {})
+
     // Transición breve — guiño al paso "Diagnóstico (90s)" del prototipo, sin construir una
     // ruta/paso separado (ver plan). El diagnóstico real (mock, por ahora) vive en /activo/[id].
     setLoading(false)
