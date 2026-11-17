@@ -236,6 +236,10 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
     else if (c.tipo === 'opcion') { if (c.opciones!.includes(v as string)) caracteristicas[c.clave] = v as string }
     else if (Array.isArray(v)) { const a = v.filter((y) => c.opciones!.includes(y)); if (a.length) caracteristicas[c.clave] = a }
   }
+  // V10 §29.2: lo que el cliente quiere y no es un filtro ("tranquilo", "para mi familia"), con sus
+  // palabras. Va en caracteristicas para no cambiar la tabla; el motor lo usa para ordenar.
+  const prefs = (Array.isArray(crudo.preferencias) ? crudo.preferencias : []).map((p) => texto(p, 80)).filter(Boolean)
+  if (prefs.length) caracteristicas.preferencias = [...new Set(prefs)].slice(0, 8)
 
   // V9: hasta 3 zonas. Sin `zonas` (fichas y clientes de la V8) se arma una con los campos sueltos.
   const crudas = (Array.isArray(x.zonas) && x.zonas.length ? x.zonas : [x]) as Record<string, unknown>[]
@@ -419,13 +423,19 @@ export function resumenNecesidad(n: Necesidad): string {
 }
 
 /** Detalle de las características para la tarjeta: ["Altura libre: 8 m", "Andenes de carga: 2", ...]. */
+/** Las preferencias de la ficha (V10 §29.2): lo que no es filtro pero ordena los resultados. */
+export const preferenciasDe = (n: Pick<Necesidad, 'caracteristicas'>): string[] => {
+  const p = n.caracteristicas.preferencias
+  return Array.isArray(p) ? p : []
+}
+
 export function detalleCaracteristicas(n: Pick<Necesidad, 'tipo' | 'caracteristicas'>): string[] {
   return CARACTERISTICAS[n.tipo].flatMap((c) => {
     const v = n.caracteristicas[c.clave]
     if (v == null || c.clave === CAMPO_AREA[n.tipo]) return []
     if (Array.isArray(v)) return [`${c.etiqueta}: ${v.join(', ')}`]
     return [`${c.etiqueta}: ${typeof v === 'number' ? v.toLocaleString('es-MX') : v}${c.unidad ? ` ${c.unidad}` : ''}`]
-  })
+  }).concat(preferenciasDe(n).length ? [`Prefiere: ${preferenciasDe(n).join(', ')}`] : [])
 }
 
 const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()

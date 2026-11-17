@@ -157,7 +157,10 @@ function conOrdenDelMotor(opciones: OpcionPlataforma[], motor: Awaited<ReturnTyp
     if (!m) return o
     // Lo que el motor agrega a las razones de EslAix: características y datos faltantes.
     const cumple = m.cumple.filter((c, i) => i > 0 && !c.startsWith('precio'))
-    return { ...o, razones: [...new Set([...o.razones, ...cumple, ...m.faltanDatos.map((f) => f.replace(/^sin dato: /, 'no indica '))])] }
+    // "Sin descripción" solo si ninguna preferencia coincidió con lo que sí tiene el anuncio.
+    const faltan = m.faltanDatos.flatMap((f) => (f.startsWith('sin dato: descripción') ? (m.preferencias.length ? [] : ['sin descripción para comparar con tus preferencias']) : [f.replace(/^sin dato: /, 'no indica ')]))
+    const coincide = m.preferencias.length ? [`coincide con: ${m.preferencias.join(', ')}`] : []
+    return { ...o, razones: [...new Set([...o.razones, ...cumple, ...coincide, ...faltan])] }
   }
   const conMotor = opciones.filter((o) => pos.has(o.activoId)).sort((x, y) => pos.get(x.activoId)!.posicion - pos.get(y.activoId)!.posicion)
   return [...conMotor, ...opciones.filter((o) => !pos.has(o.activoId))].map(extra)

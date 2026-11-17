@@ -8,7 +8,7 @@
 // Si el motor no está configurado, falla o tarda más de MAX_MS, todo sigue con el orden de siempre.
 //
 // Variables: MOTOR_BUSQUEDA_URL (p. ej. https://mindbridge-search.vercel.app) y MOTOR_BUSQUEDA_KEY.
-import type { Necesidad } from '@/lib/necesidad'
+import { preferenciasDe, type Necesidad } from '@/lib/necesidad'
 
 const MAX_MS = 4000
 
@@ -24,6 +24,8 @@ export interface ResultadoMotor {
   posicion: number
   cumple: string[]
   faltanDatos: string[]
+  /** Palabras de las preferencias que aparecen en el anuncio. */
+  preferencias: string[]
 }
 
 const config = () => {
@@ -52,7 +54,8 @@ export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | n
     operacion: n.operacion === 'renta' ? 'renta' : 'venta',
     filtros_duros: filtros,
     geo: null, // las zonas (hasta 3) las aplica EslAix
-    preferencias_suaves: null,
+    // Las preferencias ordenan por significado y se explican ("coincide con: tranquilo").
+    preferencias_suaves: preferenciasDe(n).join(', ') || null,
     orden: 'relevancia',
     ambiguedades: [],
     confianza: 1,
@@ -72,14 +75,14 @@ export async function ordenDelMotor(n: Necesidad, sesionId?: string): Promise<Re
       signal: AbortSignal.timeout(MAX_MS),
     })
     if (!r.ok) { console.error('motor de búsqueda:', r.status, (await r.text()).slice(0, 200)); return null }
-    const d = (await r.json()) as { resultados: { id_en_fuente: string | null; explicacion: { cumple: string[]; faltan_datos: string[] } }[] }
+    const d = (await r.json()) as { resultados: { id_en_fuente: string | null; explicacion: { cumple: string[]; faltan_datos: string[]; preferencias: string[] } }[] }
     const vistos = new Set<string>()
     const out: ResultadoMotor[] = []
     for (const x of d.resultados) {
       const id = (x.id_en_fuente ?? '').replace(/:(venta|renta)$/, '')
       if (!id || vistos.has(id)) continue
       vistos.add(id)
-      out.push({ activoId: id, posicion: out.length, cumple: x.explicacion.cumple, faltanDatos: x.explicacion.faltan_datos })
+      out.push({ activoId: id, posicion: out.length, cumple: x.explicacion.cumple, faltanDatos: x.explicacion.faltan_datos, preferencias: x.explicacion.preferencias ?? [] })
     }
     return out
   } catch (e) {
