@@ -10,9 +10,9 @@
 // por zona, con "lo que rinde tu dinero" en cada una.
 // V9 (§22): el primer paso es "¿Comprar o rentar?" (obligatorio, sin "me da igual"). En renta el
 // presupuesto es la renta mensual y se piden plazo, garantía, fecha de entrada, amueblada y mascotas.
-import { useEffect, useState } from 'react'
-import ChatFicha from './ChatFicha'
-import type { FichaChat } from '@/lib/chatFicha'
+import { useState } from 'react'
+import ChatEntrada from './ChatEntrada'
+import { REGLAS_COMPRAR, type FichaChat } from '@/lib/chatFicha'
 import { BandaPaso, Avance } from '../components/Banda'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -53,7 +53,6 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   const router = useRouter()
   // V10 §29.2: se entra por el chat; "llenar a mano" lleva a los pasos de siempre.
   const [paso, setPaso] = useState<Paso>('chat')
-  const [buscarAlLlenar, setBuscarAlLlenar] = useState(false)
   const [operacion, setOperacion] = useState<Operacion | null>(null)
   const [renta, setRenta] = useState<{ plazo_contrato: string | null; garantia: string | null; fecha_entrada: string | null; amueblada: string | null; mascotas: boolean | null }>(
     { plazo_contrato: null, garantia: null, fecha_entrada: null, amueblada: null, mascotas: null })
@@ -87,11 +86,11 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     busqueda_directa: directa, publicada_brokers: brokers,
   })
 
-  const buscar = async () => {
-    if (!pres.max) { setError(enRenta ? 'Escribe la renta mensual máxima' : 'Escribe tu presupuesto máximo'); return }
-    if (pres.min && Number(pres.min) > Number(pres.max)) { setError('El mínimo es mayor que el máximo'); return }
+  const buscar = async (cuerpo = necesidad()) => {
+    if (!cuerpo.presupuesto_max) { setError(enRenta ? 'Escribe la renta mensual máxima' : 'Escribe tu presupuesto máximo'); return }
+    if (cuerpo.presupuesto_min && Number(cuerpo.presupuesto_min) > Number(cuerpo.presupuesto_max)) { setError('El mínimo es mayor que el máximo'); return }
     setCargando(true); setError(null)
-    const r = await fetch('/api/necesidades/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(necesidad()) })
+    const r = await fetch('/api/necesidades/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) })
     const j = await r.json().catch(() => ({}))
     setCargando(false)
     if (!r.ok) { setError(j.error ?? 'No se pudo buscar'); return }
@@ -100,31 +99,35 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   }
 
   // Lo que el chat llenó pasa a la misma ficha de siempre (el cliente la puede corregir a mano).
-  const aplicarChat = (f: FichaChat) => {
-    if (f.operacion !== operacion) setResultados(null)
-    setOperacion(f.operacion)
-    setTipo(f.tipo)
+  const caracteristicasDeChat = (f: FichaChat) => {
     const campos = new Set(f.tipo ? CARACTERISTICAS[f.tipo].map((c) => c.clave) : [])
     const c: Record<string, string | string[]> = {}
     for (const k of ['recamaras', 'banos', 'estacionamientos'] as const) if (campos.has(k) && f[k] != null) c[k] = String(f[k])
     if (campos.has('amenidades') && f.amenidades.length) c.amenidades = f.amenidades
-    setCar(c)
+    return c
+  }
+  // En renta, "acepta mascotas" también es la pregunta de mascotas de la ficha de renta.
+  const rentaDeChat = (f: FichaChat) => (f.amenidades.includes('Acepta mascotas') ? { ...renta, mascotas: true } : renta)
+  const aplicarChat = (f: FichaChat) => {
+    if (f.operacion !== operacion) setResultados(null)
+    setOperacion(f.operacion)
+    setTipo(f.tipo)
+    setCar(caracteristicasDeChat(f))
+    if (f.operacion === 'renta') setRenta(rentaDeChat(f))
     if (f.zonas.length) setZonas(f.zonas.map((z) => ({ ...zonaVacia(), municipio: z.municipio, colonias: z.colonias })))
-    // En renta, "acepta mascotas" también es la pregunta de mascotas de la ficha de renta.
-    if (f.operacion === 'renta' && f.amenidades.includes('Acepta mascotas')) setRenta((r) => ({ ...r, mascotas: true }))
     setPres({ min: f.presupuesto_min ? String(Math.round(f.presupuesto_min)) : '', max: f.presupuesto_max ? String(Math.round(f.presupuesto_max)) : '' })
   }
+  // Con presupuesto busca de una vez (con la ficha del chat, sin esperar al estado); sin él, lo pide.
   const buscarDesdeChat = (f: FichaChat) => {
     aplicarChat(f)
-    if (f.presupuesto_max) setBuscarAlLlenar(true) // busca cuando el estado ya tenga la ficha
-    else ir('presupuesto')
+    if (!f.presupuesto_max) { ir('presupuesto'); return }
+    buscar({
+      ...necesidad(), operacion: f.operacion, renta: f.operacion === 'renta' ? rentaDeChat(f) : null, tipo: f.tipo,
+      zonas: f.zonas.map((z) => ({ estado: 'Nuevo León', municipio: z.municipio, nombre: '', colonias: z.colonias })),
+      caracteristicas: caracteristicasDeChat(f),
+      presupuesto_min: f.presupuesto_min ? String(Math.round(f.presupuesto_min)) : null, presupuesto_max: String(Math.round(f.presupuesto_max)),
+    })
   }
-  useEffect(() => {
-    if (!buscarAlLlenar) return
-    setBuscarAlLlenar(false)
-    buscar()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buscarAlLlenar])
 
   const terminar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -168,8 +171,8 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   return (
     <>
       {paso === 'chat' && (
-        <ChatFicha barra={barra} onAtras={onAtras} cargando={cargando}
-          onAMano={(f) => { aplicarChat(f); ir('operacion') }} onBuscar={buscarDesdeChat} />
+        <ChatEntrada reglas={REGLAS_COMPRAR} barra={barra} onAtras={onAtras} cargando={cargando}
+          onAMano={(f) => { aplicarChat(f); ir('operacion') }} onListo={buscarDesdeChat} />
       )}
       {paso === 'chat' && error && <p className="text-[15px] text-center" style={{ color: 'var(--c-rojo, #b42318)' }}>{error}</p>}
 
@@ -344,7 +347,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
             )}
           </div>
           {error && <p className="text-[16px] text-error">{error}</p>}
-          {continuar(buscar, cargando ? 'Buscando…' : 'Buscar →')}
+          {continuar(() => buscar(), cargando ? 'Buscando…' : 'Buscar →')}
         </>
       )}
 

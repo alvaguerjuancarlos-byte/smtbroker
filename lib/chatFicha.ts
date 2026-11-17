@@ -102,3 +102,20 @@ export function quitarChip(f: FichaChat, clave: string): FichaChat {
   else if (k === 'preferencia') g.preferencias = g.preferencias.filter((p) => p !== v)
   return g
 }
+
+/** Reglas del chat de comprar o rentar para app/empezar/ChatEntrada.tsx. */
+export const REGLAS_COMPRAR = {
+  ruta: '/api/chat-ficha',
+  vacia: fichaVacia,
+  chips: chipsDeFicha,
+  quitar: quitarChip,
+  siguiente: siguientePregunta,
+  mensaje: (f: FichaChat, p: Pregunta | null) => mensajeDelChat(f, p, []),
+  lista: fichaLista,
+  saludo: 'Cuéntame qué buscas, como se lo dirías a una persona: qué tipo de propiedad, dónde y cuánto quieres pagar.',
+  ejemplo: 'Busco casa para mi familia en Cumbres, con jardín, como de 4 millones.',
+  titulo: '¿Qué buscas?',
+  subtitulo: 'Escríbelo con tus palabras. Tu ficha se va llenando sola.',
+  boton: 'Buscar',
+  color: 'var(--c-verde)',
+}

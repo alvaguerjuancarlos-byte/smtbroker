@@ -21,6 +21,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Field, inputCls } from '../components/FormField'
 import FichaNecesidad from './FichaNecesidad'
+import ChatEntrada from './ChatEntrada'
+import { REGLAS_VENDER, AMENIDADES_PROPIEDAD, cuantos, type FichaPropiedad } from '@/lib/chatPropiedad'
 import { BandaPaso, Avance, MarcaBarra } from '../components/Banda'
 
 type Quiere = 'vender' | 'comprar'
@@ -47,6 +49,18 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
     busca: '', zona: '', presupuesto: PRESUPUESTOS[2],
   })
   const [trampa, setTrampa] = useState('')
+  // V10 §29.2: quien vende entra por el chat; lo que el chat llena pasa al formulario de siempre.
+  const [chatVender, setChatVender] = useState(true)
+  const [extras, setExtras] = useState<Pick<FichaPropiedad, 'recamaras' | 'banos' | 'estacionamientos' | 'amenidades' | 'notas'>>({ recamaras: null, banos: null, estacionamientos: null, amenidades: [], notas: [] })
+  const aplicarChat = (p: FichaPropiedad) => {
+    const t = (v: number | null) => (v == null ? '' : String(Math.round(v)))
+    setF((x) => ({
+      ...x, tipo: p.tipo ?? x.tipo, municipio: p.municipio ?? x.municipio, colonia: p.colonia ?? x.colonia,
+      operacion: p.operacion ?? x.operacion, precio: t(p.precio) || x.precio, renta_mensual: t(p.renta_mensual) || x.renta_mensual, superficie: t(p.superficie) || x.superficie,
+    }))
+    setExtras({ recamaras: p.recamaras, banos: p.banos, estacionamientos: p.estacionamientos, amenidades: p.amenidades, notas: p.notas })
+    setChatVender(false)
+  }
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [yaExiste, setYaExiste] = useState(false)
@@ -76,7 +90,7 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
         quiere, nombre: f.nombre, email: f.email, password: f.password, telefono: f.telefono, sitio_web: trampa,
         propiedad: {
           tipo: f.tipo, superficie: f.superficie, municipio: f.municipio, colonia: f.colonia, precio: f.precio,
-          operacion: f.operacion, renta_mensual: f.renta_mensual, renta: { deposito_meses: f.deposito_meses },
+          operacion: f.operacion, renta_mensual: f.renta_mensual, renta: { deposito_meses: f.deposito_meses }, ...extras,
         },
         busqueda: { busca: f.busca, zona: f.zona, presupuesto: f.presupuesto },
       }),
@@ -100,7 +114,9 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
       <a href="/login" className="font-sans text-[16px] font-medium text-tinta">Iniciar sesión</a>
     </>
   )
-  const atrasBtn = paso === 'datos' && !inicial && quiere !== 'comprar'
+  const atrasBtn = paso === 'datos' && quiere === 'vender'
+    ? <button onClick={() => setChatVender(true)} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>
+    : paso === 'datos' && !inicial && quiere !== 'comprar'
     ? <button onClick={() => setPaso('que')} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>
     : undefined
   const etiquetaPaso = `Paso ${numPaso} de ${totalPasos}${quiere ? ` · ${quiere === 'vender' ? 'Vender' : 'Comprar'}` : ''}`
@@ -137,7 +153,12 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
           </>
         )}
 
-        {paso === 'datos' && quiere && (
+        {paso === 'datos' && quiere === 'vender' && chatVender && (
+          <ChatEntrada reglas={REGLAS_VENDER} barra={barra} cargando={false}
+            onAtras={() => (inicial ? router.push('/bienvenida') : setPaso('que'))} onAMano={aplicarChat} onListo={aplicarChat} />
+        )}
+
+        {paso === 'datos' && quiere && !(quiere === 'vender' && chatVender) && (
           <form onSubmit={registrar} className="flex flex-col gap-5">
             <BandaPaso barra={barra} titulo={quiere === 'vender' ? 'Cuéntanos de tu propiedad' : '¿Qué estás buscando?'} subtitulo={quiere === 'vender' ? 'Con esto, EslAix empieza a analizar tu propiedad.' : 'Dínoslo una sola vez y te avisamos de lo que coincida.'} atras={atrasBtn}
               avance={<Avance total={totalPasos} hechos={numPaso} color={quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'} />} etiqueta={etiquetaPaso} />
@@ -146,6 +167,13 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
               <Field label="WhatsApp" required tema="oscuro"><input value={f.telefono} onChange={set('telefono')} required inputMode="tel" autoComplete="tel" placeholder="81 1234 5678" className={cls} /></Field>
               {quiere === 'vender' ? (
                 <>
+                  {(extras.recamaras != null || extras.banos != null || extras.estacionamientos != null || extras.amenidades.length > 0 || extras.notas.length > 0) && (
+                    <p className="text-[15px] text-tinta-2" data-extras-chat>Del chat: {[
+                      extras.recamaras != null && cuantos(extras.recamaras, 'recámara', 'recámaras'), extras.banos != null && cuantos(extras.banos, 'baño', 'baños'),
+                      extras.estacionamientos != null && cuantos(extras.estacionamientos, 'estacionamiento', 'estacionamientos'), ...extras.notas,
+                      ...extras.amenidades.map((a) => (AMENIDADES_PROPIEDAD.find(([k]) => k === a)?.[1] ?? a).toLowerCase()),
+                    ].filter(Boolean).join(' · ')}</p>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
                     <Field label="Tipo" required tema="oscuro">
                       <select value={f.tipo} onChange={set('tipo')} className={cls}>{TIPOS.map((t) => <option key={t}>{t}</option>)}</select>
