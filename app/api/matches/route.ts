@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarOperacion, avisarUsuario } from '@/lib/avisos'
-import { puntuarMatch, esMatchValido, type ResultadoMatch } from '@/lib/matching'
+import { puntuarMatch, esMatchValido } from '@/lib/matching'
+import { coincidenciasDePerfil, type CoincidenciaPerfil } from '@/lib/motorBusqueda'
 import { mismoMundo } from '@/lib/mundo'
 import { atiendeComprador, atiendeVendedor, contactoDe, type Contacto } from '@/lib/contactoConexion'
 
@@ -26,6 +27,13 @@ import { atiendeComprador, atiendeVendedor, contactoDe, type Contacto } from '@/
 //
 // Mundos (lib/mundo.ts, migración 20261008000000): una cuenta real solo cruza datos reales y una
 // cuenta demo solo datos demo -- los brokers del piloto nunca ven a los personajes del video.
+//
+// V10 §29.4 (paso 5): quién coincide con quién lo decide el motor de búsqueda (MindBridge Search):
+// el % de coincidencia contra lo que pide el perfil, umbral 60, con sus razones. Comparado contra
+// lib/matching.ts el 16-nov-2026: el viejo sugería 816 propiedades de las que ~92 eran lo pedido
+// (sin zona, rentas a compradores); el motor 91, todas correctas. Si el motor no responde para un
+// perfil, ese perfil usa lib/matching.ts de respaldo. La privacidad y la visibilidad (mundos,
+// V7.2) siguen decidiéndose aquí, igual que antes.
 
 function mensajeError(e: unknown): string { return e instanceof Error ? e.message : String(e) }
 
@@ -77,7 +85,12 @@ export async function GET(req: NextRequest) {
     const estadoDe = new Map(((solicitudes as { activo_id: string; perfil_id: string; estado: string }[]) || [])
       .map((s) => [`${s.activo_id}:${s.perfil_id}`, s.estado]))
     const solicitud = (a: Activo, p: Perfil) => estadoDe.get(`${a.id}:${p.id}`) ?? null
-    const valido = (a: Activo, p: Perfil): ResultadoMatch | null => {
+    // Motor primero (§29.4); por perfil, el emparejador viejo de respaldo si el motor no respondió.
+    const motorDe = new Map<string, Map<string, CoincidenciaPerfil> | null>()
+    const prepararMotor = (ps: Perfil[]) => Promise.all(ps.map(async (p) => { motorDe.set(p.id, await coincidenciasDePerfil(p)) }))
+    const valido = (a: Activo, p: Perfil): CoincidenciaPerfil | null => {
+      const m = motorDe.get(p.id)
+      if (m) return m.get(a.id) ?? null
       const r = puntuarMatch(a, p)
       return esMatchValido(a, r) ? r : null
     }
@@ -105,6 +118,8 @@ export async function GET(req: NextRequest) {
       const nombreDe = new Map(((nombres as { id: string; nombre: string | null }[]) || []).map((u) => [u.id, u.nombre || 'Comprador']))
       const aliasDe = (p: Perfil) => p.alias_cliente ?? (p.usuario_id ? nombreDe.get(p.usuario_id) : null) ?? 'Cliente'
       const esMio = (p: Perfil) => (p.broker_id === uid && p.usuario_id === null) || p.representado_por === uid
+      // Para su portafolio cuentan todos los perfiles; sin portafolio, solo los de sus clientes.
+      await prepararMotor(miPortafolio.length ? P : misClientes)
 
       const paraMisClientes = porScore(misClientes.flatMap((p) => A.flatMap((a) => {
         const r = valido(a, p)
@@ -142,6 +157,7 @@ export async function GET(req: NextRequest) {
       const miPerfil = P.find((p) => p.usuario_id === uid)
       if (!miPerfil) return NextResponse.json({ rol, coincidencias: [], tieneBroker: false })
       const visibles = porSuCuenta(miPerfil) ? A.filter((a) => !a.broker_id) : A // V7.2: por su cuenta, solo particulares
+      await prepararMotor([miPerfil])
       const coincidencias = porScore(visibles.flatMap((a) => {
         const r = valido(a, miPerfil)
         return r ? [{ activoId: a.id, perfilId: miPerfil.id, score: r.score, razones: r.razones, activo: activoPublico(a), solicitud: solicitud(a, miPerfil) }] : []
@@ -159,10 +175,12 @@ export async function GET(req: NextRequest) {
     // propiedad tiene broker, las conexiones las atiende el broker (no se le da contacto a él).
     if (rol === 'propietario') {
       const mios = A.filter((a) => a.usuario_id === uid && !a.broker_id)
+      await prepararMotor(P.filter((p) => mios.some((a) => solicitud(a, p))))
       const conexiones = mios.flatMap((a) => P.flatMap((p) => {
         const est = solicitud(a, p)
         if (!est) return []
-        const r = puntuarMatch(a, p)
+        // Ya conectados: se muestra el % de hoy (del motor; si ya no pasa el umbral, el del viejo).
+        const r = valido(a, p) ?? puntuarMatch(a, p)
         return [{ activoId: a.id, perfilId: p.id, score: r.score, razones: r.razones, solicitud: est,
           contraparte: atiendeComprador(p).esBroker ? 'Comprador con broker' : 'Comprador por su cuenta' }]
       }))
@@ -208,8 +226,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Las propiedades que traen los asesores se ven con un asesor', necesitaBroker: true }, { status: 403 })
     }
 
-    const r = puntuarMatch(activo, perfil)
-    if (!esMatchValido(activo, r)) return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
+    // Recalculado aquí (nunca se confía en el navegador): motor primero, el viejo de respaldo.
+    if (activo.status === 'cerrado') return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
+    const motor = await coincidenciasDePerfil(perfil)
+    const viejo = puntuarMatch(activo, perfil)
+    const r = motor ? motor.get(activo.id) ?? null : esMatchValido(activo, viejo) ? viejo : null
+    if (!r) return NextResponse.json({ error: 'No es un match válido' }, { status: 422 })
 
     const { data: existente } = await admin.from('matches').select('id, estado')
       .eq('activo_id', activoId).eq('perfil_id', perfilId).maybeSingle()
