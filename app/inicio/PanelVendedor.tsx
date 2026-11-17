@@ -116,15 +116,22 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
     <>
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
         subtitulo={<>EslAix ya está analizando tu propiedad: <span className="text-tinta">{activo.nombre}</span>{lugar && !activo.nombre.includes(lugar) ? `, ${lugar}` : ''}. Esto es lo que preparamos para ti:</>}>
-        {activos.length > 1 && (
-          <label className="flex items-center gap-2 text-[15px] text-tenue mt-1">
-            Ver otra propiedad:
-            <select value={activo.id} onChange={(e) => setActivo(activos.find((x) => x.id === e.target.value) ?? activo)}
-              className="bg-tarjeta border border-linea text-tinta text-[16px] px-2 py-1.5 rounded-xl">
-              {activos.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-            </select>
-          </label>
-        )}
+        <div className="flex flex-wrap items-center gap-3 mt-1">
+          {activos.length > 1 && (
+            <label className="flex items-center gap-2 text-[15px] text-tenue">
+              Ver otra propiedad:
+              <select value={activo.id} onChange={(e) => setActivo(activos.find((x) => x.id === e.target.value) ?? activo)}
+                className="bg-tarjeta border border-linea text-tinta text-[16px] px-2 py-1.5 rounded-xl">
+                {activos.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+              </select>
+            </label>
+          )}
+          {/* El dueño puede cargar más de una propiedad; antes solo lo encontraba en el menú ("Registrar activo"). */}
+          <Link href="/activo/nuevo"
+            className="inline-flex items-center gap-1.5 bg-gold-500 hover:bg-gold-400 text-navy-950 font-medium text-[15px] px-3.5 py-2 rounded-xl transition-colors">
+            <span aria-hidden="true">+</span> Cargar otra propiedad
+          </Link>
+        </div>
       </EncabezadoPantalla>
 
       {conBroker && tarjetaBroker}

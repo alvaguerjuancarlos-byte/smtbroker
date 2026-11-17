@@ -19,6 +19,8 @@ interface Activo {
 }
 
 export default function DashboardPage() {
+  // Barra del rol real: Operación ve sus enlaces (incluye Cargar propiedad); el propietario, los suyos.
+  const [rolBarra, setRolBarra] = useState<'propietario' | 'broker_maestro'>('propietario')
   const router = useRouter()
   const [userName, setUserName] = useState('')
   const [activos,  setActivos]  = useState<Activo[]>([])
@@ -40,12 +42,14 @@ export default function DashboardPage() {
       // lib/roles.ts: antes esta lista vivía por separado aquí y no incluía broker_maestro, que
       // se quedaba viendo esta pantalla vacía en vez de caer en /panel).
       const rolUsuario = (profile as { rol: string | null } | null)?.rol
-      if (rolUsuario && rolUsuario !== 'propietario' && rolUsuario in HOME_POR_ROL) {
+      // Operación (broker_maestro) sí se queda: es su "Vista propietario" y desde aquí carga propiedades.
+      if (rolUsuario && rolUsuario !== 'propietario' && rolUsuario !== 'broker_maestro' && rolUsuario in HOME_POR_ROL) {
         router.push(HOME_POR_ROL[rolUsuario as keyof typeof HOME_POR_ROL])
         return
       }
 
       setUserName((profile as { nombre: string } | null)?.nombre || user.email || 'Usuario')
+      if (rolUsuario === 'broker_maestro') setRolBarra('broker_maestro')
 
       const { data } = await supabase
         .from('activos')
@@ -81,7 +85,7 @@ export default function DashboardPage() {
         }}
       />
       <div className="relative flex flex-col flex-1">
-      <Topbar userName={userName} rol="propietario" />
+      <Topbar userName={userName} rol={rolBarra} />
 
       <main className="flex-1 px-4 md:px-6 pb-10">
         <div className="w-full max-w-[1000px] mx-auto flex flex-col gap-6 md:gap-8">
@@ -96,7 +100,7 @@ export default function DashboardPage() {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M8 3v10M3 8h10" stroke="#070f1c" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
-                <span className="hidden sm:inline">Registrar activo</span>
+                <span className="hidden sm:inline">Cargar propiedad</span>
                 <span className="sm:hidden">Registrar</span>
               </button>
             } />
@@ -139,7 +143,7 @@ export default function DashboardPage() {
                   onClick={() => router.push('/activo/nuevo')}
                   className="mt-2 text-[16px] font-medium text-acento hover:text-acento-2 transition-colors"
                 >
-                  Registrar activo →
+                  Cargar propiedad →
                 </button>
               </div>
             ) : (

@@ -15,7 +15,7 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   propietario: [
     { href: '/inicio', label: 'Inicio' },
     { href: '/dashboard', label: 'Mis activos' },
-    { href: '/activo/nuevo', label: 'Registrar activo' },
+    { href: '/activo/nuevo', label: 'Cargar propiedad' },
   ],
   broker: [
     { href: '/portal-broker', label: 'Mi portal' },
@@ -29,6 +29,7 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: '/panel', label: 'Operación' },
     { href: '/panel/prospectos-broker', label: 'Prospección' },
     { href: '/dashboard', label: 'Vista propietario' },
+    { href: '/activo/nuevo', label: 'Cargar propiedad' },
     { href: '/portal-inversion', label: 'Vista comprador' },
     { href: '/portal-broker', label: 'Vista broker' },
   ],
