@@ -5,6 +5,7 @@ import { avisarOperacion } from '@/lib/avisos'
 import { validarNecesidad, resumenNecesidad, validarOperacionActivo } from '@/lib/necesidad'
 import { guardarNecesidad } from '@/lib/necesidadServidor'
 import { reindexarMotor } from '@/lib/motorBusqueda'
+import { AMENIDADES_PROPIEDAD } from '@/lib/chatPropiedad'
 
 // Registro inmediato de un cliente desde el recorrido guiado /empezar (Documento Maestro V7.2,
 // decisión de JC del 1-nov-2026). Sin sesión. Crea en un paso:
@@ -52,6 +53,16 @@ export async function POST(req: NextRequest) {
       tipo: texto(p.tipo, 40), superficie: numero(p.superficie), municipio: texto(p.municipio, 80),
       colonia: texto(p.colonia, 80), precio: numero(p.precio),
     }
+    // V10 §29.2: lo que el chat de vender ya sabe de la propiedad (opcional). Solo valores válidos.
+    const cuenta = (v: unknown, max: number) => { const x = numero(v); return x != null && x <= max ? x : null }
+    const datosBusqueda = {
+      recamaras: cuenta(p.recamaras, 30) != null ? Math.floor(cuenta(p.recamaras, 30)!) : null,
+      banos: cuenta(p.banos, 30) != null ? Math.round(cuenta(p.banos, 30)! * 2) / 2 : null,
+      estacionamientos: cuenta(p.estacionamientos, 100) != null ? Math.floor(cuenta(p.estacionamientos, 100)!) : null,
+      amenidades: (Array.isArray(p.amenidades) ? p.amenidades : []).filter((a): a is string => AMENIDADES_PROPIEDAD.some(([k]) => k === a)),
+      // Lo que el dueño contó en el chat y no es un campo ("recién remodelado"), como descripción.
+      descripcion: (Array.isArray(p.notas) ? p.notas : []).map((n) => texto(n, 80)).filter(Boolean).slice(0, 8).join('. ') || null,
+    }
     const busqueda = { busca: texto(s.busca, 120), zona: texto(s.zona, 120), presupuesto: texto(s.presupuesto, 40) }
     // V9 (§22.3): la propiedad está en venta, en renta o en las dos, con su precio y/o su renta.
     const op = validarOperacionActivo(p)
@@ -92,7 +103,7 @@ export async function POST(req: NextRequest) {
       const lugar = propiedad.colonia || propiedad.municipio
       const { data, error } = await admin.from('activos').insert({
         usuario_id: uid, cargado_por: 'propietario', nombre: `${propiedad.tipo} en ${lugar}`, tipo: propiedad.tipo,
-        superficie: propiedad.superficie, municipio: propiedad.municipio, colonia: propiedad.colonia || null,
+        superficie: propiedad.superficie, municipio: propiedad.municipio, colonia: propiedad.colonia || null, ...datosBusqueda,
         estado: 'Nuevo León', status: 'ingresado', es_demo: esDemo,
         ...('error' in op ? {} : { precio_total: op.precio_total, operacion: op.operacion, renta_mensual: op.renta_mensual, renta: op.renta }),
       }).select('id').single()

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { dentroDelFreno, traducir, textoLimpio as texto, numeroLimpio as num } from '@/lib/chatServidor'
 import { TIPOS_NECESIDAD, MUNICIPIOS_NL, type TipoNecesidad } from '@/lib/necesidad'
 import {
   AMENIDADES_CHAT, fichaVacia, siguientePregunta, mensajeDelChat, fichaLista,
@@ -10,11 +10,6 @@ import {
 // Claude solo traduce (regla del motor, §29.1); la pregunta siguiente y el texto del chat salen de
 // lib/chatFicha.ts. Sin sesión, como la búsqueda directa; con freno por IP porque cada mensaje
 // cuesta una llamada al modelo. No se guarda nada de lo que el cliente escribe (§29.5, #4).
-
-const MODELO = 'claude-opus-5-5'
-const MAX_POR_IP_HORA = 60
-const usos = new Map<string, number[]>()
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const n = (t: string) => ({ anyOf: [{ type: 'number' }, { type: 'null' }], description: t })
 const SCHEMA = {
@@ -50,9 +45,6 @@ Reglas:
 9. amenidades, solo de esta lista: ${AMENIDADES_CHAT.join(', ')}. "Vigilancia" o "privada con caseta" = Seguridad privada; "pet friendly" o "con mi perro" = Acepta mascotas. Otras cosas van a preferencias.
 10. preferencias: lo que el cliente quiere y no es un dato de la ficha, con sus palabras y corto ("para mi familia", "tranquilo", "cerca del Tec", "barata"). Sin repetir las que ya están.`
 
-const ipDe = (req: NextRequest) => (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'sin-ip'
-const num = (v: unknown, max: number) => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= max ? v : null)
-const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const sinAcentos = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const MUN = new Map(MUNICIPIOS_NL.map((m) => [sinAcentos(m), m]))
 MUN.set('san pedro', 'San Pedro Garza García'); MUN.set('san nicolas', 'San Nicolás de los Garza'); MUN.set('escobedo', 'General Escobedo')
@@ -91,21 +83,10 @@ export async function POST(req: NextRequest) {
     const ya = (Array.isArray(b.yaPreguntadas) ? b.yaPreguntadas : []).filter((p): p is Pregunta => PREGUNTAS.includes(p as Pregunta))
     const ultima = PREGUNTAS.includes(b.ultimaPregunta as Pregunta) ? (b.ultimaPregunta as Pregunta) : null
 
-    const ip = ipDe(req), ahora = Date.now()
-    const recientes = (usos.get(ip) ?? []).filter((t) => ahora - t < 3600_000)
-    if (recientes.length >= MAX_POR_IP_HORA) return NextResponse.json({ error: 'Llegaste al límite de mensajes por hora. Puedes llenar la ficha a mano.' }, { status: 429 })
-    usos.set(ip, [...recientes, ahora])
-
-    const r = await client.messages.create({
-      model: MODELO,
-      max_tokens: 4000,
-      system: [{ type: 'text', text: SISTEMA, cache_control: { type: 'ephemeral' } }],
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      messages: [{ role: 'user', content: `Ficha actual: ${JSON.stringify(actual)}\nÚltima pregunta del chat: ${ultima ?? '(ninguna)'}\nMensaje nuevo del cliente: ${mensaje}` }],
-    })
-    const bloque = r.content.find((c) => c.type === 'text')
-    if (!bloque || bloque.type !== 'text') throw new Error('sin respuesta del modelo')
-    const ficha = limpiar(JSON.parse(bloque.text))
+    if (!dentroDelFreno(req)) return NextResponse.json({ error: 'Llegaste al límite de mensajes por hora. Puedes llenar la ficha a mano.' }, { status: 429 })
+    const ficha = limpiar(await traducir(SISTEMA, SCHEMA, `Ficha actual: ${JSON.stringify(actual)}
+Última pregunta del chat: ${ultima ?? '(ninguna)'}
+Mensaje nuevo del cliente: ${mensaje}`))
     // Un cambio de operación borra el presupuesto anterior (comprar y rentar no se comparan).
     if (actual.operacion && ficha.operacion && actual.operacion !== ficha.operacion && ficha.presupuesto_max === actual.presupuesto_max) { ficha.presupuesto_max = null; ficha.presupuesto_min = null }
 

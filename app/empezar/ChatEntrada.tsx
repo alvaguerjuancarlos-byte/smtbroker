@@ -1,30 +1,46 @@
 'use client'
 
-// Chat de entrada (Documento Maestro V10, §29.2), camino "comprar o rentar". El cliente escribe con
-// sus palabras; la ficha se llena al lado en chips (cada uno se puede quitar); si falta un dato
-// importante, el chat lo pregunta, una cosa a la vez. Con la ficha lista se activa "Buscar".
-// Siempre se puede saltar y llenar la ficha a mano (onAMano).
+// Chat de entrada (Documento Maestro V10, §29.2), para los dos caminos: comprar/rentar (la ficha de
+// necesidad, lib/chatFicha.ts) y vender/poner en renta (la ficha de la propiedad, lib/chatPropiedad.ts).
+// El cliente escribe con sus palabras; la ficha se llena abajo en chips (cada uno se puede quitar);
+// si falta un dato importante, el chat lo pregunta, una cosa a la vez. Con la ficha lista se activa
+// el botón final. Siempre se puede saltar y llenar la ficha a mano (onAMano).
 import { useEffect, useRef, useState } from 'react'
 import { BandaPaso } from '../components/Banda'
-import { chipsDeFicha, quitarChip, fichaLista, fichaVacia, siguientePregunta, mensajeDelChat, type FichaChat, type Pregunta } from '@/lib/chatFicha'
 
 interface Linea { de: 'cliente' | 'chat'; texto: string }
 
-const verde = 'var(--c-verde)'
-const EJEMPLO = 'Busco casa para mi familia en Cumbres, con jardín, como de 4 millones.'
+export interface ReglasChat<F, P extends string> {
+  /** Ruta del servidor que traduce un mensaje (app/api/chat-ficha o app/api/chat-propiedad). */
+  ruta: string
+  vacia: () => F
+  chips: (f: F) => { clave: string; texto: string }[]
+  quitar: (f: F, clave: string) => F
+  siguiente: (f: F, ya: P[]) => P | null
+  mensaje: (f: F, p: P | null) => string
+  lista: (f: F) => boolean
+  saludo: string
+  ejemplo: string
+  titulo: string
+  subtitulo: string
+  boton: string
+  color: string
+}
 
-export default function ChatFicha({ barra, onAtras, onAMano, onBuscar, cargando }: {
+export default function ChatEntrada<F, P extends string>({ reglas, barra, onAtras, onAMano, onListo, cargando }: {
+  reglas: ReglasChat<F, P>
   barra?: React.ReactNode
   onAtras: () => void
-  onAMano: (f: FichaChat) => void
-  onBuscar: (f: FichaChat) => void
+  onAMano: (f: F) => void
+  onListo: (f: F) => void
   cargando: boolean
 }) {
-  const [ficha, setFicha] = useState<FichaChat>(fichaVacia())
-  const [lineas, setLineas] = useState<Linea[]>([{ de: 'chat', texto: 'Cuéntame qué buscas, como se lo dirías a una persona: qué tipo de propiedad, dónde y cuánto quieres pagar.' }])
+  const r = reglas
+  const [ficha, setFicha] = useState<F>(r.vacia)
+  const [lineas, setLineas] = useState<Linea[]>([{ de: 'chat', texto: r.saludo }])
   const [texto, setTexto] = useState('')
-  const [pregunta, setPregunta] = useState<Pregunta | null>(null)
-  const [yaPreguntadas, setYaPreguntadas] = useState<Pregunta[]>([])
+  const [pregunta, setPregunta] = useState<P | null>(null)
+  const [yaPreguntadas, setYaPreguntadas] = useState<P[]>([])
   const [pensando, setPensando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fin = useRef<HTMLDivElement>(null)
@@ -36,31 +52,31 @@ export default function ChatFicha({ barra, onAtras, onAMano, onBuscar, cargando 
     if (!mensaje || pensando) return
     setTexto(''); setError(null); setPensando(true)
     setLineas((l) => [...l, { de: 'cliente', texto: mensaje }])
-    const r = await fetch('/api/chat-ficha', {
+    const res = await fetch(r.ruta, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mensaje, ficha, ultimaPregunta: pregunta, yaPreguntadas }),
     }).catch(() => null)
-    const j = r ? await r.json().catch(() => ({})) : {}
+    const j = res ? await res.json().catch(() => ({})) : {}
     setPensando(false)
-    if (!r || !r.ok) { setError(j.error ?? 'No se pudo enviar. Intenta de nuevo.'); return }
+    if (!res || !res.ok) { setError(j.error ?? 'No se pudo enviar. Intenta de nuevo.'); return }
     setFicha(j.ficha); setPregunta(j.pregunta); setYaPreguntadas(j.yaPreguntadas)
     setLineas((l) => [...l, { de: 'chat', texto: j.mensaje }])
   }
 
   // Quitar un chip: si era obligatorio, el chat lo vuelve a preguntar.
   const quitar = (clave: string) => {
-    const f = quitarChip(ficha, clave)
+    const f = r.quitar(ficha, clave)
     setFicha(f)
-    const p = siguientePregunta(f, yaPreguntadas)
-    if (p && p !== pregunta) { setPregunta(p); setLineas((l) => [...l, { de: 'chat', texto: mensajeDelChat(f, p, []) }]) }
+    const p = r.siguiente(f, yaPreguntadas)
+    if (p && p !== pregunta) { setPregunta(p); setLineas((l) => [...l, { de: 'chat', texto: r.mensaje(f, p) }]) }
   }
 
-  const chips = chipsDeFicha(ficha)
-  const lista = fichaLista(ficha)
+  const chips = r.chips(ficha)
+  const lista = r.lista(ficha)
 
   return (
     <>
-      <BandaPaso barra={barra} titulo="¿Qué buscas?" subtitulo="Escríbelo con tus palabras. Tu ficha se va llenando sola."
+      <BandaPaso barra={barra} titulo={r.titulo} subtitulo={r.subtitulo}
         atras={<button onClick={onAtras} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>} />
 
       <div className="flex flex-col gap-3" data-chat-ficha>
@@ -75,7 +91,7 @@ export default function ChatFicha({ barra, onAtras, onAMano, onBuscar, cargando 
 
         <form onSubmit={enviar} className="flex gap-2">
           <input value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={600} autoFocus
-            placeholder={lineas.length === 1 ? EJEMPLO : 'Escribe tu respuesta…'} aria-label="Tu mensaje"
+            placeholder={lineas.length === 1 ? r.ejemplo : 'Escribe tu respuesta…'} aria-label="Tu mensaje"
             className="flex-1 min-w-0 bg-tarjeta border border-linea-fuerte rounded-lg px-3.5 py-3 text-[17px] text-tinta placeholder:text-tenue" />
           <button type="submit" disabled={!texto.trim() || pensando} className="font-sans text-[16px] font-medium px-4 rounded-lg text-white disabled:opacity-50" style={{ background: 'var(--c-acento)' }}>Enviar</button>
         </form>
@@ -87,20 +103,23 @@ export default function ChatFicha({ barra, onAtras, onAMano, onBuscar, cargando 
             ? <p className="text-[16px] text-tenue">Aquí aparece lo que vaya entendiendo.</p>
             : (
               <div className="flex flex-wrap gap-2" data-chips>
-                {chips.map((c) => (
-                  <button key={c.clave} type="button" onClick={() => quitar(c.clave)} data-chip={c.clave} title="Quitar"
-                    className="text-[16px] px-3 py-2 rounded-lg border text-tinta flex items-center gap-2"
-                    style={c.clave.startsWith('preferencia:') ? { borderColor: 'var(--c-linea-fuerte)' } : { borderColor: verde, background: 'var(--c-verde-suave)' }}>
-                    {c.texto}<span aria-hidden className="text-tenue">×</span>
-                  </button>
-                ))}
+                {chips.map((c) => {
+                  const suave = c.clave.startsWith('preferencia:') || c.clave.startsWith('nota:')
+                  return (
+                    <button key={c.clave} type="button" onClick={() => quitar(c.clave)} data-chip={c.clave} title="Quitar"
+                      className="text-[16px] px-3 py-2 rounded-lg border text-tinta flex items-center gap-2"
+                      style={suave ? { borderColor: 'var(--c-linea-fuerte)' } : { borderColor: 'var(--c-verde)', background: 'var(--c-verde-suave)' }}>
+                      {c.texto}<span aria-hidden className="text-tenue">×</span>
+                    </button>
+                  )
+                })}
               </div>
             )}
         </div>
 
-        <button type="button" onClick={() => onBuscar(ficha)} disabled={!lista || cargando || pensando} data-buscar
-          className="font-sans text-[17px] font-medium px-4 py-3.5 rounded-lg text-white disabled:opacity-50 mt-1" style={{ background: verde }}>
-          {cargando ? 'Buscando…' : 'Buscar'}
+        <button type="button" onClick={() => onListo(ficha)} disabled={!lista || cargando || pensando} data-buscar
+          className="font-sans text-[17px] font-medium px-4 py-3.5 rounded-lg text-white disabled:opacity-50 mt-1" style={{ background: r.color }}>
+          {cargando ? 'Un momento…' : r.boton}
         </button>
         <button type="button" onClick={() => onAMano(ficha)} className="text-[16px] text-tinta-2 hover:text-tinta underline underline-offset-4 self-center">
           Prefiero llenar la ficha a mano
