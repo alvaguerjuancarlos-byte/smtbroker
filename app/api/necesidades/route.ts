@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { BUCKET_FOTOS } from '@/lib/fichaPublica'
 import { sesionServidor } from '@/lib/sesionServidor'
 import { perfilesBrokers } from '@/lib/nivelServidor'
 import { municipioCanonico, normalizarTipos } from '@/lib/matching'
@@ -114,6 +115,10 @@ export async function GET(req: NextRequest) {
       broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
       zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
+      /** V10 §24.3: foto de portada (propiedades de EslAix; los portales no se copian, §18). */
+      foto?: string | null
+      /** Banda 3: ¿ya pidió que se certifique? y en qué va la invitación al anunciante. */
+      pedida?: boolean; invitacion?: string
     }
     const necesidadDe = new Map(N.map((n) => [n.id, n]))
     // Zona y puntaje contra la ficha a la que pertenece la opción (V9, §23.4).
@@ -152,9 +157,9 @@ export async function GET(req: NextRequest) {
     // Anuncios de portales del Radar (los del motor, los que pegó él y los que agregó Operación).
     if (p) {
       const { data: radar } = await s.admin.from('radar_opciones')
-        .select('id, anuncio_id, radar_anuncios(url, fuente, titulo, precio, superficie, tipo, municipio, colonia, lectura)').eq('perfil_id', p.id).order('created_at', { ascending: false }).limit(20)
-      type Anuncio = { url: string; fuente: string; titulo: string | null; precio: number | null; superficie: number | null; tipo: string | null; municipio: string | null; colonia: string | null; lectura: string | null }
-      for (const o of (radar as unknown as { id: string; anuncio_id: string; radar_anuncios: Anuncio }[]) || []) {
+        .select('id, anuncio_id, interesado_at, radar_anuncios(url, fuente, titulo, precio, superficie, tipo, municipio, colonia, lectura, invitacion_estado)').eq('perfil_id', p.id).order('created_at', { ascending: false }).limit(20)
+      type Anuncio = { url: string; fuente: string; titulo: string | null; precio: number | null; superficie: number | null; tipo: string | null; municipio: string | null; colonia: string | null; lectura: string | null; invitacion_estado: string }
+      for (const o of (radar as unknown as { id: string; anuncio_id: string; interesado_at: string | null; radar_anuncios: Anuncio }[]) || []) {
         const a = o.radar_anuncios
         // V8 (opción 2): lo leído de la página o capturado por el comprador; con precio y m² se analiza.
         // V9: el anuncio va a la búsqueda vigente más reciente del mismo tipo en cuya zona cae.
@@ -165,9 +170,19 @@ export async function GET(req: NextRequest) {
           ...(dueña ? { necesidadId: dueña.id, ...ubicar({ ...a, operacion: dueña.operacion === 'renta' ? 'renta' : 'venta', precio_total: a.precio, renta_mensual: a.precio }, dueña.id) } : {}),
           clave: `r:${o.id}`, origen: 'portal', titulo: a.titulo || `Anuncio de ${a.fuente}`, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia,
           precio: a.precio, superficie: a.superficie, url: a.url, fuente: a.fuente, opcionId: o.id, anuncioId: o.anuncio_id, lectura: a.lectura,
+          pedida: !!o.interesado_at, invitacion: a.invitacion_estado,
         })
       }
     }
+
+    // V10 §24.3: foto de portada de cada propiedad de la plataforma (la primera que subió, como la ficha pública).
+    const conActivo = bandeja.filter((o) => o.activoId)
+    const portadas = await Promise.all(conActivo.map((o) => s.admin.storage.from(BUCKET_FOTOS)
+      .list(o.activoId!, { limit: 1, sortBy: { column: 'created_at', order: 'asc' } })
+      .then(({ data }) => (data || []).find((f) => f.name && !f.name.startsWith('.')))
+      .then((f) => (f ? s.admin.storage.from(BUCKET_FOTOS).getPublicUrl(`${o.activoId}/${f.name}`).data.publicUrl : null))
+      .catch(() => null)))
+    conActivo.forEach((o, i) => { o.foto = portadas[i] })
 
     const { data: an } = await s.admin.from('analisis').select('activo_id, anuncio_id').eq('usuario_id', s.uid).eq('descartado', false)
     return NextResponse.json({

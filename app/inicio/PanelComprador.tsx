@@ -36,6 +36,7 @@ interface Opcion {
   broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
   zona?: number; puntaje?: number; razones?: string[]; operacion?: 'compra' | 'renta'; detalleRenta?: string[]
+  foto?: string | null; pedida?: boolean; invitacion?: string
 }
 interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
@@ -114,6 +115,18 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     router.push(`/analisis#${id}`)
   }
 
+  // V10 §24.3, banda 3: "Pedir que se certifique" = el "Me interesa" del Radar (§18): Operación invita
+  // al anunciante a certificar; si ya hay invitación en curso, solo se suma como interesado.
+  const pedirCertificacion = async (o: Opcion) => {
+    if (!o.opcionId) return
+    setOcupado(o.clave); setError(null)
+    const r = await fetch(`/api/radar/${o.opcionId}`, { method: 'POST', headers: { Authorization: 'Bearer ' + await token() } })
+    const j = await r.json().catch(() => ({}))
+    setOcupado(null)
+    if (!r.ok) { setError(j.error ?? 'No se pudo pedir la certificación'); return }
+    await cargar()
+  }
+
   // Anuncio de portal (opción 2): leer esa página, o escribir lo que vio si el portal no deja.
   const datosAnuncio = async (o: Opcion, cuerpo: Record<string, unknown>) => {
     if (!o.opcionId) return
@@ -180,6 +193,20 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   const otras = datos.bandeja.filter((o) => !conZona.some((n) => n.id === o.necesidadId && o.zona != null && o.zona >= 0))
   const alternar = (clave: string) => setAbiertas((x) => { const y = new Set(x); if (y.has(clave)) y.delete(clave); else y.add(clave); return y })
 
+  // §24.3: precio contra mercado = su precio por m² contra el típico de su zona (el mismo de "lo que
+  // rinde tu dinero", §23.2), solo con 3 comparables o más. Es una referencia rápida; el análisis
+  // completo sale al marcar "Me interesa" (§20).
+  const contraMercado = (o: Opcion) => {
+    if (!o.precio || !o.superficie || o.zona == null || o.zona < 0) return null
+    const z = datos.necesidades.find((n) => n.id === o.necesidadId)?.zonas?.[o.zona]
+    if (!z?.precioM2 || z.comparables < 3) return null
+    const pct = Math.round(((o.precio / o.superficie) / z.precioM2 - 1) * 100)
+    if (Math.abs(pct) < 5) return { texto: `En línea con el mercado de ${z.nombre}`, color: 'var(--c-tinta-2)' }
+    return pct < 0
+      ? { texto: `~${-pct} % abajo del mercado de ${z.nombre}`, color: verde }
+      : { texto: `~${pct} % arriba del mercado de ${z.nombre}`, color: pct > 15 ? 'var(--c-aviso, #b54708)' : 'var(--c-tinta-2)' }
+  }
+
   // §24.3: la misma tarjeta en las tres bandas; solo cambia la etiqueta de origen.
   const etiquetaDe = (o: Opcion) => o.origen === 'broker'
     ? [o.broker?.deTuAsesor ? 'De tu asesor' : null, o.broker ? `${o.broker.nombre}${o.broker.nivel ? ` · ${o.broker.nivel}` : ''}` : 'Asesor verificado', o.certificada ? 'certificada' : null].filter(Boolean).join(' · ')
@@ -188,6 +215,11 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     : `${o.fuente ?? 'Portal'} · sin certificar`
   const verOpcion = (o: Opcion, banda?: number) => (
     <div key={o.clave} className="border-t border-linea pt-2.5 flex flex-col gap-1" data-opcion={o.clave} data-banda-opcion={banda}>
+      {o.foto
+        ? <img src={o.foto} alt="" loading="lazy" className="w-full h-[132px] object-cover rounded-lg bg-fondo" data-foto />
+        : <div className="w-full h-[64px] rounded-lg bg-fondo flex items-center justify-center text-[13px] text-tenue" data-sin-foto>
+            {o.origen === 'portal' ? 'La foto está en el portal' : 'Sin fotos todavía'}
+          </div>}
       <span className="font-sans text-[13px]" style={{ color: ORIGEN[o.origen].color, fontWeight: o.broker?.deTuAsesor ? 600 : undefined }}>
         {etiquetaDe(o)}
       </span>
@@ -197,11 +229,20 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       <span className="text-[15px] text-tenue">
         {[o.precio ? dinero(o.precio, o.operacion) : null, o.superficie ? `${o.superficie.toLocaleString('es-MX')} m²` : null, o.colonia || o.municipio, o.fuente].filter(Boolean).join(' · ') || 'Abre el anuncio para ver los detalles'}
       </span>
+      {(() => { const m = contraMercado(o); return m && <span className="text-[14px]" style={{ color: m.color }} data-mercado>{m.texto}</span> })()}
       {o.detalleRenta && o.detalleRenta.length > 0 && <span className="text-[14px] text-tenue">{o.detalleRenta.join(' · ')}</span>}
       {(o.puntaje != null || !!o.razones?.length) && o.origen !== 'portal' && (
         <span className="text-[14px] text-tinta-2">{o.puntaje != null && <b className="font-semibold" style={{ color: verde }}>{o.puntaje} %</b>}{o.razones?.length ? `${o.puntaje != null ? ' · ' : ''}${o.razones.join(' · ')}` : ''}</span>
       )}
       {o.origen === 'portal' && accionesAnuncio(o)}
+      {o.origen === 'portal' && o.opcionId && (o.pedida || (o.invitacion && o.invitacion !== 'sin_invitar')
+        ? <span className="text-[14px] text-tenue" data-certificacion-pedida>
+            {o.invitacion === 'aceptada' ? 'El anunciante aceptó certificarla.' : o.invitacion === 'rechazada' || o.invitacion === 'sin_respuesta' ? 'El anunciante no aceptó certificarla.' : 'Pedimos al anunciante que la certifique; te avisamos.'}
+          </span>
+        : <button onClick={() => pedirCertificacion(o)} disabled={ocupado === o.clave} data-pedir-certificacion
+            className="w-fit px-3 py-1.5 text-[15px] font-sans border disabled:opacity-60 rounded-lg" style={{ borderColor: verde, color: verde }}>
+            {ocupado === o.clave ? 'Pidiendo…' : 'Pedir que se certifique'}
+          </button>)}
       {(o.activoId || (o.anuncioId && o.precio && o.superficie)) && (() => {
         const id = (o.activoId ?? o.anuncioId)!
         return (
