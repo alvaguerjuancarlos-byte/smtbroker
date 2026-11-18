@@ -4,7 +4,10 @@
 //   - Tus búsquedas (§19.1, §19.5): cada ficha con sus dos caminos (búsqueda directa y publicada a
 //     brokers), su vigencia de 30 días y cuántas propuestas lleva; pausar, renovar y crear otra
 //     (hasta 3 activas, en /buscar).
-//   - Tu bandeja (§19.4): todas las opciones en un solo lugar, con su etiqueta de origen.
+//   - V10 §24.3 (18-nov-2026): el TABLERO DE DECISIÓN reemplaza a la bandeja mezclada: tres bandas fijas
+//     (Encontradas por EslAix · Propuestas por asesores · En portales sin certificar), de más certeza a
+//     menos y nunca revueltas; dentro de cada banda una columna por zona con las 3 mejores (en celular
+//     las zonas se recorren de lado); interruptor de propuestas en la banda 2; lo de su asesor primero.
 //   - Su Radar (pegar ligas de otros portales) y, si va por su cuenta, el broker.
 //   - V8 Parte 2 (§20): "Me interesa" en cada propiedad de la bandeja dispara su análisis y lleva a
 //     /analisis (comparativo). Un anuncio de portal se analiza cuando tiene precio y m²: la plataforma
@@ -24,12 +27,13 @@ import ListaConexiones from '../components/ListaConexiones'
 interface Busqueda {
   id: string; operacion: 'compra' | 'renta'; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
   busqueda_directa: boolean; publicada_brokers: boolean; propuestas: number
+  camino?: 'por_mi_cuenta' | 'con_asesor'
   zonas: { nombre: string; municipio: string; precioM2: number | null; comparables: number; rinde: { m2: number; faltaPct: number | null } | null }[]
 }
 interface Opcion {
   clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
-  broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
+  broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
   zona?: number; puntaje?: number; razones?: string[]; operacion?: 'compra' | 'renta'; detalleRenta?: string[]
 }
@@ -46,6 +50,16 @@ const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
   particular: { texto: 'Particular', color: 'var(--c-gris)' },
   portal: { texto: 'De portal · no certificada', color: 'var(--c-gris)' },
 }
+
+// V10 §24.3: las tres bandas, en este orden fijo (decisión 2 de la V10: también con asesor).
+const BANDAS: { id: 1 | 2 | 3; titulo: string; color: string; vacio: string; de: (o: Opcion) => boolean }[] = [
+  { id: 1, titulo: 'Encontradas por EslAix', color: verde, de: (o) => o.origen === 'certificada' || o.origen === 'particular',
+    vacio: 'Aún no encontramos propiedades en la plataforma para esta búsqueda; te avisamos cuando aparezcan.' },
+  { id: 2, titulo: 'Propuestas por asesores', color: 'var(--c-oro)', de: (o) => o.origen === 'broker',
+    vacio: 'Aún no hay propuestas de asesores; te avisamos cuando lleguen.' },
+  { id: 3, titulo: 'En portales · sin certificar', color: 'var(--c-gris)', de: (o) => o.origen === 'portal',
+    vacio: 'Aún no hay anuncios de portales en tus zonas.' },
+]
 
 // Columnas por número de zonas (clases completas para que Tailwind las genere).
 const COLUMNAS: Record<number, string> = { 1: '', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3' }
@@ -159,15 +173,23 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   const porSuCuenta = !datos.conBroker
   // V9: cada búsqueda vigente con sus zonas; dentro de cada zona, de la más cercana a la menos.
   const porPuntaje = (a: Opcion, b: Opcion) => (b.puntaje ?? 0) - (a.puntaje ?? 0)
+  // Banda 2: primero lo de su asesor (decisión 2 de la V10), luego por coincidencia.
+  const porAsesor = (a: Opcion, b: Opcion) => Number(!!b.broker?.deTuAsesor) - Number(!!a.broker?.deTuAsesor) || porPuntaje(a, b)
   const enZona = (nid: string, k: number) => datos.bandeja.filter((o) => o.necesidadId === nid && o.zona === k).sort(porPuntaje)
   const conZona = activas.filter((n) => n.zonas?.length)
   const otras = datos.bandeja.filter((o) => !conZona.some((n) => n.id === o.necesidadId && o.zona != null && o.zona >= 0))
   const alternar = (clave: string) => setAbiertas((x) => { const y = new Set(x); if (y.has(clave)) y.delete(clave); else y.add(clave); return y })
 
-  const verOpcion = (o: Opcion) => (
-    <div key={o.clave} className="border-t border-linea pt-2.5 flex flex-col gap-1" data-opcion={o.clave}>
-      <span className="font-sans text-[13px]" style={{ color: ORIGEN[o.origen].color }}>
-        {ORIGEN[o.origen].texto}{o.origen === 'broker' && o.broker ? ` · ${o.broker.nombre}${o.broker.nivel ? ` (${o.broker.nivel})` : ''}` : ''}{o.origen === 'broker' && o.certificada ? ' · certificada' : ''}
+  // §24.3: la misma tarjeta en las tres bandas; solo cambia la etiqueta de origen.
+  const etiquetaDe = (o: Opcion) => o.origen === 'broker'
+    ? [o.broker?.deTuAsesor ? 'De tu asesor' : null, o.broker ? `${o.broker.nombre}${o.broker.nivel ? ` · ${o.broker.nivel}` : ''}` : 'Asesor verificado', o.certificada ? 'certificada' : null].filter(Boolean).join(' · ')
+    : o.origen === 'certificada' ? 'Certificada por EslAix'
+    : o.origen === 'particular' ? 'Particular · sin certificar'
+    : `${o.fuente ?? 'Portal'} · sin certificar`
+  const verOpcion = (o: Opcion, banda?: number) => (
+    <div key={o.clave} className="border-t border-linea pt-2.5 flex flex-col gap-1" data-opcion={o.clave} data-banda-opcion={banda}>
+      <span className="font-sans text-[13px]" style={{ color: ORIGEN[o.origen].color, fontWeight: o.broker?.deTuAsesor ? 600 : undefined }}>
+        {etiquetaDe(o)}
       </span>
       {o.url
         ? <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-[17px] underline underline-offset-2 decoration-linea-fuerte">{o.titulo}</a>
@@ -192,12 +214,14 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
     </div>
   )
 
+  // V10 §24.1: eligió "con un asesor" en la entrada y aún no tiene uno: se le pide elegirlo arriba.
+  const pideAsesor = conBroker || datos.necesidades.some((n) => n.camino === 'con_asesor')
   const tarjetaBroker = porSuCuenta && (
-    <div className={`${tarjeta} ${conBroker ? '' : 'border-linea'}`} style={conBroker ? { borderColor: verde } : undefined}>
-      <span className={etiqueta} style={{ color: conBroker ? verde : undefined }}>{conBroker ? 'Elige tu asesor verificado' : '¿Quieres que un asesor te ayude?'}</span>
+    <div className={`${tarjeta} ${pideAsesor ? '' : 'border-linea'}`} style={pideAsesor ? { borderColor: verde } : undefined}>
+      <span className={etiqueta} style={{ color: pideAsesor ? verde : undefined }}>{pideAsesor ? 'Elige tu asesor verificado' : '¿Quieres que un asesor te ayude?'}</span>
       <p className="text-[17px]">Con un asesor verificado accedes a toda la red y te acompaña en visitas, negociación y cierre.</p>
-      <a href="/portal-inversion?broker=1" className={conBroker ? 'font-sans text-[16px] font-medium px-4 py-3 text-center text-white' : 'font-sans text-[15px]'}
-        style={conBroker ? { background: verde } : { color: verde }}>{conBroker ? 'Ver asesores de mi zona' : 'Ver asesores de mi zona →'}</a>
+      <a href="/portal-inversion?broker=1" className={pideAsesor ? 'font-sans text-[16px] font-medium px-4 py-3 text-center text-white' : 'font-sans text-[15px]'}
+        style={pideAsesor ? { background: verde } : { color: verde }}>{pideAsesor ? 'Ver asesores de mi zona' : 'Ver asesores de mi zona →'}</a>
     </div>
   )
 
@@ -220,7 +244,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
         subtitulo="EslAix ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los asesores." />
 
-      {conBroker && tarjetaBroker}
+      {pideAsesor && tarjetaBroker}
 
       {/* V8 Parte 3: las propiedades que pidió ver ("Quiero verla") y en qué va cada una */}
       <ListaConexiones titulo="Propiedades que pediste ver" vacio="" ocultarVacia />
@@ -260,65 +284,95 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
       ))}
       {error && <p className="text-[15px] text-error">{error}</p>}
 
-      <div className="flex flex-col gap-3" data-bandeja>
-        <span className={`${etiqueta} text-tenue`}>Tu bandeja · {datos.bandeja.length}</span>
-        {datos.bandeja.length === 0 && conZona.length === 0 && (
-          <p className="text-[16px] text-tinta-2">Todavía no hay opciones. Te avisamos en cuanto un asesor te proponga algo o aparezca una coincidencia.</p>
+      {/* V10 §24.3: el tablero de decisión. Tres bandas fijas, de más certeza a menos, que nunca se
+          mezclan; dentro de cada banda, una columna por zona con las 3 mejores. */}
+      <div className="flex flex-col gap-4" data-tablero>
+        {conZona.length === 0 && datos.bandeja.length === 0 && (
+          <p className="text-[16px] text-tinta-2">Todavía no hay opciones. Te avisamos en cuanto aparezca una coincidencia o un asesor te proponga algo.</p>
         )}
         {conZona.map((n) => (
-          <div key={n.id} className="flex flex-col gap-2" data-bandeja-busqueda={n.id}>
-            {conZona.length > 1 && <span className="text-[16px] font-medium text-tinta-2">{n.resumen}</span>}
-            <div className={`grid grid-cols-1 gap-3 ${COLUMNAS[n.zonas.length] ?? ''}`}>
-              {n.zonas.map((z, k) => {
-                const lista = enZona(n.id, k)
-                const clave = `${n.id}:${k}`
-                const visibles = abiertas.has(clave) ? lista : lista.slice(0, MEJORES_POR_ZONA)
-                return (
-                  <div key={k} className={`${tarjeta} border-linea`} data-zona-bandeja={k}>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-display text-[20px] font-medium">{z.nombre}</span>
-                      <span className="text-[15px] text-tenue">
-                        {lista.length} {lista.length === 1 ? 'opción' : 'opciones'}{z.precioM2 ? ` · ~$${z.precioM2.toLocaleString('es-MX')}/m²${n.operacion === 'renta' ? ' al mes' : ''} (${z.comparables} comparables)` : ''}
-                      </span>
-                      {z.rinde && (
-                        <span className="text-[15px] text-tinta-2">
-                          {n.operacion === 'renta' ? 'Con tu renta' : 'Con tu presupuesto'}, ~{z.rinde.m2.toLocaleString('es-MX')} m²
-                          {z.rinde.faltaPct != null && z.rinde.faltaPct > 0 && <span className="text-aviso"> · {z.rinde.faltaPct} % abajo de lo que pides aquí</span>}
+          <div key={n.id} className="flex flex-col gap-3" data-tablero-busqueda={n.id}>
+            <div className="flex flex-col gap-1">
+              <span className="font-display text-[22px] font-medium">Tu tablero{conZona.length > 1 ? ` · ${n.resumen}` : ''}</span>
+              {n.zonas.some((z) => z.rinde) && (
+                <span className="text-[15px] text-tinta-2" data-rinde>
+                  {n.operacion === 'renta' ? 'Lo que rinde tu renta' : 'Lo que rinde tu dinero'}:{' '}
+                  {n.zonas.map((z) => `${z.nombre} ${z.rinde ? `~${z.rinde.m2.toLocaleString('es-MX')} m²` : 'sin dato'}`).join(' · ')}
+                </span>
+              )}
+            </div>
+            {BANDAS.map((b) => {
+              const enBanda = (k: number) => enZona(n.id, k).filter(b.de).sort(b.id === 2 ? porAsesor : porPuntaje)
+              const total = n.zonas.reduce((t, _z, k) => t + enBanda(k).length, 0)
+              const interruptor = b.id === 1 ? 'busqueda_directa' : b.id === 2 ? 'publicada_brokers' : null
+              const encendido = interruptor ? n[interruptor] : true
+              return (
+                <div key={b.id} className={`${tarjeta} border-linea`} data-banda={b.id}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-sans text-[14px] font-semibold uppercase tracking-wide" style={{ color: b.color }}>{b.id} · {b.titulo}{total ? ` · ${total}` : ''}</span>
+                    {b.id === 2 && (
+                      <button onClick={() => cambiar(n.id, { publicada_brokers: !n.publicada_brokers })} disabled={ocupado === n.id} data-interruptor-propuestas
+                        className="flex items-center gap-2 text-[14px] text-tinta-2 disabled:opacity-60" aria-pressed={n.publicada_brokers}>
+                        Recibir propuestas
+                        <span className="w-9 h-5 rounded-full relative transition-colors" style={{ background: n.publicada_brokers ? verde : 'var(--c-linea-fuerte)' }}>
+                          <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: n.publicada_brokers ? '18px' : '2px' }} />
                         </span>
-                      )}
-                    </div>
-                    {lista.length === 0
-                      ? <p className="text-[15px] text-tenue border-t border-linea pt-2.5">Aún no hay opciones en {z.nombre}.</p>
-                      : visibles.map(verOpcion)}
-                    {lista.length > MEJORES_POR_ZONA && (
-                      <button onClick={() => alternar(clave)} className="w-fit font-sans text-[15px]" style={{ color: verde }}>
-                        {abiertas.has(clave) ? 'Ver solo las 3 mejores' : `Ver las ${lista.length} →`}
                       </button>
                     )}
                   </div>
-                )
-              })}
-            </div>
+                  {total === 0 ? (
+                    <p className="text-[15px] text-tenue">
+                      {!encendido && interruptor
+                        ? <>{b.id === 1 ? 'Apagaste la búsqueda directa.' : 'Apagaste las propuestas de asesores.'}{' '}
+                            <button onClick={() => cambiar(n.id, { [interruptor]: true })} disabled={ocupado === n.id} style={{ color: verde }}>{b.id === 1 ? 'Encenderla' : 'Encenderlas'}</button></>
+                        : b.vacio}
+                      {b.id === 3 && porSuCuenta && <> · <a href="/portal-inversion#radar" style={{ color: verde }}>Pega la liga de un anuncio que viste</a></>}
+                    </p>
+                  ) : (
+                    <div className={`flex gap-3 overflow-x-auto pb-1 md:grid md:overflow-visible ${COLUMNAS[n.zonas.length] ?? ''}`}>
+                      {n.zonas.map((z, k) => {
+                        const lista = enBanda(k)
+                        const clave = `${n.id}:${b.id}:${k}`
+                        const visibles = abiertas.has(clave) ? lista : lista.slice(0, MEJORES_POR_ZONA)
+                        return (
+                          <div key={k} className="min-w-[80%] md:min-w-0 flex flex-col gap-1" data-zona-banda={k}>
+                            <span className="text-[14px] font-medium text-tinta-2 uppercase tracking-wide">{z.nombre}</span>
+                            {lista.length === 0
+                              ? <p className="text-[15px] text-tenue border-t border-linea pt-2.5">Nada aquí todavía.</p>
+                              : visibles.map((o) => verOpcion(o, b.id))}
+                            {lista.length > MEJORES_POR_ZONA && (
+                              <button onClick={() => alternar(clave)} className="w-fit font-sans text-[15px]" style={{ color: verde }}>
+                                {abiertas.has(clave) ? 'Ver solo las 3 mejores' : `Ver las ${lista.length} →`}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         ))}
         {otras.length > 0 && (
           <div className={`${tarjeta} border-linea`} data-otras-opciones>
-            <span className={`${etiqueta} text-tenue`}>{conZona.length ? 'Otras opciones' : 'Tus opciones'} · {otras.length}</span>
-            {otras.map(verOpcion)}
+            <span className={`${etiqueta} text-tenue`}>{conZona.length ? 'Fuera de tus zonas' : 'Tus opciones'} · {otras.length}</span>
+            {BANDAS.map((b) => {
+              const lista = otras.filter(b.de)
+              return lista.length > 0 && (
+                <div key={b.id} className="flex flex-col gap-1">
+                  <span className="font-sans text-[13px] font-semibold uppercase tracking-wide mt-1" style={{ color: b.color }}>{b.titulo}</span>
+                  {lista.map((o) => verOpcion(o, b.id))}
+                </div>
+              )
+            })}
           </div>
         )}
-        <p className="text-[15px] text-tenue">Marca &quot;Me interesa&quot; y recibe el análisis: {activas.length > 0 && activas.every((n) => n.operacion === 'renta') ? 'renta contra mercado, lo que pagarías para entrar y cada mes' : 'precio contra mercado, plusvalía'} y si cumple lo que buscas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
+        <p className="text-[15px] text-tenue">Marca &quot;Me interesa&quot; en cualquier banda y recibe el análisis: {activas.length > 0 && activas.every((n) => n.operacion === 'renta') ? 'renta contra mercado, lo que pagarías para entrar y cada mes' : 'precio contra mercado, plusvalía'} y si cumple lo que buscas. En el comparativo puedes juntar opciones de bandas distintas. Quien la ofrece no se entera.{datos.analizados.length > 0 && <> · <a href="/analisis" className="underline underline-offset-2" style={{ color: verde }}>Ver mi comparativo ({datos.analizados.length})</a></>}</p>
       </div>
 
-      {porSuCuenta && (
-        <div className={`${tarjeta} border-linea`}>
-          <span className={`${etiqueta} text-tenue`}>¿Viste algo en otro portal?</span>
-          <p className="text-[17px]">Pega la liga y le pedimos al anunciante que la certifique.</p>
-          <a href="/portal-inversion#radar" className="font-sans text-[15px]" style={{ color: verde }}>Abrir mi Radar →</a>
-        </div>
-      )}
-
-      {!conBroker && tarjetaBroker}
+      {!pideAsesor && tarjetaBroker}
     </>
   )
 }

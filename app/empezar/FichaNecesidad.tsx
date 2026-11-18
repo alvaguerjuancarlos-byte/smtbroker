@@ -87,7 +87,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     zonas: zonas.map((z) => ({ estado: z.estado, municipio: z.municipio, nombre: z.nombre, colonias: z.colonias })),
     caracteristicas: Object.fromEntries(Object.entries(car).filter(([, v]) => (Array.isArray(v) ? v.length : v !== ''))),
     presupuesto_min: pres.min || null, presupuesto_max: pres.max, forma_pago: formaPago, plazo, proposito,
-    busqueda_directa: directa, publicada_brokers: brokers,
+    busqueda_directa: directa, publicada_brokers: brokers, camino: conAsesor ? 'con_asesor' : 'por_mi_cuenta',
   })
 
   const buscar = async (cuerpo = necesidad()) => {

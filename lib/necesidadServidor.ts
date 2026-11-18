@@ -34,7 +34,7 @@ export interface FilaNecesidad extends Necesidad {
   created_at: string
 }
 
-export const COLS_NECESIDAD = 'id, usuario_id, operacion, renta, tipo, caracteristicas, estado, municipio, zona, colonias, zonas, presupuesto_min, presupuesto_max, forma_pago, plazo, proposito, busqueda_directa, publicada_brokers, activa, vence_at, es_demo, created_at'
+export const COLS_NECESIDAD = 'id, usuario_id, operacion, renta, tipo, caracteristicas, estado, municipio, zona, colonias, zonas, presupuesto_min, presupuesto_max, forma_pago, plazo, proposito, busqueda_directa, publicada_brokers, camino, activa, vence_at, es_demo, created_at'
 
 /** Activa y sin vencer: la que cuenta para el tope de 3 y la que ven los brokers. */
 export const vigente = (n: Pick<FilaNecesidad, 'activa' | 'vence_at'>) => n.activa && new Date(n.vence_at).getTime() > Date.now()
