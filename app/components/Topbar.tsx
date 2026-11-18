@@ -25,14 +25,18 @@ const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: '/inicio', label: 'Inicio' },
     { href: '/portal-inversion', label: 'Mi portal' },
   ],
+  // JC (18-nov-2026): el menú se lee desde el cliente, con tres puertas. Operación (y Prospección,
+  // que se abre desde el panel) va aparte, a la derecha: es la herramienta interna, no una vista.
   broker_maestro: [
-    { href: '/panel', label: 'Operación' },
-    { href: '/panel/prospectos-broker', label: 'Prospección' },
-    { href: '/dashboard', label: 'Vista propietario' },
-    { href: '/activo/nuevo', label: 'Cargar propiedad' },
-    { href: '/portal-inversion', label: 'Vista comprador' },
-    { href: '/portal-broker', label: 'Vista broker' },
+    { href: '/dashboard', label: 'Quiero vender o rentar' },
+    { href: '/portal-inversion', label: 'Busco comprar o rentar' },
+    { href: '/portal-broker', label: 'Asesores verificados' },
   ],
+}
+
+// Herramienta interna, separada del menú principal.
+const INTERNO_POR_ROL: Partial<Record<Rol, { href: string; label: string }>> = {
+  broker_maestro: { href: '/panel', label: 'Operación' },
 }
 
 export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol }) {
@@ -47,6 +51,7 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
   const initial = userName ? userName.charAt(0).toUpperCase() : '?'
   const home = rol ? HOME_POR_ROL[rol] : '/dashboard'
   const nav = rol ? NAV_POR_ROL[rol] : []
+  const interno = rol ? INTERNO_POR_ROL[rol] : undefined
 
   return (
     <header className="tema-oscuro bg-superficie border-b border-linea sticky top-0 z-20">
@@ -70,6 +75,14 @@ export default function Topbar({ userName, rol }: { userName?: string; rol?: Rol
         </nav>
 
         <div className="ml-auto flex items-center gap-2 md:gap-3">
+          {interno && (
+            <Link href={interno.href} data-interno
+              className={`font-sans text-[13px] px-2.5 py-1 border rounded-lg transition-colors ${
+                pathname.startsWith(interno.href) ? 'text-acento border-gold-500' : 'text-tenue border-linea hover:text-tinta'
+              }`}>
+              {interno.label}
+            </Link>
+          )}
           {userName && (
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-sutil border border-gold-500/30 flex items-center justify-center shrink-0">
