@@ -42,9 +42,13 @@ const boton = 'font-sans text-[16px] font-medium px-4 py-3.5 text-center transit
 const soloDigitos = (v: string) => v.replace(/\D/g, '')
 const conComas = (v: string) => (v ? Number(v).toLocaleString('es-MX') : '')
 
-export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPasos, barra }: {
+export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPasos, barra, operacionInicial, conAsesor }: {
   barra?: React.ReactNode
   conSesion: boolean
+  /** V10 §24.1: la operación elegida en la entrada (comprar o rentar) llega ya puesta. */
+  operacionInicial?: Operacion
+  /** V10 §24.1: eligió "con un asesor": al crear la cuenta va directo a elegir asesor de su zona. */
+  conAsesor?: boolean
   onAtras: () => void
   /** Pasos previos del recorrido (el "¿qué quieres hacer?"), para numerar la barra. */
   pasoBase: number
@@ -53,7 +57,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
   const router = useRouter()
   // V10 §29.2: se entra por el chat; "llenar a mano" lleva a los pasos de siempre.
   const [paso, setPaso] = useState<Paso>('chat')
-  const [operacion, setOperacion] = useState<Operacion | null>(null)
+  const [operacion, setOperacion] = useState<Operacion | null>(operacionInicial ?? null)
   const [renta, setRenta] = useState<{ plazo_contrato: string | null; garantia: string | null; fecha_entrada: string | null; amueblada: string | null; mascotas: boolean | null }>(
     { plazo_contrato: null, garantia: null, fecha_entrada: null, amueblada: null, mascotas: null })
   const [tipo, setTipo] = useState<TipoNecesidad | null>(null)
@@ -151,7 +155,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     const { data: s, error: eLogin } = await supabase.auth.signInWithPassword({ email: cuenta.email.trim().toLowerCase(), password: cuenta.password })
     setCargando(false)
     if (eLogin || !s.session) { setError('Tu cuenta quedó creada. Inicia sesión para continuar.'); setYaExiste(true); return }
-    router.push('/inicio')
+    router.push(conAsesor ? '/inicio?camino=broker' : '/inicio')
   }
 
   const chip = (on: boolean) => `px-3 py-2.5 text-[16px] border transition-colors ${on ? 'text-tinta' : 'border-linea text-tinta-2 hover:border-linea-fuerte'} rounded-lg`
@@ -173,6 +177,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     <>
       {paso === 'chat' && (
         <ChatEntrada reglas={REGLAS_COMPRAR} barra={barra} onAtras={onAtras} cargando={cargando}
+          inicial={operacionInicial ? { ...REGLAS_COMPRAR.vacia(), operacion: operacionInicial } : undefined}
           onAMano={(f) => { aplicarChat(f); ir('operacion') }} onListo={buscarDesdeChat} />
       )}
       {paso === 'chat' && error && <p className="text-[15px] text-center" style={{ color: 'var(--c-rojo, #b42318)' }}>{error}</p>}
@@ -424,7 +429,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
           )}
           {error && <p className="text-[16px] text-error">{error}{yaExiste && <> · <a href="/login" className="text-acento underline underline-offset-2">Iniciar sesión</a></>}</p>}
           <button disabled={cargando || (!directa && !brokers)} className={`${boton} text-white`} style={{ background: verde }}>
-            {cargando ? 'Guardando…' : conSesion ? 'Guardar mi búsqueda' : 'Crear mi cuenta y buscar'}
+            {cargando ? 'Guardando…' : conSesion ? 'Guardar mi búsqueda' : conAsesor ? 'Crear mi cuenta y elegir asesor' : 'Crear mi cuenta y buscar'}
           </button>
         </form>
       )}

@@ -3,7 +3,7 @@
 // Recorrido guiado del cliente (Documento Maestro V7.2; maqueta aprobada por JC el 1-nov-2026):
 //   1. ¿Qué quieres hacer?        vender | comprar
 //   2. Tus datos                  cuenta (correo y contraseña), WhatsApp y la propiedad o la búsqueda
-//   3. ¿Cómo quieres avanzar?     con un broker verificado (muy recomendable) o por su cuenta
+//   3. (V10 §24.1: el "cómo" pasó a ser el paso 2, antes de la ficha; ver abajo)
 // El registro es inmediato (app/api/registro-cliente). Al terminar llega a su panel (/inicio), donde
 // Smart Bróker le entrega lo que preparó: el precio realista y la invitación a certificar (quien
 // vende) o afinar su búsqueda (quien compra). JC, 1-nov: el precio inmediato en el recorrido "se
@@ -25,8 +25,26 @@ import ChatEntrada from './ChatEntrada'
 import { REGLAS_VENDER, AMENIDADES_PROPIEDAD, cuantos, type FichaPropiedad } from '@/lib/chatPropiedad'
 import { BandaPaso, Avance, MarcaBarra } from '../components/Banda'
 
+// V10 §24.1 (16-nov-2026): la entrada pregunta primero QUÉ (comprar, rentar, vender, poner en renta)
+// y luego CÓMO (por mi cuenta / con un asesor), con dos tarjetas del mismo peso: ninguna es "la
+// recomendada". El cómo se elige ANTES de la ficha; al terminar, quien eligió asesor va directo a
+// elegir uno de su zona (/inicio?camino=broker) y quien va por su cuenta, a su panel. Se retiró la
+// pantalla "¿Cómo quieres avanzar?" que aparecía después de crear la cuenta con "muy recomendable".
+// Internamente `quiere` sigue siendo el lado (comprar = busca, vender = ofrece) que espera
+// app/api/registro-cliente; la operación (compra/renta, venta/renta) llega ya puesta a la ficha.
+export type Opcion = 'comprar' | 'rentar' | 'vender' | 'poner_renta'
 type Quiere = 'vender' | 'comprar'
-type Paso = 'que' | 'datos' | 'camino'
+type Paso = 'que' | 'como' | 'datos'
+type Camino = 'cuenta' | 'asesor'
+
+const OPCIONES: { id: Opcion; titulo: string; texto: string }[] = [
+  { id: 'comprar', titulo: 'Comprar', texto: 'Dinos qué buscas y ves opciones que coinciden.' },
+  { id: 'rentar', titulo: 'Rentar', texto: 'Con la renta que puedes pagar al mes.' },
+  { id: 'vender', titulo: 'Vender', texto: 'Precio realista de mercado y personas que buscan algo como lo tuyo.' },
+  { id: 'poner_renta', titulo: 'Poner en renta', texto: 'Renta realista y personas que buscan rentar en tu zona.' },
+]
+const ladoDe = (o: Opcion): Quiere => (o === 'comprar' || o === 'rentar' ? 'comprar' : 'vender')
+const ETIQUETA: Record<Opcion, string> = { comprar: 'Comprar', rentar: 'Rentar', vender: 'Vender', poner_renta: 'Poner en renta' }
 
 const PRESUPUESTOS = ['Menos de $2M', '$2M – $5M', '$5M – $15M', '$15M – $50M', 'Más de $50M']
 const TIPOS = ['Casa', 'Departamento', 'Terreno', 'Local comercial', 'Oficina', 'Bodega']
@@ -39,13 +57,15 @@ const GRID_BG = {
   backgroundSize: '56px 56px',
 }
 
-export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
+export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
   const router = useRouter()
-  const [quiere, setQuiere] = useState<Quiere | null>(inicial)
-  const [paso, setPaso] = useState<Paso>(inicial ? 'datos' : 'que')
+  const [opcion, setOpcion] = useState<Opcion | null>(inicial)
+  const quiere: Quiere | null = opcion ? ladoDe(opcion) : null
+  const [camino, setCamino] = useState<Camino | null>(null)
+  const [paso, setPaso] = useState<Paso>(inicial ? 'como' : 'que')
   const [f, setF] = useState({
     nombre: '', email: '', password: '', telefono: '',
-    tipo: 'Casa', superficie: '', municipio: '', colonia: '', precio: '', operacion: 'venta', renta_mensual: '', deposito_meses: '',
+    tipo: 'Casa', superficie: '', municipio: '', colonia: '', precio: '', operacion: inicial === 'poner_renta' ? 'renta' : 'venta', renta_mensual: '', deposito_meses: '',
     busca: '', zona: '', presupuesto: PRESUPUESTOS[2],
   })
   const [trampa, setTrampa] = useState('')
@@ -76,9 +96,14 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((x) => ({ ...x, [k]: e.target.value }))
   const totalPasos = 3
-  const numPaso = { que: 1, datos: 2, camino: 3 }[paso]
+  const numPaso = { que: 1, como: 2, datos: 3 }[paso]
 
-  const elegir = (q: Quiere) => { setQuiere(q); setPaso('datos'); setError(null) }
+  const elegir = (o: Opcion) => {
+    setOpcion(o); setPaso('como'); setError(null)
+    if (ladoDe(o) === 'vender') setF((x) => ({ ...x, operacion: o === 'poner_renta' ? 'renta' : 'venta' }))
+  }
+  const elegirCamino = (c: Camino) => { setCamino(c); setPaso('datos'); setChatVender(true); setError(null) }
+  const destino = () => (camino === 'asesor' ? '/inicio?camino=broker' : '/inicio')
 
   const registrar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,10 +126,8 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
     setEnviando(false)
     if (eLogin || !s.session) { setError('Tu cuenta quedó creada. Inicia sesión para continuar.'); setYaExiste(true); return }
 
-    setPaso('camino')
+    router.push(destino())
   }
-
-  const terminar = (conBroker: boolean) => router.push(conBroker ? '/inicio?camino=broker' : '/inicio')
 
   const boton = 'font-sans text-[16px] font-medium px-4 py-3.5 text-center transition-colors disabled:opacity-60'
 
@@ -114,48 +137,67 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
       <a href="/login" className="font-sans text-[16px] font-medium text-tinta">Iniciar sesión</a>
     </>
   )
+  const btnAtras = (onClick: () => void) => <button onClick={onClick} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>
   const atrasBtn = paso === 'datos' && quiere === 'vender'
-    ? <button onClick={() => setChatVender(true)} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>
-    : paso === 'datos' && !inicial && quiere !== 'comprar'
-    ? <button onClick={() => setPaso('que')} className="font-sans text-[16px] text-tinta-2 hover:text-tinta">← Atrás</button>
+    ? btnAtras(() => setChatVender(true))
+    : paso === 'como'
+    ? btnAtras(() => (inicial ? router.push('/bienvenida') : setPaso('que')))
     : undefined
-  const etiquetaPaso = `Paso ${numPaso} de ${totalPasos}${quiere ? ` · ${quiere === 'vender' ? 'Vender' : 'Comprar'}` : ''}`
+  const etiquetaPaso = `Paso ${numPaso} de ${totalPasos}${opcion ? ` · ${ETIQUETA[opcion]}` : ''}`
+  const colorLado = quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'
+  const tarjetaCls = 'text-left bg-tarjeta border border-linea p-5 flex flex-col gap-1.5 hover:border-linea-fuerte rounded-xl h-full'
 
   return (
     <div className="min-h-screen bg-fondo text-tinta font-sans relative">
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative w-full max-w-[680px] mx-auto px-5 pb-12 flex flex-col gap-6">
-        {quiere === 'comprar' && paso !== 'que' ? (
-          <FichaNecesidad conSesion={false} barra={barra} onAtras={() => (inicial ? router.push('/bienvenida') : setPaso('que'))}
-            pasoBase={inicial ? 0 : 1} totalPasos={inicial ? 6 : 7} />
+        {quiere === 'comprar' && paso === 'datos' ? (
+          <FichaNecesidad conSesion={false} barra={barra} onAtras={() => setPaso('como')}
+            operacionInicial={opcion === 'rentar' ? 'renta' : 'compra'} conAsesor={camino === 'asesor'}
+            pasoBase={inicial ? 1 : 2} totalPasos={inicial ? 7 : 8} />
         ) : <>
         {paso === 'que' && (
           <>
-            <BandaPaso barra={barra} titulo={'¿Qué quieres hacer?'} subtitulo={'Vende o compra con certeza. Te acompañamos paso a paso.'} atras={atrasBtn}
-              avance={<Avance total={totalPasos} hechos={numPaso} color={quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'} />} etiqueta={etiquetaPaso} />
-            <div className="flex flex-col gap-3">
-              <button onClick={() => elegir('vender')} className="text-left bg-tarjeta border border-gold-500 p-5 flex gap-4 hover:bg-tarjeta/80 rounded-xl">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-acento shrink-0" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg>
-                <span className="flex flex-col gap-1">
-                  <span className="font-display text-[22px] font-medium">Quiero vender o rentar mi propiedad</span>
-                  <span className="text-[16px] text-tinta-2">Precio realista de mercado, certificación y clientes reales.</span>
-                </span>
-              </button>
-              <button onClick={() => elegir('comprar')} className="text-left bg-tarjeta border border-linea p-5 flex gap-4 hover:border-verde/60 rounded-xl">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7fd1b9" strokeWidth="1.6" className="shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></svg>
-                <span className="flex flex-col gap-1">
-                  <span className="font-display text-[22px] font-medium">Quiero comprar o rentar</span>
-                  <span className="text-[16px] text-tinta-2">Dinos qué buscas una sola vez y te llegan opciones que coinciden.</span>
-                </span>
-              </button>
+            <BandaPaso barra={barra} titulo={'¿Qué quieres hacer?'} subtitulo={'Compra, renta o vende con certeza. Te acompañamos paso a paso.'} atras={atrasBtn}
+              avance={<Avance total={totalPasos} hechos={numPaso} color="var(--c-acento)" />} etiqueta={etiquetaPaso} />
+            <div className="grid grid-cols-2 gap-3" data-opciones>
+              {OPCIONES.map((o) => (
+                <button key={o.id} onClick={() => elegir(o.id)} data-opcion={o.id} className={tarjetaCls}>
+                  <span className="font-display text-[21px] font-medium text-tinta">{o.titulo}</span>
+                  <span className="text-[15px] text-tinta-2">{o.texto}</span>
+                </button>
+              ))}
             </div>
             <p className="text-[16px] text-tenue text-center">¿Eres asesor inmobiliario? <a href="/bienvenida?broker=1" className="text-acento underline underline-offset-2">Regístrate aquí</a></p>
           </>
         )}
 
+        {/* §24.1: dos tarjetas del mismo tamaño y color, sin "recomendado". Se puede cambiar después. */}
+        {paso === 'como' && opcion && (
+          <>
+            <BandaPaso barra={barra} titulo={'¿Cómo quieres hacerlo?'} subtitulo={'Puedes cambiar de camino cuando quieras.'} atras={atrasBtn}
+              avance={<Avance total={totalPasos} hechos={numPaso} color={colorLado} />} etiqueta={etiquetaPaso} />
+            <div className="grid grid-cols-2 gap-3" data-como>
+              <button onClick={() => elegirCamino('cuenta')} data-camino="cuenta" className={tarjetaCls}>
+                <span className="font-display text-[21px] font-medium text-tinta">Por mi cuenta</span>
+                <span className="text-[15px] text-tinta-2">{quiere === 'comprar'
+                  ? 'La plataforma busca, certifica y te conecta.'
+                  : 'La plataforma certifica tu propiedad, la publica y te conecta con quien busca.'}</span>
+              </button>
+              <button onClick={() => elegirCamino('asesor')} data-camino="asesor" className={tarjetaCls}>
+                <span className="font-display text-[21px] font-medium text-tinta">Con un asesor</span>
+                <span className="text-[15px] text-tinta-2">{quiere === 'comprar'
+                  ? 'Un asesor verificado te acompaña y suma sus opciones.'
+                  : 'Un asesor verificado lleva tu propiedad y te acompaña hasta el cierre.'}</span>
+              </button>
+            </div>
+          </>
+        )}
+
         {paso === 'datos' && quiere === 'vender' && chatVender && (
           <ChatEntrada reglas={REGLAS_VENDER} barra={barra} cargando={false}
-            onAtras={() => (inicial ? router.push('/bienvenida') : setPaso('que'))} onAMano={aplicarChat} onListo={aplicarChat} />
+            inicial={{ ...REGLAS_VENDER.vacia(), operacion: opcion === 'poner_renta' ? 'renta' : 'venta' }}
+            onAtras={() => setPaso('como')} onAMano={aplicarChat} onListo={aplicarChat} />
         )}
 
         {paso === 'datos' && quiere && !(quiere === 'vender' && chatVender) && (
@@ -222,40 +264,11 @@ export default function Recorrido({ inicial }: { inicial: Quiere | null }) {
               <p className="text-[16px] text-error">{error}{yaExiste && <> · <a href="/login" className="text-acento underline underline-offset-2">Iniciar sesión</a></>}</p>
             )}
             <button disabled={enviando} className={`${boton} ${quiere === 'vender' ? 'bg-gold-500 hover:bg-gold-400' : 'bg-verde hover:opacity-90'} text-white rounded-lg`}>
-              {enviando ? 'Creando tu cuenta…' : 'Continuar →'}
+              {enviando ? 'Creando tu cuenta…' : camino === 'asesor' ? 'Crear mi cuenta y elegir asesor →' : 'Continuar →'}
             </button>
           </form>
         )}
 
-        {paso === 'camino' && quiere && (
-          <>
-            <BandaPaso barra={barra} titulo={quiere === 'vender' ? '¿Cómo quieres vender?' : '¿Cómo quieres buscar?'} subtitulo={'Puedes cambiar de opinión cuando quieras.'} atras={atrasBtn}
-              avance={<Avance total={totalPasos} hechos={numPaso} color={quiere === 'comprar' ? 'var(--c-verde)' : '#c9a227'} />} etiqueta={etiquetaPaso} />
-            <div className={`bg-tarjeta border ${quiere === 'vender' ? 'border-gold-500' : 'border-verde'} p-5 flex flex-col gap-2.5 rounded-xl`}>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="font-display text-[21px] font-medium">Con un asesor verificado</span>
-                <span className={`font-sans text-[13px] text-white px-2 py-1 ${quiere === 'vender' ? 'bg-gold-500' : 'bg-verde'} rounded-lg`}>MUY RECOMENDABLE</span>
-              </div>
-              <p className="text-[16px] text-tinta-2">
-                {quiere === 'vender'
-                  ? 'Tu asesor presenta tu propiedad a los compradores de toda la red, filtra a los interesados, negocia y te acompaña hasta el cierre.'
-                  : 'Accedes a toda la red: las propiedades de particulares y de todos los asesores de la plataforma. Tu asesor te acompaña en visitas, negociación y cierre.'}
-              </p>
-              <p className="text-[15px] text-tenue">Te sugerimos asesores verificados de tu zona, con su desempeño a la vista.</p>
-              <button onClick={() => terminar(true)} className={`${boton} mt-1 text-white ${quiere === 'vender' ? 'bg-gold-500 hover:bg-gold-400' : 'bg-verde hover:opacity-90'} rounded-lg`}>Ver asesores de mi zona</button>
-            </div>
-            <div className="bg-tarjeta border border-linea p-5 flex flex-col gap-2.5 rounded-xl">
-              <span className="font-display text-[21px] font-medium">Por mi cuenta</span>
-              <p className="text-[16px] text-tinta-2">
-                {quiere === 'vender'
-                  ? 'Tu propiedad aparece en el Radar de los compradores directos y la ven todos los asesores de la plataforma. Tú atiendes a los interesados.'
-                  : 'Buscas en el Radar de mercado: propiedades de particulares y anuncios de otros portales. ¿Viste algo en otro lado? Pega la liga y le pedimos al anunciante que la certifique.'}
-              </p>
-              {quiere === 'comprar' && <p className="text-[15px] text-tenue">Las propiedades que traen los asesores solo se ven con un asesor.</p>}
-              <button onClick={() => terminar(false)} className={`${boton} mt-1 border border-linea text-tinta hover:border-linea-fuerte`}>{quiere === 'vender' ? 'Continuar por mi cuenta' : 'Buscar por mi cuenta'}</button>
-            </div>
-          </>
-        )}
         </>}
       </div>
     </div>
