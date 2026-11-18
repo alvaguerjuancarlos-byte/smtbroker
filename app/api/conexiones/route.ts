@@ -4,12 +4,12 @@ import { avisarOperacion } from '@/lib/avisos'
 import { cumpleNecesidad } from '@/lib/necesidad'
 import { COLS_NECESIDAD, type FilaNecesidad } from '@/lib/necesidadServidor'
 import { COLS_ACTIVO_ANALISIS, type ActivoParaAnalisis } from '@/lib/analisisServidor'
-import { fase, rolEn, TEXTO_FASE, ladoComprador } from '@/lib/conexion'
+import { etiquetaEstadoCliente, fase, rolEn, TEXTO_FASE, ladoComprador } from '@/lib/conexion'
 import { COLS_CONEXION, avisarPartes, nombresDe, type FilaConexion } from '@/lib/conexionServidor'
 
 // Conexiones (Documento Maestro V8, Parte 3, §21).
 //
-// POST {activoId}: "Quiero verla". Solo el comprador y solo sobre una propiedad que ya analizó
+// POST {activoId}: "Conectar" (V10 §25.2; antes "Quiero verla"). Solo el comprador y solo sobre una propiedad que ya analizó
 // (Parte 2). Es el único momento en que se revela su nombre (§21.1). Con quién lo conecta (§21.2):
 //   - la propuso un broker en el panel  → ese broker; validación AUTOMÁTICA (broker verificado y la
 //     propiedad ya cumplió la ficha al proponerla);
@@ -44,13 +44,14 @@ export async function GET(req: NextRequest) {
       conexiones: C.map((c) => {
         const rol = rolEn(c, s.uid)
         const f = fase(c)
-        // Lo que le toca hacer a este usuario, para resaltarlo en la lista.
-        const pendiente = f === 'visita_propuesta' && rol === 'contraparte' ? 'Confirma un horario de visita'
-          : f === 'visita_realizada' && rol === 'comprador' && !c.visita_resultado ? '¿Cómo te fue en la visita?'
-            : f === 'cierre_por_confirmar' && rol === 'comprador' ? 'Confirma el cierre'
-              : null
+        // Lo que le toca hacer a este usuario, para resaltarlo en la lista (V10 §25: sin visita ni oferta).
+        const pendiente = f === 'cierre_por_confirmar' && rol === 'comprador' ? 'Confirma el cierre'
+          : rol === 'contraparte' && c.estado_cliente === 'cerrada' && !c.cierre_reportado_at ? 'Reporta el cierre'
+            : null
+        // Activa: lo que marcó quien busca (Conectado, Ya la visité, Negociando…), V10 §25.3.
+        const texto = c.estado === 'activa' && !c.cierre_reportado_at ? etiquetaEstadoCliente(c.estado_cliente) : TEXTO_FASE[f]
         return {
-          id: c.id, rol, fase: f, textoFase: TEXTO_FASE[f], pendiente, actualizado_at: c.actualizado_at,
+          id: c.id, rol, fase: f, textoFase: texto, pendiente, actualizado_at: c.actualizado_at,
           activo: activoDe.get(c.activo_id) ?? null,
           otraParte: ladoComprador(rol) ? nombres.get(c.contraparte_id) : nombres.get(c.comprador_id),
           ...(operacion ? {

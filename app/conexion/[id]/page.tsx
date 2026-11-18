@@ -1,12 +1,14 @@
 'use client'
 
-// Una conexión entre el comprador y quien ofrece la propiedad (Documento Maestro V8, Parte 3, §21).
-// La usan las tres partes con la misma pantalla: el comprador (o su broker), quien ofrece la
-// propiedad (broker o dueño) y Operación. Cada quien ve lo que le toca hacer:
-//   conversación (§21.3) → visita: el comprador propone 2 o 3 horarios, la otra parte confirma uno
-//   y se comparten los teléfonos (§21.4) → "¿cómo te fue?" → intención de oferta no vinculante
-//   (§21.5) → cierre: lo reporta quien ofrece y lo confirma el comprador, que califica al broker
-//   (§21.7). La plataforma no negocia ni cierra por nadie.
+// Una conexión entre quien busca y quien ofrece la propiedad (Documento Maestro V10, §25: la
+// plataforma SOLO CONECTA). La usan las tres partes con la misma pantalla: quien busca (o su asesor),
+// quien ofrece (asesor o dueño) y Operación:
+//   por validar → validada: los dos ven nombre, teléfono y botón de WhatsApp (§25.2) → quien busca
+//   marca en qué va con un toque (Conectado, Ya la visité, Negociando, Cerré / Ya rento, La descarté
+//   con motivo, §25.3) → cierre: lo reporta quien ofrece y lo confirma quien busca, que califica al
+//   asesor (§25.5). Los mensajes dentro de la plataforma son opcionales.
+// Se retiraron (sin borrar datos) la agenda de visita, el "¿cómo te fue?", la intención de oferta y
+// la solicitud de renta (§25.6).
 // Todo pasa por app/api/conexiones/[id].
 import { EncabezadoPantalla } from '@/app/components/Banda'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -14,8 +16,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useRolUsuario } from '@/lib/useRolUsuario'
 import Topbar from '../../components/Topbar'
-import { millones, rentaTexto, PLAZOS_CONTRATO, GARANTIAS, ENTRADAS } from '@/lib/necesidad'
-import { textoSolicitud, type SolicitudRenta } from '@/lib/conexion'
+import { millones, rentaTexto } from '@/lib/necesidad'
+import { ESTADOS_CLIENTE, MOTIVOS_DESCARTE, etiquetaEstadoCliente, type EstadoCliente } from '@/lib/conexion'
 
 interface Detalle {
   conexion: {
@@ -24,11 +26,9 @@ interface Detalle {
     oferta_monto: number | null; oferta_forma_pago: string | null; oferta_at: string | null
     cierre_precio: number | null; cierre_fecha: string | null; cierre_reportado_at: string | null; cierre_confirmado_at: string | null
     compro_respuesta: string | null; created_at: string; aporte?: Record<string, unknown>
-    solicitud_renta: SolicitudRenta | null
+    estado_cliente?: EstadoCliente; motivo_descarte?: string | null
   }
-  /** V9 (§22.5): en renta, solicitud de renta, contrato firmado y "¿ya rentaste?". */
   operacion: 'compra' | 'renta'
-  fichaRenta: { plazo_contrato?: string | null; garantia?: string | null; fecha_entrada?: string | null } | null
   rol: 'comprador' | 'contraparte' | 'broker_comprador' | 'operacion'
   fase: string; textoFase: string
   activo: { id: string; nombre: string; tipo: string; municipio: string; colonia: string | null; superficie: number | null; precio_total: number | null; operacion?: string | null; renta_mensual?: number | null }
@@ -51,23 +51,23 @@ const etiqueta = 'font-sans text-[14px] text-tenue'
 const campo = 'w-full px-3 py-2.5 border border-linea bg-fondo/60 text-[17px] text-tinta focus:outline-none focus:border-gold-500 rounded-lg'
 const botonPrimario = 'w-fit font-sans text-[15px] font-medium px-4 py-2.5 text-white disabled:opacity-50'
 const pesos = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-const cuando = (iso: string) => new Date(iso).toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
-const DIA = 86400_000
+// Liga de WhatsApp con un mensaje de arranque. Teléfonos de 10 dígitos se toman como de México (+52).
+const whatsapp = (tel: string | null, texto: string) => {
+  const dig = (tel ?? '').replace(/\D/g, '')
+  if (dig.length < 10) return null
+  return `https://wa.me/${dig.length === 10 ? '52' + dig : dig}?text=${encodeURIComponent(texto)}`
+}
 
 export default function ConexionPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const rolUsuario = useRolUsuario()
   const [d, setD] = useState<Detalle | null>(null)
-  const [ahora, setAhora] = useState(0) // hora de la última carga (no se lee el reloj al dibujar)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [texto, setTexto] = useState('')
-  const [horarios, setHorarios] = useState(['', '', ''])
-  const [oferta, setOferta] = useState({ monto: '', formaPago: 'contado' })
-  const [solicitud, setSolicitud] = useState<{ plazo_contrato: string; garantia: string; fecha_entrada: string } | null>(null)
   const [cierre, setCierre] = useState({ precio: '', fecha: new Date().toISOString().slice(0, 10) })
-  const [motivo, setMotivo] = useState('')
+  const [descartando, setDescartando] = useState(false)
   const [notas, setNotas] = useState({ atencion: 0, rapidez: 0, honestidad: 0, comentario: '' })
   const caja = useRef<HTMLDivElement>(null)
 
@@ -77,10 +77,6 @@ export default function ConexionPage() {
     const j = await r.json().catch(() => ({}))
     if (!r.ok) { setError(j.error ?? 'No se pudo cargar'); return }
     setD(j as Detalle)
-    setAhora(Date.now())
-    // La solicitud de renta arranca con lo que ya dijo en su ficha (o con la que ya envió).
-    const f = (j as Detalle).conexion.solicitud_renta ?? (j as Detalle).fichaRenta
-    setSolicitud((x) => x ?? { plazo_contrato: f?.plazo_contrato ?? '', garantia: f?.garantia ?? '', fecha_entrada: f?.fecha_entrada ?? '' })
   }, [id])
   useEffect(() => {
     const init = async () => {
@@ -116,7 +112,6 @@ export default function ConexionPage() {
   const ladoComprador = d.rol === 'comprador' || d.rol === 'broker_comprador'
   const activa = c.estado === 'activa'
   const renta = d.operacion === 'renta'
-  const visitaPasada = !!c.visita_at && new Date(c.visita_at).getTime() <= ahora
   const otraParte = ladoComprador
     ? `${d.partes.contraparte}${d.partes.contraparteEsBroker ? ' (asesor verificado)' : ' (dueño)'}`
     : `${d.partes.comprador}${d.partes.brokerComprador ? `, con su asesor ${d.partes.brokerComprador}` : ''}`
@@ -132,7 +127,7 @@ export default function ConexionPage() {
             <EncabezadoPantalla ancho="max-w-[860px]" titulo={d.activo.nombre}
               subtitulo={d.rol === 'operacion' ? `${d.partes.comprador} → ${d.partes.contraparte}` : `Con ${otraParte}`}>
               <a href={volver} className="font-sans text-[16px] text-tinta-2 hover:text-tinta w-fit -order-1">← Volver</a>
-              <span className="font-sans text-[16px] font-semibold -order-1" style={{ color: verde }}>{d.textoFase}</span>
+              <span className="font-sans text-[16px] font-semibold -order-1" style={{ color: verde }}>{activa ? etiquetaEstadoCliente(c.estado_cliente, d.operacion) : d.textoFase}</span>
               <p className="text-[18px] text-tinta-2">
                 {[renta ? (d.activo.renta_mensual ? rentaTexto(d.activo.renta_mensual) : null) : d.activo.precio_total ? millones(d.activo.precio_total) : null, d.activo.superficie ? `${d.activo.superficie.toLocaleString('es-MX')} m²` : null, [d.activo.colonia, d.activo.municipio].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
               </p>
@@ -150,141 +145,87 @@ export default function ConexionPage() {
                       <button onClick={() => accion({ accion: 'rechazar' })} disabled={ocupado} className="w-fit font-sans text-[15px] px-4 py-2.5 border border-linea text-tinta-2 rounded-lg">Rechazar</button>
                     </div>
                   </>
-                ) : <p className="text-[16px] text-tinta-2">Operación revisa esta conexión antes de abrir la conversación. Te avisamos por correo.</p>}
+                ) : <p className="text-[16px] text-tinta-2">Operación revisa esta conexión. Al validarla, los dos reciben el nombre, el teléfono y el WhatsApp del otro. Te avisamos por correo.</p>}
               </div>
             )}
             {c.estado === 'rechazada' && <div className={tarjeta}><p className="text-[16px] text-tinta-2">Operación no aprobó esta conexión.</p></div>}
 
             {d.telefonos && (
-              <div className={tarjeta} style={{ borderColor: verde }}>
-                <span className={etiqueta}>Teléfonos · visita confirmada</span>
-                <p className="text-[17px]">{ladoComprador ? d.partes.contraparte : d.partes.brokerComprador ?? d.partes.comprador}: <b>{(ladoComprador ? d.telefonos.contraparte : d.telefonos.comprador) ?? 'sin teléfono registrado'}</b></p>
-              </div>
-            )}
-
-            {(activa || c.visita_at) && c.estado !== 'por_validar' && (
-              <div className={tarjeta}>
-                <span className={etiqueta}>Visita</span>
-                {c.visita_confirmada_at && c.visita_at ? (
-                  <p className="text-[17px]">{visitaPasada ? 'Fue' : 'Confirmada para'} el <b>{cuando(c.visita_at)}</b>.</p>
-                ) : c.horarios_propuestos.length ? (
-                  d.rol === 'contraparte' ? (
+              <div className={tarjeta} style={{ borderColor: verde }} data-contacto>
+                <span className={etiqueta}>Contacto · ya pueden escribirse directo</span>
+                {(() => {
+                  const nombre = ladoComprador ? d.partes.contraparte : d.partes.brokerComprador ?? d.partes.comprador
+                  const tel = ladoComprador ? d.telefonos!.contraparte : d.telefonos!.comprador
+                  const wa = whatsapp(tel, `Hola ${nombre.split(' ')[0]}, te escribo por ${d.activo.nombre} (conectamos en EslAix).`)
+                  return (
                     <>
-                      <p className="text-[16px] text-tinta-2">El comprador propone estos horarios. Elige uno:</p>
-                      {c.horarios_propuestos.map((h) => (
-                        <button key={h} onClick={() => accion({ accion: 'confirmar_visita', horario: h })} disabled={ocupado}
-                          className="text-left px-3 py-2.5 border border-linea hover:border-verde text-[17px] rounded-lg">{cuando(h)} <span className="font-sans text-[14px]" style={{ color: verde }}>· Confirmar</span></button>
-                      ))}
+                      <p className="text-[17px]">{nombre}{ladoComprador && d.partes.contraparteEsBroker ? ' · asesor verificado' : ''}: <b>{tel ?? 'sin teléfono registrado'}</b></p>
+                      {wa && <a href={wa} target="_blank" rel="noopener noreferrer" data-whatsapp className={botonPrimario + ' rounded-lg'} style={{ background: '#1f8f4e' }}>Escribir por WhatsApp</a>}
                     </>
-                  ) : <p className="text-[16px] text-tinta-2">Propusiste: {c.horarios_propuestos.map(cuando).join(' · ')}. Esperando que confirme uno.</p>
-                ) : !ladoComprador ? <p className="text-[16px] text-tinta-2">El comprador propondrá horarios para la visita.</p> : null}
+                  )
+                })()}
+              </div>
+            )}
 
-                {ladoComprador && activa && !c.visita_confirmada_at && (
+            {(activa || c.estado === 'descartada' || c.estado === 'cerrada') && (
+              <div className={tarjeta} data-estado-cliente>
+                <span className={etiqueta}>{ladoComprador ? '¿En qué va?' : `En qué va, según ${d.partes.comprador}`}</span>
+                {ladoComprador && activa ? (
                   <>
-                    <p className="text-[16px] text-tenue">{c.horarios_propuestos.length ? 'Puedes cambiar tu propuesta:' : 'Propón de 1 a 3 horarios para la visita:'}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {horarios.map((h, i) => (
-                        <input key={i} type="datetime-local" value={h} onChange={(e) => setHorarios((x) => x.map((y, k) => (k === i ? e.target.value : y)))} className={campo} />
-                      ))}
-                    </div>
-                    <button disabled={ocupado || !horarios.some(Boolean)} className={botonPrimario} style={{ background: verde }}
-                      onClick={async () => { if (await accion({ accion: 'proponer_horarios', horarios: horarios.filter(Boolean).map((h) => new Date(h).toISOString()) })) setHorarios(['', '', '']) }}>
-                      Proponer horarios
-                    </button>
-                  </>
-                )}
-
-                {d.rol === 'comprador' && visitaPasada && !c.visita_resultado && activa && (
-                  <div className="flex flex-col gap-2 border-t border-linea pt-2.5">
-                    <p className="text-[17px] font-medium">¿Cómo te fue?</p>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'me_interesa' })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg" style={{ borderColor: verde }}>Me interesa</button>
-                      <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'quiero_ofertar' })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg" style={{ borderColor: verde }}>{renta ? 'Quiero rentarla' : 'Quiero ofertar'}</button>
+                      {ESTADOS_CLIENTE.map((e) => {
+                        const actual = (c.estado_cliente ?? 'conectado') === e.id
+                        return (
+                          <button key={e.id} data-estado={e.id} disabled={ocupado || actual}
+                            onClick={() => (e.id === 'descartada' ? setDescartando(true) : accion({ accion: 'estado', estado: e.id }))}
+                            className="px-3 py-2 border text-[16px] rounded-lg disabled:cursor-default"
+                            style={actual ? { borderColor: verde, background: 'var(--c-verde-suave)' } : { borderColor: 'var(--c-linea)' }}>
+                            {renta ? e.renta : e.compra}
+                          </button>
+                        )
+                      })}
                     </div>
-                    <div className="flex gap-2">
-                      <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo: precio, estado, ubicación…" className={campo} />
-                      <button onClick={() => accion({ accion: 'resultado_visita', resultado: 'descarto', motivo })} disabled={ocupado} className="px-3 py-2 border border-linea text-[16px] text-tinta-2 shrink-0 rounded-lg">La descarto</button>
-                    </div>
-                  </div>
-                )}
-                {c.visita_resultado && <p className="text-[15px] text-tenue">Después de la visita: {c.visita_resultado === 'me_interesa' ? 'le interesa' : c.visita_resultado === 'quiero_ofertar' ? (renta ? 'quiere rentarla' : 'quiere ofertar') : 'la descartó'}.</p>}
-              </div>
-            )}
-
-            {renta && (c.oferta_at || (ladoComprador && activa && !c.cierre_reportado_at)) && (
-              <div className={tarjeta} data-solicitud-renta>
-                <span className={etiqueta}>Solicitud de renta · no vinculante</span>
-                {c.oferta_at && c.oferta_monto ? (
-                  <p className="text-[17px]"><b>{rentaTexto(c.oferta_monto)}</b>{c.solicitud_renta ? ` · ${textoSolicitud(c.solicitud_renta)}` : ''} · enviada el {new Date(c.oferta_at).toLocaleDateString('es-MX')}.</p>
-                ) : null}
-                {ladoComprador && activa && !c.cierre_reportado_at && solicitud && (
-                  <>
-                    {d.referencia?.texto && <p className="text-[15px] text-tenue">Tu análisis: {d.referencia.texto}</p>}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input value={oferta.monto ? Number(oferta.monto).toLocaleString('es-MX') : ''} onChange={(e) => setOferta((x) => ({ ...x, monto: e.target.value.replace(/\D/g, '') }))}
-                        inputMode="numeric" placeholder={d.activo.renta_mensual ? `Renta que ofreces al mes (pide ${d.activo.renta_mensual.toLocaleString('es-MX')})` : 'Renta que ofreces al mes'} className={campo} name="renta-ofrecida" />
-                      <select value={solicitud.plazo_contrato} onChange={(e) => setSolicitud((x) => ({ ...x!, plazo_contrato: e.target.value }))} className={campo} name="plazo">
-                        <option value="">Plazo del contrato</option>{PLAZOS_CONTRATO.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
-                      </select>
-                      <select value={solicitud.garantia} onChange={(e) => setSolicitud((x) => ({ ...x!, garantia: e.target.value }))} className={campo} name="garantia">
-                        <option value="">Garantía que das</option>{GARANTIAS.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
-                      </select>
-                      <select value={solicitud.fecha_entrada} onChange={(e) => setSolicitud((x) => ({ ...x!, fecha_entrada: e.target.value }))} className={campo} name="entrada">
-                        <option value="">¿Cuándo entras?</option>{ENTRADAS.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
-                      </select>
-                    </div>
-                    <button onClick={() => accion({ accion: 'oferta', monto: oferta.monto, ...solicitud })} disabled={ocupado || !oferta.monto || !solicitud.plazo_contrato} className={botonPrimario} style={{ background: verde }}>
-                      {c.oferta_at ? 'Actualizar solicitud de renta' : 'Enviar solicitud de renta'}
-                    </button>
-                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. El contrato y la firma van por su cuenta{d.partes.brokerComprador ? ' con tu asesor' : ''}.</p>
+                    {descartando && (
+                      <div className="flex flex-wrap items-center gap-2 border-t border-linea pt-2.5" data-motivos>
+                        <span className="text-[16px] text-tinta-2">¿Por qué la descartas?</span>
+                        {MOTIVOS_DESCARTE.map((m) => (
+                          <button key={m.id} data-motivo={m.id} disabled={ocupado}
+                            onClick={async () => { if (await accion({ accion: 'estado', estado: 'descartada', motivo: m.id })) setDescartando(false) }}
+                            className="px-3 py-1.5 border border-linea text-[15px] rounded-lg">{m.etiqueta}</button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[14px] text-tenue">Márcalo con un toque; así te avisamos qué sigue. La visita y la negociación las acuerdan directo.</p>
                   </>
-                )}
-              </div>
-            )}
-
-            {!renta && (c.oferta_at || (ladoComprador && activa && !c.cierre_reportado_at)) && (
-              <div className={tarjeta}>
-                <span className={etiqueta}>Intención de oferta · no vinculante</span>
-                {c.oferta_at && c.oferta_monto ? (
-                  <p className="text-[17px]"><b>{pesos(c.oferta_monto)}</b> de {c.oferta_forma_pago === 'credito' ? 'crédito bancario' : c.oferta_forma_pago === 'infonavit' ? 'Infonavit / Fovissste' : 'contado'} · enviada el {new Date(c.oferta_at).toLocaleDateString('es-MX')}.</p>
-                ) : null}
-                {ladoComprador && activa && !c.cierre_reportado_at && (
-                  <>
-                    {d.referencia?.texto && <p className="text-[15px] text-tenue">Tu análisis: {d.referencia.texto}</p>}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input value={oferta.monto ? Number(oferta.monto).toLocaleString('es-MX') : ''} onChange={(e) => setOferta((x) => ({ ...x, monto: e.target.value.replace(/\D/g, '') }))}
-                        inputMode="numeric" placeholder="Monto (MXN)" className={campo} />
-                      <select value={oferta.formaPago} onChange={(e) => setOferta((x) => ({ ...x, formaPago: e.target.value }))} className={campo}>
-                        <option value="contado">Contado</option><option value="credito">Crédito bancario</option><option value="infonavit">Infonavit / Fovissste</option>
-                      </select>
-                    </div>
-                    <button onClick={() => accion({ accion: 'oferta', monto: oferta.monto, formaPago: oferta.formaPago })} disabled={ocupado || !oferta.monto} className={botonPrimario} style={{ background: verde }}>
-                      {c.oferta_at ? 'Actualizar intención de oferta' : 'Enviar intención de oferta'}
-                    </button>
-                    <p className="text-[15px] text-tenue">Se envía como dato, no es un contrato. La negociación, el contrato y la notaría van por su cuenta{d.partes.brokerComprador ? ' con tu asesor' : '; para eso te conviene un asesor verificado'}.</p>
-                  </>
+                ) : (
+                  <p className="text-[17px]">
+                    {etiquetaEstadoCliente(c.estado_cliente, d.operacion)}
+                    {c.estado_cliente === 'descartada' && c.motivo_descarte ? ` · ${MOTIVOS_DESCARTE.find((m) => m.id === c.motivo_descarte)?.etiqueta.toLowerCase() ?? c.motivo_descarte}` : ''}
+                  </p>
                 )}
               </div>
             )}
 
             {(c.cierre_reportado_at || (d.rol === 'contraparte' && activa)) && (
               <div className={tarjeta}>
-                <span className={etiqueta}>{renta ? 'Contrato de renta' : 'Cierre'}</span>
+                <span className={etiqueta}>{renta ? 'Renta' : 'Cierre'}</span>
                 {c.cierre_reportado_at ? (
                   <>
-                    <p className="text-[17px]">{renta ? 'Contrato firmado' : 'Cierre reportado'}: <b>{renta ? rentaTexto(c.cierre_precio ?? 0) : pesos(c.cierre_precio ?? 0)}</b> · {c.cierre_fecha}. {c.cierre_confirmado_at ? <span style={{ color: verde }}>Confirmado por {renta ? 'quien renta' : 'el comprador'} ✓</span> : <span className="text-tenue">Falta la confirmación {renta ? 'de quien renta' : 'del comprador'}.</span>}</p>
+                    <p className="text-[17px]">{renta ? 'Renta reportada' : 'Cierre reportado'}: <b>{renta ? rentaTexto(c.cierre_precio ?? 0) : pesos(c.cierre_precio ?? 0)}</b> · {c.cierre_fecha}. {c.cierre_confirmado_at ? <span style={{ color: verde }}>Confirmado por {renta ? 'quien renta' : 'el comprador'} ✓</span> : <span className="text-tenue">Falta la confirmación {renta ? 'de quien renta' : 'del comprador'}.</span>}</p>
                     {d.rol === 'comprador' && !c.cierre_confirmado_at && (
-                      <button onClick={() => accion({ accion: 'confirmar_cierre' })} disabled={ocupado} className={botonPrimario} style={{ background: verde }}>{renta ? 'Confirmo que firmé el contrato' : 'Confirmo que compré'}</button>
+                      <button onClick={() => accion({ accion: 'confirmar_cierre' })} disabled={ocupado} className={botonPrimario} style={{ background: verde }}>{renta ? 'Confirmo que ya rento' : 'Confirmo que compré'}</button>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="text-[16px] text-tinta-2">{renta ? 'Cuando se firme el contrato, repórtalo aquí. Quien renta lo confirma y queda como renta verificada.' : 'Cuando se firme, repórtalo aquí. El comprador lo confirma y queda como cierre verificado.'}</p>
+                    <p className="text-[16px] text-tinta-2">{c.estado_cliente === 'cerrada'
+                      ? `${d.partes.comprador} marcó que ${renta ? 'ya la renta' : 'ya cerró'}. Repórtalo con su ${renta ? 'renta mensual' : 'precio'} y fecha para que quede verificado.`
+                      : renta ? 'Cuando quede rentada, repórtalo aquí. Quien renta lo confirma y queda como renta verificada.' : 'Cuando se firme, repórtalo aquí. El comprador lo confirma y queda como cierre verificado.'}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input value={cierre.precio ? Number(cierre.precio).toLocaleString('es-MX') : ''} onChange={(e) => setCierre((x) => ({ ...x, precio: e.target.value.replace(/\D/g, '') }))} inputMode="numeric" placeholder={renta ? 'Renta mensual del contrato (MXN)' : 'Precio de cierre (MXN)'} className={campo} name="cierre-precio" />
+                      <input value={cierre.precio ? Number(cierre.precio).toLocaleString('es-MX') : ''} onChange={(e) => setCierre((x) => ({ ...x, precio: e.target.value.replace(/\D/g, '') }))} inputMode="numeric" placeholder={renta ? 'Renta mensual (MXN)' : 'Precio de cierre (MXN)'} className={campo} name="cierre-precio" />
                       <input type="date" value={cierre.fecha} onChange={(e) => setCierre((x) => ({ ...x, fecha: e.target.value }))} className={campo} />
                     </div>
-                    <button onClick={() => accion({ accion: 'reportar_cierre', ...cierre })} disabled={ocupado || !cierre.precio} className={botonPrimario} style={{ background: verde }}>{renta ? 'Reportar contrato firmado' : 'Reportar cierre'}</button>
+                    <button onClick={() => accion({ accion: 'reportar_cierre', ...cierre })} disabled={ocupado || !cierre.precio} className={botonPrimario} style={{ background: verde }}>{renta ? 'Reportar renta' : 'Reportar cierre'}</button>
                   </>
                 )}
                 {d.puedeCalificar && (
@@ -306,21 +247,9 @@ export default function ConexionPage() {
               </div>
             )}
 
-            {d.rol === 'comprador' && activa && !c.cierre_reportado_at && ahora - new Date(c.created_at).getTime() >= 30 * DIA && (
-              <div className={tarjeta}>
-                <span className={etiqueta}>{renta ? '¿Ya rentaste?' : '¿Ya compraste?'}</span>
-                <div className="flex flex-wrap gap-2">
-                  {([['si_esta', 'Sí, esta'], ['otra', renta ? 'Renté otra' : 'Compré otra'], ['no_aun', 'Todavía no']] as const).map(([v, t]) => (
-                    <button key={v} onClick={() => accion({ accion: 'compre', respuesta: v })} disabled={ocupado} className="px-3 py-2 border text-[16px] rounded-lg"
-                      style={c.compro_respuesta === v ? { borderColor: verde, background: 'var(--c-verde-suave)' } : { borderColor: 'var(--c-linea)' }}>{t}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {c.estado !== 'por_validar' && c.estado !== 'rechazada' && (
               <div className={tarjeta}>
-                <span className={etiqueta}>Conversación</span>
+                <span className={etiqueta}>Mensajes · opcional</span>
                 <div ref={caja} className="flex flex-col gap-2 max-h-[420px] overflow-y-auto">
                   {d.mensajes.length === 0 && <p className="text-[16px] text-tenue">Todavía no hay mensajes. {activa ? 'Escribe el primero.' : ''}</p>}
                   {d.mensajes.map((m) => (
@@ -336,7 +265,7 @@ export default function ConexionPage() {
                     <button disabled={ocupado || !texto.trim()} className="font-sans text-[15px] px-4 text-white disabled:opacity-50 shrink-0" style={{ background: verde }}>Enviar</button>
                   </form>
                 )}
-                <p className="text-[14px] text-tenue">Los teléfonos se comparten al confirmar la visita. EslAix conecta y da seguimiento; no negocia ni cierra por nadie.</p>
+                <p className="text-[14px] text-tenue">Pueden escribirse aquí o directo por WhatsApp. EslAix conecta y da seguimiento; no agenda, no negocia ni cierra por nadie.</p>
               </div>
             )}
           </div>

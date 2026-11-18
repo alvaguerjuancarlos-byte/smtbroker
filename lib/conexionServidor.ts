@@ -5,7 +5,7 @@ import { avisarUsuario, type Aviso } from '@/lib/avisos'
 import type { ConexionBase, SolicitudRenta } from '@/lib/conexion'
 import type { Operacion } from '@/lib/necesidad'
 
-export const COLS_CONEXION = 'id, comprador_id, activo_id, necesidad_id, propuesta_id, contraparte_id, contraparte_es_broker, broker_comprador_id, origen, estado, validacion, validada_at, aporte, horarios_propuestos, visita_at, visita_confirmada_at, recordatorio_enviado_at, como_te_fue_enviado_at, visita_resultado, motivo_descarte, oferta_monto, oferta_forma_pago, oferta_at, cierre_precio, cierre_fecha, cierre_reportado_at, cierre_confirmado_at, seguimientos_enviados, compro_respuesta, compro_respuesta_at, solicitud_renta, es_demo, created_at, actualizado_at'
+export const COLS_CONEXION = 'id, comprador_id, activo_id, necesidad_id, propuesta_id, contraparte_id, contraparte_es_broker, broker_comprador_id, origen, estado, validacion, validada_at, aporte, horarios_propuestos, visita_at, visita_confirmada_at, recordatorio_enviado_at, como_te_fue_enviado_at, visita_resultado, motivo_descarte, oferta_monto, oferta_forma_pago, oferta_at, cierre_precio, cierre_fecha, cierre_reportado_at, cierre_confirmado_at, seguimientos_enviados, compro_respuesta, compro_respuesta_at, solicitud_renta, estado_cliente, estado_cliente_at, siete_dias_enviado_at, es_demo, created_at, actualizado_at'
 
 export interface FilaConexion extends ConexionBase {
   id: string

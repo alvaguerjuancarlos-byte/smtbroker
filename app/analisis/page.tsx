@@ -7,7 +7,7 @@
 //   - lo que depende del tipo y del propósito: costo total, mensualidad, uso de suelo, rendimiento
 //     por renta (§20.2);
 //   - lo legal: sello si está certificada o "no revisada legalmente" con el botón para pedirla (§20.3).
-//   - "Quiero verla" (V8 Parte 3, §21.1): abre la conexión con quien la ofrece y revela su nombre.
+//   - "Conectar" (V10 §25.2; antes "Quiero verla"): abre la conexión con quien la ofrece y revela su nombre.
 //   - Un anuncio de portal (opción 2, 10-nov-2026) se analiza igual, marcado "De portal · no
 //     certificada", con su liga original; en vez de "Quiero verla", se invita al anunciante a certificar.
 // Con dos o más, el comparativo lado a lado (§20.4). Todo sale de app/api/analisis.
@@ -265,9 +265,9 @@ export default function AnalisisPage() {
 
                   {f.activo_id && <div className={bloque}>
                     <button onClick={() => quieroVerla(f)} disabled={!!ocupado} className="w-full font-sans text-[16px] font-medium px-4 py-3 text-white disabled:opacity-60" style={{ background: verde }}>
-                      {ocupado === f.id + 'ver' ? 'Conectando…' : 'Quiero verla'}
+                      {ocupado === f.id + 'ver' ? 'Conectando…' : 'Conectar'}
                     </button>
-                    <p className="text-[15px] text-tenue">Te conectamos con quien la ofrece para conversar y agendar la visita. Solo entonces sabrá tu nombre.</p>
+                    <p className="text-[15px] text-tenue">Te conectamos con quien la ofrece: al validarse, los dos reciben nombre, teléfono y WhatsApp. Solo entonces sabrá tu nombre.</p>
                   </div>}
 
                   <div className="flex gap-4 flex-wrap pt-1">
