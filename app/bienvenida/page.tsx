@@ -5,7 +5,7 @@
 // una página pública no tiene caso. Ahora ese acceso vive detrás del link discreto "Iniciar
 // sesión" del header (mismo /login para cualquier rol, incluido el Broker Maestro) — un
 // "paraguas" silencioso en vez de un letrero.
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Field, inputCls } from '../components/FormField'
 import { AvisoSimplificado } from '../components/AvisoSimplificado'
@@ -62,6 +62,14 @@ const ROLES = [
   },
 ]
 
+// Las mismas cuatro puertas que el paso 1 de /empezar (app/empezar/Recorrido.tsx).
+const PUERTAS = [
+  { id: 'comprar', titulo: 'Comprar', texto: 'Dinos qué buscas y ves opciones que coinciden.' },
+  { id: 'rentar', titulo: 'Rentar', texto: 'Con la renta que puedes pagar al mes.' },
+  { id: 'vender', titulo: 'Vender', texto: 'Precio realista y personas que buscan algo como lo tuyo.' },
+  { id: 'poner_renta', titulo: 'Poner en renta', texto: 'Renta realista y quién busca rentar en tu zona.' },
+]
+
 const GRID_BG = {
   backgroundImage:
     'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
@@ -72,6 +80,14 @@ export default function BienvenidaPage() {
   const router  = useRouter()
   const [rol,       setRol]       = useState<Rol>(null)
   const formRef = useRef<HTMLDivElement>(null)
+  // Entrada discreta del asesor (§24.5): abre su formulario de registro.
+  const elegirAsesor = () => { setRol('broker'); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }
+  // /bienvenida?broker=1 (el enlace "¿Eres asesor inmobiliario?" de /empezar) llega directo a ese formulario.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('broker') !== '1') return
+    const t = setTimeout(elegirAsesor, 0)
+    return () => clearTimeout(t)
+  }, [])
   const [enviado,   setEnviado]   = useState(false)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
@@ -181,35 +197,25 @@ export default function BienvenidaPage() {
               </p>
             </div>
 
-            {/* Selección de rol */}
+            {/* V10 §24.1 y §24.5 (JC, 18-nov-2026): la misma pregunta que la entrada, con las cuatro
+                operaciones al mismo nivel (antes "Soy propietario / Quiero comprar" escondía rentar y
+                poner en renta). Cada una lleva al paso 2 de /empezar con la operación ya puesta. El
+                asesor ya no es una tarjeta más: una sola entrada discreta abajo. */}
             <div>
-              <p className="font-sans text-[14px] text-tenue mb-5">¿Cómo quieres participar?</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {ROLES.map(r => {
-                  const sel = rol === r.id
-                  return (
-                    <button key={r.id} onClick={() => {
-                      // V7.2: vendedores y compradores entran al recorrido guiado con registro
-                      // inmediato (/empezar); solo los brokers dejan solicitud para aprobación.
-                      if (r.id === 'propietario' || r.id === 'inversionista') { router.push(`/empezar?quiere=${r.id === 'propietario' ? 'vender' : 'comprar'}`); return }
-                      setRol(r.id); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
-                    }}
-                      className={`p-5 border text-left transition-all bg-tarjeta ${sel ? 'border-gold-500' : 'border-linea hover:border-linea-fuerte'} rounded-xl`}>
-                      <div className="w-11 h-11 border flex items-center justify-center mb-4" style={{ borderColor: r.accent, color: r.accent }}>
-                        {r.icono}
-                      </div>
-                      <p className="text-[18px] font-medium text-tinta mb-0.5">{r.titulo}</p>
-                      <p className="text-[15px] text-tenue mb-3">{r.sub}</p>
-                      <p className="text-[15px] text-tinta-2 leading-relaxed mb-4">{r.desc}</p>
-                      <div className="flex flex-col gap-1.5 pt-3 border-t border-linea">
-                        {r.beneficios.map(b => (
-                          <p key={b} className="text-[14px] text-tenue">— {b}</p>
-                        ))}
-                      </div>
-                    </button>
-                  )
-                })}
+              <p className="font-sans text-[14px] text-tenue mb-5">¿Qué quieres hacer?</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-puertas>
+                {PUERTAS.map((o) => (
+                  <button key={o.id} onClick={() => router.push(`/empezar?quiere=${o.id}`)} data-puerta={o.id}
+                    className="p-5 border border-linea hover:border-linea-fuerte text-left transition-all bg-tarjeta rounded-xl flex flex-col gap-1.5">
+                    <span className="text-[19px] font-medium text-tinta">{o.titulo}</span>
+                    <span className="text-[15px] text-tinta-2 leading-snug">{o.texto}</span>
+                  </button>
+                ))}
               </div>
+              <p className="text-[16px] text-tenue mt-6">
+                ¿Eres asesor inmobiliario?{' '}
+                <button onClick={elegirAsesor} className="text-acento underline underline-offset-2" data-entrada-asesor>Únete a SMT Match</button>
+              </p>
             </div>
 
             {/* Formulario — aparece al seleccionar rol */}
