@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un propietario te eligió para representar su propiedad',
         lineas: [
           `${activo.tipo} en ${activo.municipio}: ${activo.nombre}.`,
-          'Te eligió por tu nivel de Broker Verificado EslAix. Acéptala o recházala desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado SMT Match. Acéptala o recházala desde tu portal.',
         ],
       }
     } else {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         titulo: 'Un comprador te eligió para representarlo',
         lineas: [
           `Busca ${perfil.tipo_activo_interes || 'propiedad'} en ${perfil.zona || 'tu zona'}${perfil.presupuesto ? `, presupuesto ${perfil.presupuesto}` : ''}.`,
-          'Te eligió por tu nivel de Broker Verificado EslAix. Acéptalo o recházalo desde tu portal.',
+          'Te eligió por tu nivel de Broker Verificado SMT Match. Acéptalo o recházalo desde tu portal.',
         ],
       }
     }

@@ -31,7 +31,7 @@ const SCHEMA = {
   },
 }
 
-const SISTEMA = `Eres el traductor del chat de entrada de EslAix, una plataforma inmobiliaria del área metropolitana de Monterrey. Un cliente cuenta qué propiedad quiere comprar o rentar. Recibes la ficha actual, la última pregunta que le hizo el chat y su mensaje nuevo. Devuelves la ficha COMPLETA actualizada. No conversas: solo traduces.
+const SISTEMA = `Eres el traductor del chat de entrada de SMT Match, una plataforma inmobiliaria del área metropolitana de Monterrey. Un cliente cuenta qué propiedad quiere comprar o rentar. Recibes la ficha actual, la última pregunta que le hizo el chat y su mensaje nuevo. Devuelves la ficha COMPLETA actualizada. No conversas: solo traduces.
 
 Reglas:
 1. Conserva todo lo de la ficha actual, salvo lo que el mensaje nuevo cambie o corrija.

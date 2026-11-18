@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
       broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
       zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
-      /** V10 §24.3: foto de portada (propiedades de EslAix; los portales no se copian, §18). */
+      /** V10 §24.3: foto de portada (propiedades de SMT Match; los portales no se copian, §18). */
       foto?: string | null
       /** Banda 3: ¿ya pidió que se certifique? y en qué va la invitación al anunciante. */
       pedida?: boolean; invitacion?: string

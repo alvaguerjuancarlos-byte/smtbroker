@@ -93,7 +93,7 @@ export default function LoginPage() {
             Bienvenido<br /><span className="italic font-normal text-acento">de vuelta.</span>
           </h1>
           <p className="text-[18px] text-tinta-2 max-w-[42ch] mt-5 leading-relaxed">
-            Diagnóstico legal y de mercado, certificación de brokers, y el resto del ecosistema EslAix — todo en un mismo lugar.
+            Diagnóstico legal y de mercado, certificación de brokers, y el resto del ecosistema SMT Match — todo en un mismo lugar.
           </p>
 
           <div className="hidden sm:flex items-center gap-3 mt-14 pt-6 border-t border-linea">

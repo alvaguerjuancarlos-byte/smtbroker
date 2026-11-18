@@ -1,9 +1,9 @@
 // Conexión con MindBridge Search, el motor de búsqueda (Documento Maestro V10, §29).
 //
-// EslAix le manda la ficha ya llena (sin pasar por Claude: ~1 s) y el motor ORDENA y EXPLICA:
+// SMT Match le manda la ficha ya llena (sin pasar por Claude: ~1 s) y el motor ORDENA y EXPLICA:
 // qué cumple cada propiedad y qué datos le faltan. Una propiedad sin un dato no se excluye: baja.
-// EslAix sigue mandando en lo que se muestra (zona, tipo, presupuesto, demo/real, brokers): el motor
-// solo reordena lo que EslAix ya aprobó (cambio gradual, §29.4).
+// SMT Match sigue mandando en lo que se muestra (zona, tipo, presupuesto, demo/real, brokers): el motor
+// solo reordena lo que SMT Match ya aprobó (cambio gradual, §29.4).
 //
 // Si el motor no está configurado, falla o tarda más de MAX_MS, todo sigue con el orden de siempre.
 //
@@ -19,7 +19,7 @@ const AMENIDADES: Record<string, string> = {
 const TIPOS = new Set(['casa', 'departamento', 'terreno', 'local', 'oficina', 'bodega'])
 
 export interface ResultadoMotor {
-  /** Id de la propiedad en EslAix (sin el sufijo :venta/:renta de las que están en ambas). */
+  /** Id de la propiedad en SMT Match (sin el sufijo :venta/:renta de las que están en ambas). */
   activoId: string
   posicion: number
   cumple: string[]
@@ -36,7 +36,7 @@ const config = () => {
   return url && key ? { url, key } : null
 }
 
-/** La ficha de EslAix en el formato del motor (docs/schemas/parser-output.json del motor). */
+/** La ficha de SMT Match en el formato del motor (docs/schemas/parser-output.json del motor). */
 export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | null {
   if (!TIPOS.has(n.tipo)) return null // "edificio" no existe en el motor: orden de siempre
   const c = n.caracteristicas
@@ -44,7 +44,7 @@ export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | n
   const amenidades = (Array.isArray(c.amenidades) ? c.amenidades : []).map((a) => AMENIDADES[a]).filter(Boolean)
   const filtros: Record<string, unknown> = {
     tipo: [n.tipo],
-    // El presupuesto tal cual; el margen de ±10 % de EslAix (MARGEN_PRECIO) va como tolerancia_precio,
+    // El presupuesto tal cual; el margen de ±10 % de SMT Match (MARGEN_PRECIO) va como tolerancia_precio,
     // así el motor muestra lo que cae en el margen pero le da medio punto en el %.
     precio_mxn: { min: n.presupuesto_min ? Math.floor(n.presupuesto_min) : null, max: Math.ceil(n.presupuesto_max) },
     recamaras: minimo(c.recamaras, true),
@@ -56,7 +56,7 @@ export function interpretacionDeFicha(n: Necesidad): Record<string, unknown> | n
   return {
     operacion: n.operacion === 'renta' ? 'renta' : 'venta',
     filtros_duros: filtros,
-    geo: null, // las zonas (hasta 3) las aplica EslAix
+    geo: null, // las zonas (hasta 3) las aplica SMT Match
     // Las preferencias ordenan por significado y se explican ("coincide con: tranquilo").
     preferencias_suaves: preferenciasDe(n).join(', ') || null,
     orden: 'relevancia',
@@ -132,7 +132,7 @@ function interpretacionDeFrase(frase: string): Promise<Record<string, unknown> |
 export const UMBRAL_MOTOR = 60
 
 /**
- * Propiedades de EslAix que el motor sugiere para un perfil (id → % y razones), con el umbral ya
+ * Propiedades de SMT Match que el motor sugiere para un perfil (id → % y razones), con el umbral ya
  * aplicado. null = el motor no está disponible: quien llama usa el emparejador viejo de respaldo.
  */
 export async function coincidenciasDePerfil(p: { tipo_activo_interes: string | null; zona: string | null; presupuesto: string | null }): Promise<Map<string, CoincidenciaPerfil> | null> {
