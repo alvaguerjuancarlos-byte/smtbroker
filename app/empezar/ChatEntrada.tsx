@@ -27,8 +27,10 @@ export interface ReglasChat<F, P extends string> {
   color: string
 }
 
-export default function ChatEntrada<F, P extends string>({ reglas, barra, onAtras, onAMano, onListo, cargando }: {
+export default function ChatEntrada<F, P extends string>({ reglas, barra, onAtras, onAMano, onListo, cargando, inicial }: {
   reglas: ReglasChat<F, P>
+  /** Ficha con lo que ya se sabe (V10 §24.1: la operación elegida en la entrada). */
+  inicial?: F
   barra?: React.ReactNode
   onAtras: () => void
   onAMano: (f: F) => void
@@ -36,7 +38,7 @@ export default function ChatEntrada<F, P extends string>({ reglas, barra, onAtra
   cargando: boolean
 }) {
   const r = reglas
-  const [ficha, setFicha] = useState<F>(r.vacia)
+  const [ficha, setFicha] = useState<F>(() => inicial ?? r.vacia())
   const [lineas, setLineas] = useState<Linea[]>([{ de: 'chat', texto: r.saludo }])
   const [texto, setTexto] = useState('')
   const [pregunta, setPregunta] = useState<P | null>(null)
