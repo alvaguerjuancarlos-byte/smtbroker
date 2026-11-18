@@ -127,7 +127,7 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
   let q = admin.from('activos').select(COLS_ACTIVO_FICHA)
     .neq('status', 'cerrado').eq('es_demo', opts.esDemo)
   if (!opts.incluirBrokers) q = q.is('broker_id', null)
-  // El motor (§29) se consulta en paralelo; solo reordena y explica lo que EslAix aprueba aquí.
+  // El motor (§29) se consulta en paralelo; solo reordena y explica lo que SMT Match aprueba aquí.
   const [{ data }, motor] = await Promise.all([q, ordenDelMotor(n)])
   const A = ((data as ActivoDirecta[]) || []).filter((a) => cumpleNecesidad(a, n).cumple)
   if (!A.length) return []
@@ -150,14 +150,14 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
  * Con el motor (§29): el porcentaje es el % de coincidencia del motor (lo pedido que cumple cada
  * propiedad) y la lista se ordena por él; en los empates manda el orden del motor. Las que el motor
  * todavía no tiene (recién cargadas) van al final, sin %, como "recién publicada". Nada de lo que
- * EslAix aprobó desaparece.
+ * SMT Match aprobó desaparece.
  */
 function conOrdenDelMotor(opciones: OpcionPlataforma[], motor: Awaited<ReturnType<typeof ordenDelMotor>> & object): OpcionPlataforma[] {
   const pos = new Map(motor.map((m) => [m.activoId, m]))
   const extra = (o: OpcionPlataforma): OpcionPlataforma => {
     const m = pos.get(o.activoId)
     if (!m) return { ...o, puntaje: null, razones: ['recién publicada', ...o.razones] }
-    // Lo que el motor agrega a las razones de EslAix: características, coincidencias y datos faltantes.
+    // Lo que el motor agrega a las razones de SMT Match: características, coincidencias y datos faltantes.
     const cumple = m.cumple.filter((c, i) => i > 0 && !c.startsWith('precio'))
     // "Sin descripción" solo si ninguna preferencia coincidió con lo que sí tiene el anuncio.
     const faltan = m.faltanDatos.flatMap((f) => (f.startsWith('sin dato: descripción') ? (m.preferencias.length ? [] : ['sin descripción para comparar con tus preferencias']) : [f.replace(/^sin dato: /, 'no indica ')]))

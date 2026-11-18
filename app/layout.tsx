@@ -13,12 +13,12 @@ const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], 
 // quería moderna, digital y minimalista.
 const display = Space_Grotesk({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-display' })
 
-// Nombre de la marca EslAix (Maestro V10 §26): Ubuntu, por su "l" con curvita.
+// Nombre de la marca SMT Match (Maestro V10 §26): Ubuntu, por su "l" con curvita.
 const marca = Ubuntu({ subsets: ['latin'], weight: ['500', '700'], variable: '--font-marca' })
 
 export const metadata: Metadata = {
-  title: 'EslAix — Conecta con certeza',
-  description: 'EslAix by MindBridge: compra, vende o renta con certeza. Precio real, papeles revisados y las mejores opciones de tu zona.',
+  title: 'SMT Match — Conecta con certeza',
+  description: 'SMT Match by MindBridge: compra, vende o renta con certeza. Precio real, papeles revisados y las mejores opciones de tu zona.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

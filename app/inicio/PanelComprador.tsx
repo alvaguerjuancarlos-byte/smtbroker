@@ -5,7 +5,7 @@
 //     brokers), su vigencia de 30 días y cuántas propuestas lleva; pausar, renovar y crear otra
 //     (hasta 3 activas, en /buscar).
 //   - V10 §24.3 (18-nov-2026): el TABLERO DE DECISIÓN reemplaza a la bandeja mezclada: tres bandas fijas
-//     (Encontradas por EslAix · Propuestas por asesores · En portales sin certificar), de más certeza a
+//     (Encontradas por SMT Match · Propuestas por asesores · En portales sin certificar), de más certeza a
 //     menos y nunca revueltas; dentro de cada banda una columna por zona con las 3 mejores (en celular
 //     las zonas se recorren de lado); interruptor de propuestas en la banda 2; lo de su asesor primero.
 //   - Su Radar (pegar ligas de otros portales) y, si va por su cuenta, el broker.
@@ -47,14 +47,14 @@ const etiqueta = 'font-sans text-[14px]'
 // §19.4: la etiqueta dice de dónde viene cada opción.
 const ORIGEN: Record<Opcion['origen'], { texto: string; color: string }> = {
   broker: { texto: 'Propuesta por asesor verificado', color: 'var(--c-oro)' },
-  certificada: { texto: 'Certificada por EslAix', color: verde },
+  certificada: { texto: 'Certificada por SMT Match', color: verde },
   particular: { texto: 'Particular', color: 'var(--c-gris)' },
   portal: { texto: 'De portal · no certificada', color: 'var(--c-gris)' },
 }
 
 // V10 §24.3: las tres bandas, en este orden fijo (decisión 2 de la V10: también con asesor).
 const BANDAS: { id: 1 | 2 | 3; titulo: string; color: string; vacio: string; de: (o: Opcion) => boolean }[] = [
-  { id: 1, titulo: 'Encontradas por EslAix', color: verde, de: (o) => o.origen === 'certificada' || o.origen === 'particular',
+  { id: 1, titulo: 'Encontradas por SMT Match', color: verde, de: (o) => o.origen === 'certificada' || o.origen === 'particular',
     vacio: 'Aún no encontramos propiedades en la plataforma para esta búsqueda; te avisamos cuando aparezcan.' },
   { id: 2, titulo: 'Propuestas por asesores', color: 'var(--c-oro)', de: (o) => o.origen === 'broker',
     vacio: 'Aún no hay propuestas de asesores; te avisamos cuando lleguen.' },
@@ -210,7 +210,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   // §24.3: la misma tarjeta en las tres bandas; solo cambia la etiqueta de origen.
   const etiquetaDe = (o: Opcion) => o.origen === 'broker'
     ? [o.broker?.deTuAsesor ? 'De tu asesor' : null, o.broker ? `${o.broker.nombre}${o.broker.nivel ? ` · ${o.broker.nivel}` : ''}` : 'Asesor verificado', o.certificada ? 'certificada' : null].filter(Boolean).join(' · ')
-    : o.origen === 'certificada' ? 'Certificada por EslAix'
+    : o.origen === 'certificada' ? 'Certificada por SMT Match'
     : o.origen === 'particular' ? 'Particular · sin certificar'
     : `${o.fuente ?? 'Portal'} · sin certificar`
   const verOpcion = (o: Opcion, banda?: number) => (
@@ -283,7 +283,7 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   return (
     <>
       <EncabezadoPantalla ancho="max-w-[860px]" titulo={`Listo${nombre ? `, ${nombre}` : ''}.`}
-        subtitulo="EslAix ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los asesores." />
+        subtitulo="SMT Match ya está buscando por ti. Aquí llega todo lo que encontramos y lo que te proponen los asesores." />
 
       {pideAsesor && tarjetaBroker}
 

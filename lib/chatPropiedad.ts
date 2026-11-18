@@ -81,9 +81,9 @@ const TEXTO: Record<PreguntaPropiedad, (f: FichaPropiedad) => string> = {
 }
 
 export function mensajeChatPropiedad(f: FichaPropiedad, pregunta: PreguntaPropiedad | null, repetida = false): string {
-  // Si el dueño no sabe su precio, el chat no lo supone (§29.2): le explica que EslAix le dará uno de mercado.
+  // Si el dueño no sabe su precio, el chat no lo supone (§29.2): le explica que SMT Match le dará uno de mercado.
   if (repetida && (pregunta === 'precio' || pregunta === 'renta')) {
-    return `No hay problema: al terminar, EslAix te da un precio realista de mercado. Por ahora dime en cuánto te gustaría ${pregunta === 'renta' ? 'rentarla al mes' : 'venderla'}; lo puedes cambiar después.`
+    return `No hay problema: al terminar, SMT Match te da un precio realista de mercado. Por ahora dime en cuánto te gustaría ${pregunta === 'renta' ? 'rentarla al mes' : 'venderla'}; lo puedes cambiar después.`
   }
   if (repetida && pregunta) return `No te entendí. ${TEXTO[pregunta](f)}`
   if (pregunta) return TEXTO[pregunta](f)

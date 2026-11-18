@@ -156,7 +156,7 @@ export default function ConexionPage() {
                 {(() => {
                   const nombre = ladoComprador ? d.partes.contraparte : d.partes.brokerComprador ?? d.partes.comprador
                   const tel = ladoComprador ? d.telefonos!.contraparte : d.telefonos!.comprador
-                  const wa = whatsapp(tel, `Hola ${nombre.split(' ')[0]}, te escribo por ${d.activo.nombre} (conectamos en EslAix).`)
+                  const wa = whatsapp(tel, `Hola ${nombre.split(' ')[0]}, te escribo por ${d.activo.nombre} (conectamos en SMT Match).`)
                   return (
                     <>
                       <p className="text-[17px]">{nombre}{ladoComprador && d.partes.contraparteEsBroker ? ' · asesor verificado' : ''}: <b>{tel ?? 'sin teléfono registrado'}</b></p>
@@ -265,7 +265,7 @@ export default function ConexionPage() {
                     <button disabled={ocupado || !texto.trim()} className="font-sans text-[15px] px-4 text-white disabled:opacity-50 shrink-0" style={{ background: verde }}>Enviar</button>
                   </form>
                 )}
-                <p className="text-[14px] text-tenue">Pueden escribirse aquí o directo por WhatsApp. EslAix conecta y da seguimiento; no agenda, no negocia ni cierra por nadie.</p>
+                <p className="text-[14px] text-tenue">Pueden escribirse aquí o directo por WhatsApp. SMT Match conecta y da seguimiento; no agenda, no negocia ni cierra por nadie.</p>
               </div>
             )}
           </div>
