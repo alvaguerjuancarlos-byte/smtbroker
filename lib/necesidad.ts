@@ -194,6 +194,8 @@ export interface ZonaBusqueda {
 
 export interface MercadoZona { precioM2: number | null; comparables: number; fecha: string }
 
+export type Camino = 'por_mi_cuenta' | 'con_asesor'
+
 export interface Necesidad {
   /** V9: comprar o rentar. En renta, presupuesto_min/max son la renta MENSUAL. */
   operacion: Operacion
@@ -213,6 +215,8 @@ export interface Necesidad {
   proposito: Proposito | null
   busqueda_directa: boolean
   publicada_brokers: boolean
+  /** V10 §24.1/§27: cómo quiere hacerlo (columna necesidades.camino). Sin dato = por su cuenta. */
+  camino?: Camino
 }
 
 const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -289,7 +293,7 @@ export function validarNecesidad(b: unknown): { necesidad: Necesidad } | { error
       forma_pago: enRenta ? null : de(x.forma_pago, FORMAS_PAGO.map((f) => f.id)),
       plazo: enRenta ? null : de(x.plazo, PLAZOS.map((p) => p.id)),
       proposito: enRenta ? null : de(x.proposito, PROPOSITOS.map((p) => p.id)),
-      busqueda_directa, publicada_brokers,
+      busqueda_directa, publicada_brokers, camino: x.camino === 'con_asesor' ? 'con_asesor' : 'por_mi_cuenta',
     },
   }
 }

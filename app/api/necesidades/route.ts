@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
     type Opcion = {
       clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
       municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
-      broker?: { nombre: string; nivel: string }; certificada?: boolean; activoId?: string; necesidadId?: string
+      broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
       zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
     }
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       bandeja.push({
         clave: `p:${a.id}`, origen: 'broker', titulo: a.nombre, tipo: a.tipo, municipio: a.municipio, precio: precioPara(a, opDe(x.necesidad_id)),
         detalleRenta: opDe(x.necesidad_id) === 'renta' ? detalleRentaActivo(a.renta) : undefined,
-        superficie: a.superficie, broker: { nombre: b?.nombre ?? 'Asesor verificado', nivel: b?.nivel.nombre ?? '' },
+        superficie: a.superficie, broker: { nombre: b?.nombre ?? 'Asesor verificado', nivel: b?.nivel.nombre ?? '', deTuAsesor: !!p?.representado_por && x.broker_id === p.representado_por },
         certificada: certificadas.has(a.id), activoId: a.id, necesidadId: x.necesidad_id, colonia: a.colonia, ...ubicar(a, x.necesidad_id),
       })
     }
@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
       analizados: [...new Set(((an as { activo_id: string | null; anuncio_id: string | null }[]) || []).map((x) => (x.activo_id ?? x.anuncio_id)!))],
       necesidades: N.map((n) => ({
         id: n.id, operacion: n.operacion, resumen: resumenNecesidad(n), detalle: [...detalleCaracteristicas(n), ...detalleRenta(n.renta)], activa: n.activa, vigente: vigente(n),
-        vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers,
+        vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers, camino: n.camino ?? 'por_mi_cuenta',
         propuestas: P.filter((x) => x.necesidad_id === n.id).length,
         // V9 (§23.2): sus zonas con "lo que rinde tu dinero".
         zonas: zonasDe(n).map((z) => ({
