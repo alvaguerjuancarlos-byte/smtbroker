@@ -1,8 +1,8 @@
 'use client'
 
-// Lista de conexiones del usuario (Documento Maestro V8, Parte 3): el comprador ve a quién pidió ver
-// propiedades; quien ofrece (broker o dueño), a los compradores que quieren ver las suyas. Resalta lo
-// que le toca hacer (confirmar una visita, contar cómo le fue, confirmar un cierre). Cada fila abre
+// Lista de conexiones del usuario (Documento Maestro V8, Parte 3; V10 §25): quien busca ve con quién
+// conectó y en qué va (lo que marcó); quien ofrece (asesor o dueño), a quienes conectaron con las
+// suyas. Resalta lo que le toca hacer (confirmar o reportar un cierre). Cada fila abre
 // /conexion/[id]. Datos: app/api/conexiones (GET).
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'

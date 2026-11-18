@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { avisarUsuario } from '@/lib/avisos'
-import { tocaRecordatorio, tocaComoTeFue, seguimientoPendiente, DIAS_SEGUIMIENTO } from '@/lib/conexion'
-import { COLS_CONEXION, avisarPartes, fechaHora, type FilaConexion } from '@/lib/conexionServidor'
+import { tocaSieteDias, seguimientoPendiente, DIAS_SEGUIMIENTO } from '@/lib/conexion'
+import { COLS_CONEXION, type FilaConexion } from '@/lib/conexionServidor'
 
 // Cron diario de las conexiones (Documento Maestro V8, Parte 3; vercel.json, 9:00 de Monterrey):
-//   - recordatorio de la visita un día antes, a las partes (§21.4);
-//   - "¿cómo te fue?" al comprador al día siguiente de la visita (§21.4);
-//   - "¿ya compraste?" a los 30, 60 y 90 días sin cierre (§21.7).
+//   - V10 §25.3: "¿Cómo va con esta propiedad?" a los 7 días de validada, una vez;
+//   - "¿ya compraste?" a los 30, 60 y 90 días sin cierre (§21.7; en renta "¿ya rentaste?" a 30 y 60).
+// V10 §25.6: se retiraron el recordatorio de visita y el "¿cómo te fue?" (ya no hay visita agendada).
 // Vercel manda `Authorization: Bearer $CRON_SECRET` cuando la variable existe; sin ella, solo se
 // acepta la llamada del propio cron de Vercel (user-agent vercel-cron).
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const { data: activos } = ids.length ? await admin.from('activos').select('id, nombre').in('id', ids) : { data: [] }
   const nombreDe = new Map(((activos as { id: string; nombre: string }[]) || []).map((a) => [a.id, a.nombre]))
   const ahora = new Date().toISOString()
-  const cuenta = { recordatorios: 0, comoTeFue: 0, seguimientos: 0 }
+  const cuenta = { sieteDias: 0, seguimientos: 0 }
 
   // Qué conexiones son de renta: por su ficha o, sin ficha, porque la propiedad solo está en renta.
   const idsNec = [...new Set(C.map((c) => c.necesidad_id).filter((x): x is string => !!x))]
@@ -39,19 +39,14 @@ export async function GET(req: NextRequest) {
 
   for (const c of C) {
     const nombre = nombreDe.get(c.activo_id) ?? 'la propiedad'
-    const enlace = { texto: 'Abrir la conversación', ruta: `/conexion/${c.id}` }
-    if (tocaRecordatorio(c)) {
-      await avisarPartes(admin, c, { asunto: `Mañana: visita a ${nombre}`, titulo: 'Recordatorio de visita', lineas: [`${fechaHora(c.visita_at!)}.`], enlace })
-      await admin.from('conexiones').update({ recordatorio_enviado_at: ahora }).eq('id', c.id)
-      cuenta.recordatorios++
-    }
-    if (tocaComoTeFue(c)) {
+    const enlace = { texto: 'Abrir la conexión', ruta: `/conexion/${c.id}` }
+    if (tocaSieteDias(c)) {
       await avisarUsuario(admin, c.comprador_id, {
-        asunto: `¿Cómo te fue en la visita a ${nombre}?`, titulo: '¿Cómo te fue?',
-        lineas: ['Cuéntanos: ¿te interesa, quieres ofertar o la descartas?'], enlace,
+        asunto: `¿Cómo va con ${nombre}?`, titulo: '¿Cómo va con esta propiedad?',
+        lineas: ['Márcalo con un toque: ya la visité, negociando, cerré o la descarté. Así te avisamos qué sigue.'], enlace,
       }, { esDemo: c.es_demo })
-      await admin.from('conexiones').update({ como_te_fue_enviado_at: ahora }).eq('id', c.id)
-      cuenta.comoTeFue++
+      await admin.from('conexiones').update({ siete_dias_enviado_at: ahora }).eq('id', c.id)
+      cuenta.sieteDias++
     }
     // V9 (§22.5): en renta, a los 30 y 60 días y preguntando "¿ya rentaste?".
     const op = rentas.has(c.id) ? 'renta' : 'compra'
@@ -60,7 +55,7 @@ export async function GET(req: NextRequest) {
       const verbo = op === 'renta' ? 'rentaste' : 'compraste'
       await avisarUsuario(admin, c.comprador_id, {
         asunto: `¿Ya ${verbo}? · ${nombre}`, titulo: `¿Ya ${verbo}?`,
-        lineas: [`Hace ${dias} días pediste ver ${nombre}. ¿Ya ${verbo} esta, otra, o sigues buscando?`], enlace,
+        lineas: [`Hace ${dias} días conectaste con ${nombre}. ¿Ya ${verbo} esta, otra, o sigues buscando?`], enlace,
       }, { esDemo: c.es_demo })
       // Si el cron se saltó un umbral, no se repite: cuenta todos los ya vencidos.
       await admin.from('conexiones').update({ seguimientos_enviados: DIAS_SEGUIMIENTO.indexOf(dias) + 1 }).eq('id', c.id)

@@ -8,6 +8,11 @@
 // (renta ofrecida, plazo, garantía y fecha de entrada), el cierre verificado es el contrato firmado y
 // el seguimiento es a 30 y 60 días (las rentas se cierran más rápido).
 //
+// V10 §25 (18-nov-2026): la plataforma SOLO CONECTA. Se retiran (sin borrar datos) la agenda de
+// visita, el "¿cómo te fue?", la intención de oferta y la solicitud de renta. Al validarse, los dos
+// lados reciben nombre, teléfono y WhatsApp; el seguimiento es ligero: el cliente marca su estado
+// (ESTADOS_CLIENTE) y hay preguntas a los 7 días y a los 30/60/90 (renta 30/60).
+//
 // Sin imports de alias: se prueba con `node --test lib/conexion.test.ts`.
 import { PLAZOS_CONTRATO, GARANTIAS, ENTRADAS, type Operacion, type PlazoContrato, type Garantia, type Entrada } from './necesidad.ts'
 
@@ -15,6 +20,37 @@ export type EstadoConexion = 'por_validar' | 'activa' | 'rechazada' | 'cerrada' 
 export type ResultadoVisita = 'me_interesa' | 'quiero_ofertar' | 'descarto'
 export type RespuestaCompra = 'si_esta' | 'no_aun' | 'otra'
 export type Rol = 'comprador' | 'contraparte' | 'broker_comprador'
+
+/** V10 §25.3: lo que el cliente marca, con un toque. */
+export type EstadoCliente = 'conectado' | 'visitada' | 'negociando' | 'cerrada' | 'descartada'
+export type MotivoDescarte = 'precio' | 'estado' | 'ubicacion' | 'otro'
+export const ESTADOS_CLIENTE: { id: EstadoCliente; compra: string; renta: string }[] = [
+  { id: 'conectado', compra: 'Conectado', renta: 'Conectado' },
+  { id: 'visitada', compra: 'Ya la visité', renta: 'Ya la visité' },
+  { id: 'negociando', compra: 'Negociando', renta: 'Negociando' },
+  { id: 'cerrada', compra: 'Cerré', renta: 'Ya rento' },
+  { id: 'descartada', compra: 'La descarté', renta: 'La descarté' },
+]
+export const MOTIVOS_DESCARTE: { id: MotivoDescarte; etiqueta: string }[] = [
+  { id: 'precio', etiqueta: 'Precio' }, { id: 'estado', etiqueta: 'Estado' }, { id: 'ubicacion', etiqueta: 'Ubicación' }, { id: 'otro', etiqueta: 'Otro' },
+]
+export const etiquetaEstadoCliente = (e: EstadoCliente | null | undefined, op: Operacion = 'compra') =>
+  ESTADOS_CLIENTE.find((x) => x.id === (e ?? 'conectado'))![op === 'renta' ? 'renta' : 'compra']
+
+/** Valida el estado que marca el cliente; "La descarté" pide el motivo en una palabra (§25.3). */
+export function validarEstadoCliente(estado: unknown, motivo: unknown): { estado: EstadoCliente; motivo: MotivoDescarte | null } | { error: string } {
+  if (!ESTADOS_CLIENTE.some((x) => x.id === estado)) return { error: 'Estado inválido' }
+  if (estado !== 'descartada') return { estado: estado as EstadoCliente, motivo: null }
+  if (!MOTIVOS_DESCARTE.some((x) => x.id === motivo)) return { error: 'Elige por qué la descartas: precio, estado, ubicación u otro' }
+  return { estado: 'descartada', motivo: motivo as MotivoDescarte }
+}
+
+/** "¿Cómo va con esta propiedad?": una vez, a los 7 días de validada, si sigue abierta (§25.3). */
+export function tocaSieteDias(c: Pick<ConexionBase, 'estado' | 'estado_cliente' | 'siete_dias_enviado_at' | 'validada_at' | 'created_at' | 'cierre_reportado_at'>, ahora = Date.now()): boolean {
+  if (c.estado !== 'activa' || c.siete_dias_enviado_at || c.cierre_reportado_at) return false
+  if (c.estado_cliente === 'cerrada' || c.estado_cliente === 'descartada') return false
+  return ahora - new Date(c.validada_at ?? c.created_at).getTime() >= 7 * 24 * 3600_000
+}
 
 export interface ConexionBase {
   comprador_id: string
@@ -29,6 +65,10 @@ export interface ConexionBase {
   cierre_reportado_at: string | null
   cierre_confirmado_at: string | null
   seguimientos_enviados: number
+  /** V10 §25.3. Opcionales: las filas anteriores a la migración no los traen. */
+  estado_cliente?: EstadoCliente
+  siete_dias_enviado_at?: string | null
+  validada_at?: string | null
   created_at: string
 }
 

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sesionServidor, type SesionServidor } from '@/lib/sesionServidor'
 import { avisarOperacion } from '@/lib/avisos'
-import { millones, rentaTexto } from '@/lib/necesidad'
+import { rentaTexto } from '@/lib/necesidad'
 import {
-  fase, rolEn, ladoComprador, textoFase, validarHorarios, validarOferta, validarCalificacion, validarSolicitudRenta, textoSolicitud,
-  type ResultadoVisita, type RespuestaCompra,
+  fase, rolEn, ladoComprador, textoFase, validarCalificacion, validarEstadoCliente, etiquetaEstadoCliente, MOTIVOS_DESCARTE,
+  type RespuestaCompra,
 } from '@/lib/conexion'
-import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, fechaHora, operacionDeConexion, type FilaConexion } from '@/lib/conexionServidor'
+import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, operacionDeConexion, type FilaConexion } from '@/lib/conexionServidor'
 
 // Una conexión (Documento Maestro V8, Parte 3, §21).
 //
@@ -26,12 +26,20 @@ import { COLS_CONEXION, avisarPartes, nombresDe, telefonoDe, fechaHora, operacio
 //   calificar {atencion, rapidez, honestidad, comentario?}  el comprador califica al broker (paso 4)
 // La plataforma no negocia: no hay contraoferta ni contrato aquí.
 //
+// V10 §25 (18-nov-2026), la plataforma SOLO CONECTA:
+//   - los teléfonos (y el botón de WhatsApp en la pantalla) se comparten AL VALIDAR la conexión, no
+//     al confirmar la visita;
+//   - estado {estado, motivo?}  el cliente marca Conectado / Ya la visité / Negociando / Cerré (o
+//     Ya rento) / La descarté (con motivo: precio, estado, ubicación u otro). "Cerré" sin cierre
+//     reportado avisa a Operación y a quien ofrece, como "compre";
+//   - se retiran proponer_horarios, confirmar_visita, resultado_visita y oferta (también la
+//     solicitud de renta): responden 410. Los datos que ya existan se quedan en la tabla.
+//
 // V9 (§22.5), en renta: `oferta` es la SOLICITUD DE RENTA {monto (renta ofrecida), plazo_contrato,
 // garantia?, fecha_entrada?}; `reportar_cierre` es el contrato firmado (renta mensual y fecha de
 // firma). Al cerrarse, una propiedad en venta y renta sigue en venta; una solo en renta se cierra.
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
-const FORMA_PAGO: Record<string, string> = { contado: 'contado', credito: 'crédito bancario', infonavit: 'Infonavit / Fovissste' }
 
 async function cargar(s: SesionServidor, id: string) {
   const { data } = await s.admin.from('conexiones').select(COLS_CONEXION).eq('id', id).maybeSingle()
@@ -59,8 +67,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       // En renta, la ficha del lado del comprador llena de entrada su solicitud (plazo, garantía, entrada).
       op === 'renta' && c.necesidad_id && ladoComprador(rol) ? s.admin.from('necesidades').select('renta').eq('id', c.necesidad_id).maybeSingle() : Promise.resolve({ data: null }),
     ])
-    // Teléfonos solo con la visita confirmada (§21.3). Del lado del comprador con broker, el de su broker.
-    const telefonos = c.visita_confirmada_at ? {
+    // V10 §25.2: teléfonos al quedar validada la conexión. Del lado del comprador con broker, el de su broker.
+    const telefonos = c.estado === 'activa' || c.estado === 'cerrada' ? {
       comprador: await telefonoDe(s.admin, c.broker_comprador_id ?? c.comprador_id, !!c.broker_comprador_id),
       contraparte: await telefonoDe(s.admin, c.contraparte_id, c.contraparte_es_broker),
     } : null
@@ -80,6 +88,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         cierre_precio: c.cierre_precio, cierre_fecha: c.cierre_fecha, cierre_reportado_at: c.cierre_reportado_at,
         cierre_confirmado_at: c.cierre_confirmado_at, compro_respuesta: c.compro_respuesta, created_at: c.created_at,
         solicitud_renta: c.solicitud_renta,
+        estado_cliente: c.estado_cliente ?? 'conectado', motivo_descarte: c.motivo_descarte,
         ...(s.esOperacion ? { aporte: c.aporte } : {}),
       },
       rol: rol ?? 'operacion', fase: f, textoFase: textoFase(f, op), operacion: op,
@@ -133,7 +142,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         if (err) return falla(err.message, 500)
         if (b.accion === 'validar') after(() => avisarPartes(s.admin, c, {
           asunto: `Conexión lista: ${activo.nombre}`, titulo: 'Ya pueden conversar',
-          lineas: [`Operación validó la conexión para ${activo.nombre}.`, 'Escríbanse por la plataforma y acuerden la visita.'], enlace,
+          lineas: [`Operación validó la conexión para ${activo.nombre}.`, 'En la conexión están el nombre, el teléfono y el WhatsApp de cada lado: escríbanse directo.'], enlace,
         }))
         return listo()
       }
@@ -154,79 +163,41 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         return listo()
       }
 
-      case 'proponer_horarios': {
-        if (!ladoComprador(rol)) return falla('Los horarios los propone el comprador', 403)
-        if (!activa || c.visita_confirmada_at) return falla('Ya no se pueden proponer horarios', 409)
-        const h = validarHorarios(b.horarios)
-        if ('error' in h) return falla(h.error)
-        const err = await actualizar({ horarios_propuestos: h.horarios })
-        if (err) return falla(err.message, 500)
-        after(() => avisarPartes(s.admin, c, {
-          asunto: `Propuesta de visita · ${activo.nombre}`, titulo: 'Elige un horario para la visita',
-          lineas: h.horarios.map((x) => `• ${fechaHora(x)}`), enlace,
-        }, s.uid))
-        return listo()
-      }
+      // V10 §25.6: se retiraron la agenda de visita, el "¿cómo te fue?" y la oferta / solicitud de renta.
+      case 'proponer_horarios':
+      case 'confirmar_visita':
+      case 'resultado_visita':
+      case 'oferta':
+        return falla('La plataforma ya solo conecta: la visita y la negociación las acuerdan directo. Marca en qué va con tu estado.', 410)
 
-      case 'confirmar_visita': {
-        if (rol !== 'contraparte') return falla('La visita la confirma quien ofrece la propiedad', 403)
-        if (!activa) return falla('La conexión no está activa', 409)
-        const horario = c.horarios_propuestos.find((x) => new Date(x).getTime() === new Date(String(b.horario)).getTime())
-        if (!horario) return falla('Elige uno de los horarios propuestos')
-        const err = await actualizar({ visita_at: horario, visita_confirmada_at: ahora, recordatorio_enviado_at: null, como_te_fue_enviado_at: null })
+      case 'estado': {
+        if (!ladoComprador(rol)) return falla('El estado lo marca quien busca', 403)
+        if (c.estado !== 'activa') return falla('La conexión no está activa', 409)
+        const v = validarEstadoCliente(b.estado, b.motivo)
+        if ('error' in v) return falla(v.error)
+        const err = await actualizar({
+          estado_cliente: v.estado, estado_cliente_at: ahora, motivo_descarte: v.motivo,
+          ...(v.estado === 'descartada' ? { estado: 'descartada' } : {}),
+          ...(v.estado === 'cerrada' ? { compro_respuesta: 'si_esta', compro_respuesta_at: ahora } : {}),
+        })
         if (err) return falla(err.message, 500)
-        after(() => avisarPartes(s.admin, c, {
-          asunto: `Visita confirmada · ${activo.nombre}`, titulo: 'Visita confirmada',
-          lineas: [`${fechaHora(horario)}.`, 'Ya pueden ver sus teléfonos en la conversación.'], enlace,
+        const etiqueta = etiquetaEstadoCliente(v.estado, op)
+        if (v.estado === 'descartada') after(() => avisarPartes(s.admin, c, {
+          asunto: `${activo.nombre}: la descartaron`, titulo: 'Descartaron la propiedad',
+          lineas: [`Motivo: ${MOTIVOS_DESCARTE.find((m) => m.id === v.motivo)!.etiqueta.toLowerCase()}.`], enlace,
         }, s.uid))
-        return listo()
-      }
-
-      case 'resultado_visita': {
-        if (rol !== 'comprador') return falla('Solo el comprador cuenta cómo le fue', 403)
-        if (!c.visita_at || new Date(c.visita_at).getTime() > Date.now()) return falla('Todavía no es la visita', 409)
-        const resultado = b.resultado as ResultadoVisita
-        if (!['me_interesa', 'quiero_ofertar', 'descarto'].includes(resultado)) return falla('Respuesta inválida')
-        const motivo = resultado === 'descarto' && typeof b.motivo === 'string' ? b.motivo.trim().slice(0, 40) || null : null
-        const err = await actualizar({ visita_resultado: resultado, motivo_descarte: motivo, ...(resultado === 'descarto' ? { estado: 'descartada' } : {}) })
-        if (err) return falla(err.message, 500)
-        if (resultado === 'descarto') after(() => avisarPartes(s.admin, c, {
-          asunto: `${activo.nombre}: el comprador la descartó`, titulo: 'El comprador descartó la propiedad',
-          lineas: [motivo ? `Motivo: ${motivo}.` : 'No dejó motivo.'], enlace,
-        }, s.uid))
-        return listo()
-      }
-
-      case 'oferta': {
-        if (!ladoComprador(rol)) return falla(enRenta ? 'La solicitud de renta la envía quien busca rentar' : 'La intención de oferta la registra el comprador', 403)
-        if (!activa) return falla('La conexión no está activa', 409)
-        if (enRenta) {
-          const v = validarSolicitudRenta(b.monto, b)
-          if ('error' in v) return falla(v.error)
-          const err = await actualizar({ oferta_monto: v.monto, oferta_forma_pago: 'renta', solicitud_renta: v.solicitud, oferta_at: ahora, ...(c.visita_resultado ? {} : { visita_resultado: 'quiero_ofertar' }) })
-          if (err) return falla(err.message, 500)
-          const pct = activo.renta_mensual ? Math.round((v.monto / activo.renta_mensual - 1) * 1000) / 10 : null
-          after(() => avisarPartes(s.admin, c, {
-            asunto: `Solicitud de renta · ${activo.nombre}`, titulo: 'Recibiste una solicitud de renta',
-            lineas: [
-              `${rentaTexto(v.monto)}${pct != null ? ` (${pct > 0 ? '+' : ''}${pct} % contra la renta pedida de ${rentaTexto(activo.renta_mensual!)})` : ''} · ${textoSolicitud(v.solicitud)}.`,
-              'No es vinculante: es un dato para acordar. El contrato y la firma van por su cuenta.',
-            ], enlace,
-          }, s.uid))
-          return listo()
-        }
-        const o = validarOferta(b.monto, b.formaPago)
-        if ('error' in o) return falla(o.error)
-        const err = await actualizar({ oferta_monto: o.monto, oferta_forma_pago: o.formaPago, oferta_at: ahora, ...(c.visita_resultado ? {} : { visita_resultado: 'quiero_ofertar' }) })
-        if (err) return falla(err.message, 500)
-        const pct = activo.precio_total ? Math.round((o.monto / activo.precio_total - 1) * 1000) / 10 : null
-        after(() => avisarPartes(s.admin, c, {
-          asunto: `Intención de oferta · ${activo.nombre}`, titulo: 'Recibiste una intención de oferta',
-          lineas: [
-            `${mxn(o.monto)} de ${FORMA_PAGO[o.formaPago]}${pct != null ? ` (${pct > 0 ? '+' : ''}${pct} % contra el precio pedido de ${millones(activo.precio_total!)})` : ''}.`,
-            'No es vinculante: es un dato para negociar. La negociación y el cierre van por su cuenta.',
-          ], enlace,
-        }, s.uid))
+        // "Cerré" / "Ya rento" sin cierre reportado: quien ofrece lo reporta y Operación lo revisa (§25.5).
+        if (v.estado === 'cerrada' && !c.cierre_reportado_at) after(async () => {
+          await avisarPartes(s.admin, c, {
+            asunto: `${activo.nombre}: ${etiqueta.toLowerCase()}`, titulo: enRenta ? 'Dice que ya la renta' : 'Dice que ya cerró',
+            lineas: [enRenta ? 'Reporta el contrato con su renta mensual y fecha para que quede verificado.' : 'Reporta el cierre con su precio y fecha para que quede verificado.'], enlace,
+          }, s.uid)
+          await avisarOperacion({
+            asunto: `${enRenta ? 'Renta' : 'Cierre'} marcado por el cliente · ${activo.nombre}`, titulo: enRenta ? 'Renta sin contrato reportado' : 'Cierre sin reporte',
+            lineas: ['El cliente marcó la conexión como cerrada y quien ofrecía no ha reportado el cierre. Revísalo.'],
+            enlace: { texto: 'Abrir la consola', ruta: '/panel' },
+          }, { esDemo: c.es_demo })
+        })
         return listo()
       }
 

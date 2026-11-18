@@ -87,3 +87,25 @@ test('renta: solicitud de renta, textos y seguimiento a 30 y 60 días', () => {
   assert.equal(seguimientoPendiente({ ...base, seguimientos_enviados: 2 }, Date.now(), 'renta'), null)
   assert.equal(seguimientoPendiente({ ...base, seguimientos_enviados: 2 }), 90)
 })
+
+// ── V10 §25: estados que marca el cliente y pregunta de 7 días ─────────────────────────────────────
+import { validarEstadoCliente, tocaSieteDias, etiquetaEstadoCliente } from './conexion.ts'
+
+test('V10: estado del cliente; "La descarté" pide motivo', () => {
+  assert.deepEqual(validarEstadoCliente('visitada', undefined), { estado: 'visitada', motivo: null })
+  assert.ok('error' in validarEstadoCliente('descartada', undefined))
+  assert.deepEqual(validarEstadoCliente('descartada', 'precio'), { estado: 'descartada', motivo: 'precio' })
+  assert.ok('error' in validarEstadoCliente('ofertando', undefined))
+  assert.equal(etiquetaEstadoCliente('cerrada', 'renta'), 'Ya rento')
+  assert.equal(etiquetaEstadoCliente(undefined), 'Conectado')
+})
+
+test('V10: "¿Cómo va?" una vez, a los 7 días de validada y si sigue abierta', () => {
+  const dia = 24 * 3600_000, ahora = Date.parse('2026-11-20T12:00:00Z')
+  const base = { estado: 'activa' as const, estado_cliente: 'conectado' as const, siete_dias_enviado_at: null, validada_at: new Date(ahora - 8 * dia).toISOString(), created_at: new Date(ahora - 9 * dia).toISOString(), cierre_reportado_at: null }
+  assert.equal(tocaSieteDias(base, ahora), true)
+  assert.equal(tocaSieteDias({ ...base, validada_at: new Date(ahora - 3 * dia).toISOString() }, ahora), false)
+  assert.equal(tocaSieteDias({ ...base, siete_dias_enviado_at: new Date(ahora).toISOString() }, ahora), false)
+  assert.equal(tocaSieteDias({ ...base, estado_cliente: 'descartada' }, ahora), false)
+  assert.equal(tocaSieteDias({ ...base, estado: 'por_validar' }, ahora), false)
+})

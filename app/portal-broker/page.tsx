@@ -666,7 +666,7 @@ export default function PortalBrokerPage() {
           {/* Conexiones: compradores que pidieron ver una propiedad tuya, o tus clientes (V8 §21) */}
           {pestana === 'conexiones' && (
             <ListaConexiones titulo="Conexiones" acento="#d9b45a"
-              vacio="Cuando un comprador pida ver una propiedad que le propusiste, aparece aquí para conversar, agendar la visita y reportar el cierre." />
+              vacio="Cuando alguien conecte con una propiedad que le propusiste, aparece aquí con su nombre, teléfono y WhatsApp, en qué va y para reportar el cierre." />
           )}
 
           {/* Oportunidades: propietarios y compradores que te eligieron para representarlos (V6.3 §15, V7) */}

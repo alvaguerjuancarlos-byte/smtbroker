@@ -287,8 +287,8 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
 
       {pideAsesor && tarjetaBroker}
 
-      {/* V8 Parte 3: las propiedades que pidió ver ("Quiero verla") y en qué va cada una */}
-      <ListaConexiones titulo="Propiedades que pediste ver" vacio="" ocultarVacia />
+      {/* V10 §25: con quién conectó ("Conectar") y en qué va cada una */}
+      <ListaConexiones titulo="Tus conexiones" vacio="" ocultarVacia />
 
       <div className="flex items-center justify-between gap-2">
         <span className={`${etiqueta} text-tenue`}>Tus búsquedas</span>
