@@ -100,6 +100,11 @@ export default function BienvenidaPage() {
   // Entrada discreta del asesor (§24.5): abre su formulario de registro.
   const elegirAsesor = () => { setRol('broker'); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }
   // /bienvenida?broker=1 (el enlace "¿Eres asesor inmobiliario?" de /empezar) llega directo a ese formulario.
+  // /bienvenida?mundo=demo (guion v12): "Iniciar sesión" lleva a la entrada simple sin contraseña y las
+  // puertas siguen en el mundo demo.
+  const esDemo = () => new URLSearchParams(window.location.search).get('mundo') === 'demo'
+  const entrar = () => router.push(esDemo() ? '/entrar?mundo=demo' : '/login')
+  const conMundo = (ruta: string) => (esDemo() ? `${ruta}${ruta.includes('?') ? '&' : '?'}mundo=demo` : ruta)
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('broker') !== '1') return
     const t = setTimeout(elegirAsesor, 0)
@@ -194,7 +199,7 @@ export default function BienvenidaPage() {
           <Marca texto={20} slogan />
           <div className="ml-auto flex items-center gap-3 md:gap-5">
             <button onClick={elegirAsesor} className="hidden sm:inline font-sans text-[14px] text-tenue hover:text-acento">¿Eres asesor inmobiliario?</button>
-            <button onClick={() => router.push('/login')}
+            <button onClick={entrar} data-iniciar-sesion
               className="font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3.5 py-2 transition-colors rounded-lg">
               Iniciar sesión
             </button>
@@ -222,7 +227,7 @@ export default function BienvenidaPage() {
               <p className="font-sans text-[14px] text-tenue mb-5">¿Qué quieres hacer?</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-puertas>
                 {PUERTAS.map((o) => (
-                  <button key={o.id} onClick={() => router.push(`/empezar?quiere=${o.id}`)} data-puerta={o.id}
+                  <button key={o.id} onClick={() => router.push(conMundo(`/empezar?quiere=${o.id}`))} data-puerta={o.id}
                     className="p-5 border border-linea hover:border-linea-fuerte text-left transition-all bg-tarjeta rounded-xl flex flex-col gap-1.5">
                     <span className="text-[19px] font-medium text-tinta">{o.titulo}</span>
                     <span className="text-[15px] text-tinta-2 leading-snug">{o.texto}</span>
@@ -364,7 +369,7 @@ export default function BienvenidaPage() {
               <div>
                 <h2 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">¿Vendes o rentas tu propiedad?</h2>
                 <p className="text-[17px] text-tinta-2 mt-2 leading-relaxed">Regístrala y en tu tablero ves lo que pasa con ella.</p>
-                <button onClick={() => router.push('/empezar?quiere=vender')}
+                <button onClick={() => router.push(conMundo('/empezar?quiere=vender'))}
                   className="mt-5 font-sans text-[16px] font-medium px-4 py-3 bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg">Registrar mi propiedad</button>
               </div>
               <ul className="flex flex-col gap-3">

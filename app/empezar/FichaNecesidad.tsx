@@ -94,7 +94,9 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
     if (!cuerpo.presupuesto_max) { setError(enRenta ? 'Escribe la renta mensual máxima' : 'Escribe tu presupuesto máximo'); return }
     if (cuerpo.presupuesto_min && Number(cuerpo.presupuesto_min) > Number(cuerpo.presupuesto_max)) { setError('El mínimo es mayor que el máximo'); return }
     setCargando(true); setError(null)
-    const r = await fetch('/api/necesidades/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) })
+    // Con sesión (mundo demo, guion v12) la búsqueda se hace en el mundo de la cuenta.
+    const auth: Record<string, string> = conSesion ? { Authorization: 'Bearer ' + ((await supabase.auth.getSession()).data.session?.access_token ?? '') } : {}
+    const r = await fetch('/api/necesidades/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify(cuerpo) })
     const j = await r.json().catch(() => ({}))
     setCargando(false)
     if (!r.ok) { setError(j.error ?? 'No se pudo buscar'); return }
@@ -143,7 +145,7 @@ export default function FichaNecesidad({ conSesion, onAtras, pasoBase, totalPaso
       const j = await r.json().catch(() => ({}))
       setCargando(false)
       if (!r.ok) { setError(j.error ?? 'No se pudo guardar tu búsqueda'); return }
-      router.push('/inicio')
+      router.push(conAsesor ? '/inicio?camino=broker' : '/inicio')
       return
     }
     const r = await fetch('/api/registro-cliente', {

@@ -57,7 +57,7 @@ const GRID_BG = {
   backgroundSize: '56px 56px',
 }
 
-export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
+export default function Recorrido({ inicial, demo = false }: { inicial: Opcion | null; demo?: boolean }) {
   const router = useRouter()
   const [opcion, setOpcion] = useState<Opcion | null>(inicial)
   const quiere: Quiere | null = opcion ? ladoDe(opcion) : null
@@ -86,13 +86,21 @@ export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
   const [yaExiste, setYaExiste] = useState(false)
 
   // Quien ya tiene sesión no se registra de nuevo.
+  // Mundo demo (guion v12, JC 19-nov): se entra PRIMERO (/entrar?mundo=demo) y luego se elige qué hacer,
+  // ya con sesión; la ficha se guarda con ella y no se crea cuenta al final.
+  const [sesion, setSesion] = useState(false)
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession()
+      if (demo) {
+        if (!session) router.replace(`/entrar?mundo=demo${inicial ? `&quiere=${inicial}` : ''}`)
+        else setSesion(true)
+        return
+      }
       if (session && paso === 'que') router.replace('/dashboard')
     }
     init()
-  }, [router, paso])
+  }, [router, paso, demo, inicial])
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((x) => ({ ...x, [k]: e.target.value }))
   const totalPasos = 3
@@ -102,7 +110,19 @@ export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
     setOpcion(o); setPaso('como'); setError(null)
     if (ladoDe(o) === 'vender') setF((x) => ({ ...x, operacion: o === 'poner_renta' ? 'renta' : 'venta' }))
   }
-  const elegirCamino = (c: Camino) => { setCamino(c); setPaso('datos'); setChatVender(true); setError(null) }
+  const elegirCamino = async (c: Camino) => {
+    setError(null)
+    if (demo && sesion && quiere) {
+      // La cuenta demo nueva queda como comprador o propietario según lo que eligió.
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      const r = await fetch('/api/entrada-demo', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ accion: 'rol', quiere }) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(j.error ?? 'No se pudo continuar'); return }
+      // Con sesión, la propiedad se carga en la pantalla de siempre de los propietarios.
+      if (quiere === 'vender') { router.push('/activo/nuevo'); return }
+    }
+    setCamino(c); setPaso('datos'); setChatVender(true)
+  }
   const destino = () => (camino === 'asesor' ? '/inicio?camino=broker' : '/inicio')
 
   const registrar = async (e: React.FormEvent) => {
@@ -131,7 +151,14 @@ export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
 
   const boton = 'font-sans text-[16px] font-medium px-4 py-3.5 text-center transition-colors disabled:opacity-60'
 
-  const barra = (
+  const barra = demo ? (
+    <>
+      <MarcaBarra href="/bienvenida?mundo=demo" />
+      {sesion
+        ? <span className="font-sans text-[14px] text-tenue">Mundo demo</span>
+        : <a href="/entrar?mundo=demo" className="font-sans text-[16px] font-medium text-tinta">Entrar</a>}
+    </>
+  ) : (
     <>
       <MarcaBarra />
       <a href="/login" className="font-sans text-[16px] font-medium text-tinta">Iniciar sesión</a>
@@ -152,7 +179,7 @@ export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
       <div className="absolute inset-0 pointer-events-none" style={GRID_BG} />
       <div className="relative w-full max-w-[680px] mx-auto px-5 pb-12 flex flex-col gap-6">
         {quiere === 'comprar' && paso === 'datos' ? (
-          <FichaNecesidad conSesion={false} barra={barra} onAtras={() => setPaso('como')}
+          <FichaNecesidad conSesion={sesion} barra={barra} onAtras={() => setPaso('como')}
             operacionInicial={opcion === 'rentar' ? 'renta' : 'compra'} conAsesor={camino === 'asesor'}
             pasoBase={inicial ? 1 : 2} totalPasos={inicial ? 7 : 8} />
         ) : <>
@@ -191,6 +218,7 @@ export default function Recorrido({ inicial }: { inicial: Opcion | null }) {
                   : 'Un asesor verificado lleva tu propiedad y te acompaña hasta el cierre.'}</span>
               </button>
             </div>
+            {error && <p className="text-[16px] text-error" data-error>{error}</p>}
           </>
         )}
 
