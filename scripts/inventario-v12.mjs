@@ -17,11 +17,12 @@ export const NOMBRE_DIEGO = 'Departamento en Torre Valle Poniente'
 const AMENIDADES = ['alberca', 'gimnasio', 'seguridad_24h', 'elevador']
 const RENTA = { incluye_mantenimiento: true, mantenimiento: null, deposito_meses: 1, plazo_minimo: '1_anio', garantia: 'cualquiera', amueblada: false, mascotas: true }
 
-// [nombre, superficie, factor sobre la renta realista, foto, amenidades extra, descripción]
+// [nombre, superficie, factor sobre la renta realista, foto, amenidades extra, descripción, renta fija?]
 const DEPAS = [
   ['Departamento con vista en Valle Poniente', 138, 0.96, 'depa1.jpg', ['roof_garden'], 'Excelente ubicación, a unos minutos de Valle Oriente. Vista abierta a la sierra. Amenidades: alberca, gimnasio, roof garden y seguridad 24 horas.'],
   ['Departamento en Privada Valle Poniente', 144, 0.97, 'depa2.jpg', ['terraza'], 'Muy bien ubicado, en privada con caseta. Terraza propia. Amenidades: alberca, gimnasio, elevador y seguridad 24 horas.'],
-  ['Departamento en Torre Olinca', 149, 0.95, 'depa3.jpg', ['area_de_juegos'], 'Bien ubicado, junto a escuelas y centros comerciales. Amenidades completas: alberca, gimnasio, área de juegos y seguridad 24 horas.'],
+  // El depa de JC en Torre West (su anuncio real en Avisos de Ocasión, 19-nov): renta fija de $58,500.
+  ['Departamento en Torre West', 120, null, 'depa3.jpg', ['terraza', 'roof_garden'], 'Torre West, Valle Poniente: excelente ubicación, frente al consulado de Estados Unidos. 3 recámaras. Muy buenas amenidades: alberca, gimnasio, roof garden, terraza y seguridad 24 horas.', 58_500],
 ]
 const MIN = 54_000, MAX = 60_000 // dentro del presupuesto de $55k–$60k: ninguna arriba de su tope
 const redondear = (n) => Math.round(n / 500) * 500
@@ -42,9 +43,9 @@ export async function crearInventario({ admin, api, ids, fotosDir, log = console
     return data.id
   }
   const depas = []
-  for (const [nombre, superficie, factor, foto, extra, descripcion] of DEPAS) {
+  for (const [nombre, superficie, factor, foto, extra, descripcion, rentaFija] of DEPAS) {
     const id = await nueva({ usuario_id: ids.ricardo, cargado_por: 'propietario', nombre, superficie, descripcion, amenidades: [...AMENIDADES, ...extra] })
-    depas.push({ id, nombre, superficie, factor, foto })
+    depas.push({ id, nombre, superficie, factor, foto, rentaFija })
   }
   const diego = {
     id: await nueva({
@@ -79,7 +80,7 @@ export async function crearInventario({ admin, api, ids, fotosDir, log = console
     // Sin dato o fuera de lo creíble (~$250–$450/m² al mes en Valle Poniente), se usa $320/m².
     const r = reales[k] && reales[k] / d.superficie >= 250 && reales[k] / d.superficie <= 450 ? reales[k] : 320 * d.superficie
     d.realista = r
-    d.renta = Math.min(MAX, Math.max(MIN, redondear(r * d.factor)))
+    d.renta = d.rentaFija ?? Math.min(MAX, Math.max(MIN, redondear(r * d.factor)))
     await admin.from('activos').update({ renta_mensual: d.renta }).eq('id', d.id)
     log(`  ${d.nombre}: ${d.superficie} m² · realista ${reales[k] ?? 'sin dato'} → renta ${d.renta}`)
   }
