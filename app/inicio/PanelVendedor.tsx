@@ -1,6 +1,8 @@
 'use client'
 
 // Panel de quien vende (ver app/inicio/page.tsx). Trabaja sobre su propiedad más reciente.
+// V10 (§24.2, §27 "Dueño"): es su tablero: su precio contra el mercado, cuántas personas buscan algo
+// como lo suyo (conteo anónimo, app/api/tablero-dueno) y sus interesados.
 import { EncabezadoPantalla } from '../components/Banda'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -14,6 +16,11 @@ interface Activo {
 }
 // V9 (§22.3): en renta, la renta realista al mes; en venta y renta, las dos cifras.
 type Precio = { salida: number | null; renta: number | null; operacion: 'venta' | 'renta' | 'ambas'; frase: string | null } | 'calculando' | 'error'
+type Tablero = {
+  operacion: 'venta' | 'renta' | 'ambas'; precioPedido: number | null; rentaPedida: number | null
+  demanda: { compra: number; renta: number }; arribaDePresupuesto: { compra: number; renta: number }
+  interesados: { conexiones: number; activas: number; porValidar: number; dePagina: number }
+}
 type Ficha = { titular: string; puntos: string[]; whatsapp: string | null } | 'preparando' | 'error' | null
 
 const mxn = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -21,12 +28,25 @@ const tarjeta = 'bg-tarjeta border p-4 md:p-5 flex flex-col gap-2 rounded-xl'
 const etiqueta = 'font-sans text-[14px]'
 const boton = 'font-sans text-[16px] font-medium px-4 py-3 text-center transition-colors'
 
+// Su precio (o renta) contra el realista de mercado. ±5 % se lee "en línea".
+function contraMercado(pedido: number | null, realista: number | null, renta: boolean) {
+  if (!pedido || !realista) return null
+  const pct = Math.round((pedido / realista - 1) * 100)
+  const cifra = renta ? `${mxn(pedido)} al mes` : mxn(pedido)
+  if (Math.abs(pct) < 5) return { texto: `Tu ${renta ? 'renta' : 'precio'} (${cifra}) está en línea con el mercado.`, color: 'var(--c-verde, #2f7d32)' }
+  return pct > 0
+    ? { texto: `Tu ${renta ? 'renta' : 'precio'} (${cifra}) está ~${pct} % arriba del mercado.${pct > 10 ? ' Así le llega a menos personas.' : ''}`, color: pct > 10 ? 'var(--c-aviso, #b54708)' : 'var(--c-tinta-2)' }
+    : { texto: `Tu ${renta ? 'renta' : 'precio'} (${cifra}) está ~${-pct} % abajo del mercado: se ${renta ? 'rentará' : 'venderá'} rápido, pero revisa que no estés dejando dinero.`, color: 'var(--c-tinta-2)' }
+}
+const personas = (n: number) => `${n} ${n === 1 ? 'persona busca' : 'personas buscan'}`
+
 export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string; nombre: string; conBroker: boolean }) {
   const [activos, setActivos] = useState<Activo[]>([])
   const [activo, setActivo] = useState<Activo | null | undefined>(undefined)
   const [precio, setPrecio] = useState<Precio>('calculando')
   const [cert, setCert] = useState<string | null>(null)
   const [ficha, setFicha] = useState<Ficha>(null)
+  const [tablero, setTablero] = useState<Tablero | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -44,13 +64,18 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
   useEffect(() => {
     if (!activoId) return
     const cargar = async () => {
-      setPrecio('calculando'); setCert(null); setFicha(null)
+      setPrecio('calculando'); setCert(null); setFicha(null); setTablero(null)
       const a = { id: activoId }
       const { data: c } = await supabase.from('certificaciones').select('estado').eq('activo_id', a.id)
         .order('created_at', { ascending: false }).limit(1).maybeSingle()
       setCert((c as { estado: string } | null)?.estado ?? null)
       // El Agente de Mercado devuelve el diagnóstico guardado o lo calcula la primera vez.
       const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      // Demanda e interesados: no esperan al análisis de mercado.
+      fetch('/api/tablero-dueno', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ activoId: a.id }),
+      }).then((r) => (r.ok ? r.json() : null)).then((t) => setTablero(t as Tablero | null)).catch(() => {})
       try {
         const r = await fetch('/api/agentes/mercado', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -153,11 +178,48 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
             {precio.salida && <span className="font-display text-[32px] font-medium">{mxn(precio.salida)}{precio.operacion === 'ambas' && <span className="text-[17px] text-tinta-2 font-sans"> en venta</span>}</span>}
             {precio.renta && <span className="font-display text-[32px] font-medium" data-renta-realista>{mxn(precio.renta)}<span className="text-[17px] text-tinta-2 font-sans"> al mes{precio.operacion === 'ambas' ? ' en renta' : ''}</span></span>}
             {precio.operacion !== 'venta' && !precio.renta && <p className="text-[16px] text-tinta-2">Renta realista: sin dato todavía (pocas rentas comparables en tu zona).</p>}
+            {tablero && [contraMercado(tablero.precioPedido, precio.salida, false), contraMercado(tablero.rentaPedida, precio.renta, true)]
+              .filter((m): m is NonNullable<typeof m> => !!m)
+              .map((m) => <p key={m.texto} className="text-[16px] font-medium" style={{ color: m.color }} data-contra-mercado>{m.texto}</p>)}
             {precio.frase && <p className="text-[16px] text-tinta-2">{precio.frase}</p>}
             <a href={`/activo/${activo.id}`} className="font-sans text-[15px] text-acento">Ver análisis completo →</a>
           </>
         )}
       </div>
+
+      {tablero && (() => {
+        const ops = (tablero.operacion === 'ambas' ? ['compra', 'renta'] : [tablero.operacion === 'renta' ? 'renta' : 'compra']) as ('compra' | 'renta')[]
+        const total = ops.reduce((t, o) => t + tablero.demanda[o], 0)
+        const i = tablero.interesados
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`${tarjeta} border-linea`} data-demanda>
+              <span className={`${etiqueta} text-acento`}>Quién busca algo como lo tuyo</span>
+              <span className="font-display text-[32px] font-medium leading-none">{total}</span>
+              {total === 0 && ops.every((o) => !tablero.arribaDePresupuesto[o]) ? (
+                <p className="text-[16px] text-tinta-2">Hoy nadie busca exactamente algo como tu propiedad. En cuanto alguien registre una búsqueda que coincida, lo verás aquí.</p>
+              ) : ops.map((o) => (
+                <p key={o} className="text-[16px] text-tinta-2">
+                  {personas(tablero.demanda[o])} {o === 'renta' ? 'rentar' : 'comprar'} algo como tu propiedad, en tu zona y con tu {o === 'renta' ? 'renta' : 'precio'}.
+                  {tablero.arribaDePresupuesto[o] > 0 && <> <span className="text-tinta">{tablero.arribaDePresupuesto[o]} más</span> {tablero.arribaDePresupuesto[o] === 1 ? 'busca' : 'buscan'} lo mismo con menos presupuesto.</>}
+                </p>
+              ))}
+              <p className="text-[14px] text-tenue">{activo.publicada_at ? 'A quienes coinciden les mostramos tu propiedad.' : 'Publica tu página para que les aparezca.'} No te compartimos sus datos: tú decides con quién conectar.</p>
+            </div>
+            <div className={`${tarjeta} border-linea`} data-interesados>
+              <span className={`${etiqueta} text-acento`}>Interesados</span>
+              <span className="font-display text-[32px] font-medium leading-none">{i.conexiones + i.dePagina}</span>
+              <p className="text-[16px] text-tinta-2">
+                {i.conexiones === 0 && i.dePagina === 0 ? 'Todavía nadie. Te avisamos por correo en cuanto alguien quiera conectar.' : <>
+                  {i.conexiones > 0 && <>{i.conexiones} {i.conexiones === 1 ? 'quiere' : 'quieren'} conectar contigo{i.porValidar ? ` (${i.porValidar} en revisión)` : ''}. </>}
+                  {i.dePagina > 0 && <>{i.dePagina} {i.dePagina === 1 ? 'dejó' : 'dejaron'} sus datos en tu página.</>}
+                </>}
+              </p>
+              {(i.conexiones > 0 || i.dePagina > 0) && <a href={`/activo/${activo.id}/leads`} className="font-sans text-[15px] text-acento">Ver interesados →</a>}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className={`${tarjeta} border-linea`}>
         <span className={`${etiqueta} text-acento`}>Certifica tu propiedad</span>
@@ -222,7 +284,7 @@ export default function PanelVendedor({ uid, nombre, conBroker }: { uid: string;
 
       {!conBroker && tarjetaBroker}
       {/* V8 Parte 3: compradores que pidieron ver su propiedad (validados por Operación) */}
-      <ListaConexiones titulo="Compradores que quieren verla" vacio="" acento="#d9b45a" ocultarVacia />
+      <ListaConexiones titulo="Quienes quieren conectar" vacio="" acento="#d9b45a" ocultarVacia />
     </>
   )
 }
