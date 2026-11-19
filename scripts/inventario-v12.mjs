@@ -21,8 +21,8 @@ const RENTA = { incluye_mantenimiento: true, mantenimiento: null, deposito_meses
 const DEPAS = [
   ['Departamento con vista en Valle Poniente', 138, 0.96, 'depa1.jpg', ['roof_garden'], 'Excelente ubicación, a unos minutos de Valle Oriente. Vista abierta a la sierra. Amenidades: alberca, gimnasio, roof garden y seguridad 24 horas.'],
   ['Departamento en Privada Valle Poniente', 144, 0.97, 'depa2.jpg', ['terraza'], 'Muy bien ubicado, en privada con caseta. Terraza propia. Amenidades: alberca, gimnasio, elevador y seguridad 24 horas.'],
-  // El depa de JC en Torre West (su anuncio real en Avisos de Ocasión, 19-nov): renta fija de $58,500.
-  ['Departamento en Torre West', 120, null, 'depa3.jpg', ['terraza', 'roof_garden'], 'Torre West, Valle Poniente: excelente ubicación, frente al consulado de Estados Unidos. 3 recámaras. Muy buenas amenidades: alberca, gimnasio, roof garden, terraza y seguridad 24 horas.', 58_500],
+  // El depa de JC en Torre West (su anuncio real en Avisos de Ocasión, 19-nov): renta fija de $58,500, 140 m² con dos balcones.
+  ['Departamento en Torre West', 140, null, 'depa3.jpg', ['terraza', 'roof_garden'], 'Torre West, Valle Poniente: excelente ubicación, frente al consulado de Estados Unidos. 3 recámaras. Muy buenas amenidades: alberca, gimnasio, roof garden, terraza y seguridad 24 horas.', 58_500],
 ]
 const MIN = 54_000, MAX = 60_000 // dentro del presupuesto de $55k–$60k: ninguna arriba de su tope
 const redondear = (n) => Math.round(n / 500) * 500
