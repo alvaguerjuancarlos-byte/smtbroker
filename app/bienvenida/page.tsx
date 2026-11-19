@@ -70,6 +70,23 @@ const PUERTAS = [
   { id: 'poner_renta', titulo: 'Poner en renta', texto: 'Renta realista y quién busca rentar en tu zona.' },
 ]
 
+const PASOS = [
+  { titulo: 'Dinos qué buscas', texto: 'Tipo de propiedad, hasta tres zonas y tu presupuesto. Toma un par de minutos, y puedes hacerlo platicando.' },
+  { titulo: 'Compara con certeza', texto: 'En tu tablero ves lo que encontramos, lo que te proponen asesores verificados y lo que hay en los portales, con su precio contra el mercado.' },
+  { titulo: 'Conecta directo', texto: 'Cuando una te gusta, te conectamos con quien la ofrece: los dos reciben nombre, teléfono y WhatsApp. La visita y la negociación las acuerdan ustedes.' },
+]
+
+const CAMINOS = [
+  { titulo: 'Por mi cuenta', texto: 'La plataforma busca, revisa y te conecta. Si quieres, los asesores te proponen opciones sin conocer tus datos.' },
+  { titulo: 'Con un asesor', texto: 'Eliges un asesor verificado de tu zona. Recibe tu búsqueda completa, suma sus opciones y te acompaña hasta el cierre.' },
+]
+
+const DUENO = [
+  { titulo: 'Tu precio contra el mercado', texto: 'El precio (o la renta) realista de tu zona, calculado con comparables reales, y qué tan lejos está el tuyo.' },
+  { titulo: 'Cuántas personas buscan algo como lo tuyo', texto: 'Las búsquedas que tu propiedad cumple hoy en tu zona y con tu precio. Sin datos de nadie: tú decides con quién conectar.' },
+  { titulo: 'Quién se interesa', texto: 'Quienes quieren conectar contigo y quienes dejan sus datos en tu página.' },
+]
+
 const GRID_BG = {
   backgroundImage:
     'linear-gradient(var(--c-rejilla) 1px, transparent 1px), linear-gradient(90deg, var(--c-rejilla) 1px, transparent 1px)',
@@ -175,7 +192,8 @@ export default function BienvenidaPage() {
         {/* Header público */}
         <header className="px-4 md:px-8 py-5 flex items-center gap-3">
           <Marca texto={20} slogan />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3 md:gap-5">
+            <button onClick={elegirAsesor} className="hidden sm:inline font-sans text-[14px] text-tenue hover:text-acento">¿Eres asesor inmobiliario?</button>
             <button onClick={() => router.push('/login')}
               className="font-sans text-[14px] text-tenue hover:text-acento border border-linea hover:border-gold-500 px-3.5 py-2 transition-colors rounded-lg">
               Iniciar sesión
@@ -186,14 +204,13 @@ export default function BienvenidaPage() {
         <main className="px-4 md:px-8 py-8 md:py-14">
           <div className="w-full max-w-[880px] mx-auto flex flex-col gap-12 md:gap-16">
 
-            {/* Hero */}
-            <div className="max-w-[620px]">
-              <span className="font-sans text-[14px] text-acento">Plataforma IA de ventas inmobiliarias</span>
-              <h1 className="font-display font-medium text-[clamp(30px,4.4vw,46px)] leading-[1.1] tracking-[-0.01em] mt-4">
-                Únete al ecosistema<br /><span className="marca-nombre">SMT <span className="marca-ai">Match</span></span>.
+            {/* Hero (V10 §27 "Página pública"): la historia desde el cliente, con la frase larga de la marca (§26). */}
+            <div className="max-w-[660px]">
+              <h1 className="font-display font-medium text-[clamp(32px,5vw,52px)] leading-[1.08] tracking-[-0.01em]">
+                Compra, vende o renta<br />con <span className="marca-ai">certeza</span>.
               </h1>
-              <p className="text-[18px] text-tinta-2 mt-5 max-w-[52ch] leading-relaxed">
-                Conectamos a quien compra, vende o renta con la propiedad correcta: precio real, papeles revisados y asesores verificados.
+              <p className="text-[18px] text-tinta-2 mt-5 max-w-[54ch] leading-relaxed">
+                Dinos qué buscas o qué ofreces. Te mostramos las opciones que sí cumplen, con su precio real contra el mercado y los papeles revisados, y te conectamos directo con la otra parte.
               </p>
             </div>
 
@@ -212,10 +229,6 @@ export default function BienvenidaPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-[16px] text-tenue mt-6">
-                ¿Eres asesor inmobiliario?{' '}
-                <button onClick={elegirAsesor} className="text-acento underline underline-offset-2" data-entrada-asesor>Únete a SMT Match</button>
-              </p>
             </div>
 
             {/* Formulario — aparece al seleccionar rol */}
@@ -316,8 +329,68 @@ export default function BienvenidaPage() {
               </div>
             )}
 
+            {/* Cómo funciona (§24.1–24.3), contado desde quien busca */}
+            <section className="flex flex-col gap-5" data-como-funciona>
+              <h2 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Cómo funciona</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {PASOS.map((x, k) => (
+                  <div key={x.titulo} className="p-5 border border-linea bg-tarjeta rounded-xl flex flex-col gap-2">
+                    <span className="font-display text-[15px] text-acento">{k + 1}</span>
+                    <span className="text-[18px] font-medium text-tinta">{x.titulo}</span>
+                    <span className="text-[16px] text-tinta-2 leading-relaxed">{x.texto}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Los dos caminos (§24.1): mismo tamaño, mismo color, ninguno "recomendado". */}
+            <section className="flex flex-col gap-5" data-caminos>
+              <div>
+                <h2 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">Por tu cuenta o con un asesor</h2>
+                <p className="text-[17px] text-tinta-2 mt-2">Tú decides, y puedes cambiar cuando quieras.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {CAMINOS.map((c) => (
+                  <div key={c.titulo} className="p-5 border border-linea bg-tarjeta rounded-xl flex flex-col gap-2">
+                    <span className="text-[19px] font-medium text-tinta">{c.titulo}</span>
+                    <span className="text-[16px] text-tinta-2 leading-relaxed">{c.texto}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Quien vende o pone en renta (§24.2, tablero del dueño) */}
+            <section className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 md:gap-10 items-start" data-duenos>
+              <div>
+                <h2 className="font-display text-[26px] md:text-[30px] font-medium leading-tight">¿Vendes o rentas tu propiedad?</h2>
+                <p className="text-[17px] text-tinta-2 mt-2 leading-relaxed">Regístrala y en tu tablero ves lo que pasa con ella.</p>
+                <button onClick={() => router.push('/empezar?quiere=vender')}
+                  className="mt-5 font-sans text-[16px] font-medium px-4 py-3 bg-gold-500 text-navy-950 hover:bg-gold-400 rounded-lg">Registrar mi propiedad</button>
+              </div>
+              <ul className="flex flex-col gap-3">
+                {DUENO.map((d) => (
+                  <li key={d.titulo} className="p-4 border border-linea bg-tarjeta rounded-xl">
+                    <span className="text-[17px] font-medium text-tinta">{d.titulo}</span>
+                    <p className="text-[16px] text-tinta-2 mt-1 leading-relaxed">{d.texto}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
           </div>
         </main>
+
+        {/* Pie: la otra entrada discreta del asesor (§24.5) */}
+        <footer className="px-4 md:px-8 py-8 border-t border-linea">
+          <div className="w-full max-w-[880px] mx-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-[15px] text-tenue">
+            <span>SMT Match, by MindBridge</span>
+            <span className="sm:ml-auto">
+              ¿Eres asesor inmobiliario?{' '}
+              <button onClick={elegirAsesor} className="text-acento underline underline-offset-2" data-entrada-asesor>Únete a SMT Match</button>
+            </span>
+            <a href="/aviso-privacidad" className="hover:text-acento">Aviso de privacidad</a>
+          </div>
+        </footer>
       </div>
     </div>
   )
