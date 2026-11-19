@@ -1,4 +1,5 @@
 import type { ResumenRegistro } from '@/lib/registroBusqueda'
+import { contraMercadoGuardado } from '@/lib/analisisServidor'
 import { NextRequest, NextResponse } from 'next/server'
 import { BUCKET_FOTOS } from '@/lib/fichaPublica'
 import { sesionServidor } from '@/lib/sesionServidor'
@@ -120,6 +121,8 @@ export async function GET(req: NextRequest) {
       zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
       /** V10 §24.3: foto de portada (propiedades de SMT Match; los portales no se copian, §18). */
       foto?: string | null
+      /** Contra el mercado con los comparables de la propiedad (lo mismo que dirá su análisis), si los hay. */
+      mercado?: { estado: 'arriba' | 'en_linea' | 'abajo'; pct: number } | null
       /** Banda 3: ¿ya pidió que se certifique? y en qué va la invitación al anunciante. */
       pedida?: boolean; invitacion?: string
     }
@@ -193,6 +196,9 @@ export async function GET(req: NextRequest) {
       .then((f) => (f ? s.admin.storage.from(BUCKET_FOTOS).getPublicUrl(`${o.activoId}/${f.name}`).data.publicUrl : null))
       .catch(() => null)))
     conActivo.forEach((o, i) => { o.foto = portadas[i] })
+    // La tarjeta y el análisis, con la misma referencia (JC, 19-nov-2026).
+    const mercados = await Promise.all(conActivo.map((o) => contraMercadoGuardado(s.admin, { id: o.activoId!, superficie: o.superficie, precio: o.precio }, opDe(o.necesidadId ?? '')).catch(() => null)))
+    conActivo.forEach((o, i) => { o.mercado = mercados[i] })
 
     const { data: an } = await s.admin.from('analisis').select('activo_id, anuncio_id').eq('usuario_id', s.uid).eq('descartado', false)
     // Momento 3 (guion v12): el resumen de lo que revisó cada búsqueda (sin la tabla todavía, nada).

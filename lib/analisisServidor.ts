@@ -39,9 +39,13 @@ export interface DatosMercado {
 const dominio = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url } }
 
 async function comparablesGuardados(admin: SupabaseClient, activoId: string, operacion: Operacion): Promise<{ comparables: Comparable[]; fecha: string } | null> {
+  // El Agente de Mercado guarda los de venta en `comparables` y los de renta en `renta.comparables`
+  // (V9 §22.3). Antes del 19-nov-2026 los de renta no se reutilizaban: el análisis buscaba otros y
+  // podía contradecir al tablero (el depa de JC en Torre West: "8 % arriba" contra "6 % abajo").
+  const d = await leerUltimo(admin, activoId, 'mercado')
+  const deAgente = operacion === 'venta' ? d?.resultado.comparables : (d?.resultado.renta as { comparables?: unknown } | null | undefined)?.comparables
+  if (d && reciente(d.fecha) && Array.isArray(deAgente) && deAgente.length) return { comparables: deAgente as Comparable[], fecha: d.fecha }
   if (operacion === 'venta') {
-    const d = await leerUltimo(admin, activoId, 'mercado')
-    if (d && reciente(d.fecha) && Array.isArray(d.resultado.comparables)) return { comparables: d.resultado.comparables as Comparable[], fecha: d.fecha }
     const { data: p } = await admin.from('propuestas').select('precio_mercado').eq('activo_id', activoId).not('precio_mercado', 'is', null)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     const pm = (p as { precio_mercado: (DatosMercado & { operacion?: Operacion }) | null } | null)?.precio_mercado
@@ -55,6 +59,22 @@ async function comparablesGuardados(admin: SupabaseClient, activoId: string, ope
     if (bloque?.comparables && reciente(bloque.fecha ?? x.created_at)) return { comparables: bloque.comparables, fecha: bloque.fecha ?? x.created_at }
   }
   return null
+}
+
+/**
+ * La tarjeta del tablero (V10 §24.3) dice lo MISMO que el análisis: el precio (o la renta) contra el
+ * precio realista de la propiedad con sus comparables guardados (mismo cálculo y mismo semáforo que
+ * analizarPropiedad). Solo lee lo guardado, nunca busca: sin comparables recientes devuelve null y la
+ * tarjeta usa la mediana de la zona.
+ */
+export async function contraMercadoGuardado(admin: SupabaseClient, a: { id: string; superficie: number | null; precio: number | null }, op: OperacionFicha): Promise<{ estado: 'arriba' | 'en_linea' | 'abajo'; pct: number } | null> {
+  if (!a.precio || !a.superficie) return null
+  const enRenta = op === 'renta'
+  const g = await comparablesGuardados(admin, a.id, enRenta ? 'renta' : 'venta')
+  if (!g) return null
+  const pm = calcularPrecioMercado(g.comparables, a.superficie, enRenta ? null : a.precio, enRenta ? { total: 1_000, m2: 1 } : undefined)
+  const r = precioContraMercado(a.precio, pm, op)
+  return r.estado && r.diferenciaPct != null ? { estado: r.estado, pct: Math.round(r.diferenciaPct) } : null
 }
 
 /** Precio (o renta mensual) contra mercado con comparables reales, reutilizando los recientes. */
