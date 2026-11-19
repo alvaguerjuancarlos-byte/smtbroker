@@ -155,6 +155,8 @@ try {
   t = await bandeja(C4)
   ok(t.conBroker === true && de(t, aRenta).length > 0 && de(t, bRenta).length > 0, 'C4 (renta con asesor), banda 1: toda la red, incluidas las carteras de A y B')
   ok(de(t, duenoRenta).length > 0, 'C4: también ve al dueño particular')
+  ok(de(t, bRenta).every((o) => o.origen === 'broker' || o.red?.nombre === 'Asesor B V10') && de(t, aRenta).every((o) => o.origen === 'broker' || o.red?.deTuAsesor), 'C4, banda 1: las de la red llevan a su asesor (nunca "particular"); las de su asesora, marcadas como de su asesor')
+  ok(de(t, duenoRenta).every((o) => !o.red), 'C4: la del dueño sigue como particular')
 
   // ── 4. Conexión simple (§25) ─────────────────────────────────────────────
   console.log('\n4. Conectar')
@@ -237,6 +239,7 @@ try {
   ok(!/broker/i.test(t1), 'tablero de C1: nunca dice "broker"')
   const t3 = await pantalla(C3, '/inicio', 'c3-tablero', () => /Propuestas por asesores/i.test(document.body.innerText))
   ok(/tu asesor/i.test(t3), 'tablero de C3: la propuesta de su asesora se ve como de "tu asesor"')
+  ok(!/Particular · sin certificar\s*\n?\s*V10 Depa del Asesor/.test(t3), 'tablero de C3: ninguna propiedad de asesor sale como "Particular"')
   const tD = await pantalla(dueno, '/inicio', 'dueno-tablero', () => !!document.querySelector('[data-demanda]'))
   ok(/Quién busca algo como lo tuyo/.test(tD) && /Interesados/.test(tD), 'tablero del dueño: demanda e interesados')
   const tC = await pantalla(C1, `/conexion/${cx.id}`, 'c1-conexion', () => /8111111111|Contacto/.test(document.body.innerText))

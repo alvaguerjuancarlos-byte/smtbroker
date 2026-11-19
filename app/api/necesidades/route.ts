@@ -113,6 +113,8 @@ export async function GET(req: NextRequest) {
       clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
       municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
       broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
+      /** Banda 1, con asesor: propiedad de la cartera de un asesor (toda la red, §24.2). Nunca se presenta como particular. */
+      red?: { nombre: string; nivel: string; deTuAsesor: boolean }
       opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
       zona?: number; puntaje?: number | null; razones?: string[]; operacion?: Operacion; detalleRenta?: string[]
       /** V10 §24.3: foto de portada (propiedades de SMT Match; los portales no se copian, §18). */
@@ -143,6 +145,12 @@ export async function GET(req: NextRequest) {
       })
     }
     // Búsqueda directa en la plataforma (camino A). Por su cuenta solo particulares; con broker, toda la red (V7.2).
+    // Las de la red llevan al asesor que la ofrece: antes salían como "Particular" (hallazgo de la prueba V10, 18-nov).
+    let asesores: Map<string, { nombre: string | null; nivel: { nombre: string } }> | null = conBroker ? null : new Map()
+    const asesor = async (id: string) => {
+      asesores ??= new Map((brokers.length ? brokers : await perfilesBrokers(s.admin, s.esDemo)).map((x) => [x.id, x]))
+      return asesores.get(id)
+    }
     for (const n of N.filter((n) => vigente(n) && n.busqueda_directa)) {
       for (const o of await inventarioQueCumple(s.admin, n, { esDemo: s.esDemo, incluirBrokers: conBroker })) {
         if (vistos.has(o.activoId)) continue
@@ -151,6 +159,7 @@ export async function GET(req: NextRequest) {
           clave: `a:${o.activoId}`, origen: o.certificada ? 'certificada' : 'particular', titulo: o.nombre, tipo: o.tipo,
           municipio: o.municipio, precio: o.precio, superficie: o.superficie, certificada: o.certificada, operacion: n.operacion, detalleRenta: o.detalleRenta,
           activoId: o.activoId, necesidadId: n.id, colonia: o.colonia, zona: o.zona, puntaje: o.puntaje, razones: o.razones,
+          ...(o.brokerId ? { red: { nombre: (await asesor(o.brokerId))?.nombre ?? 'Asesor verificado', nivel: (await asesor(o.brokerId))?.nivel.nombre ?? '', deTuAsesor: o.brokerId === p?.representado_por } } : {}),
         })
       }
     }
