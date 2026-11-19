@@ -34,6 +34,7 @@ interface Opcion {
   clave: string; origen: 'broker' | 'certificada' | 'particular' | 'portal'; titulo: string; tipo: string | null
   municipio: string | null; precio: number | null; superficie: number | null; url?: string; fuente?: string
   broker?: { nombre: string; nivel: string; deTuAsesor?: boolean }; certificada?: boolean; activoId?: string; necesidadId?: string
+  red?: { nombre: string; nivel: string; deTuAsesor: boolean }
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
   zona?: number; puntaje?: number; razones?: string[]; operacion?: 'compra' | 'renta'; detalleRenta?: string[]
   foto?: string | null; pedida?: boolean; invitacion?: string
@@ -210,6 +211,8 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   // §24.3: la misma tarjeta en las tres bandas; solo cambia la etiqueta de origen.
   const etiquetaDe = (o: Opcion) => o.origen === 'broker'
     ? [o.broker?.deTuAsesor ? 'De tu asesor' : null, o.broker ? `${o.broker.nombre}${o.broker.nivel ? ` · ${o.broker.nivel}` : ''}` : 'Asesor verificado', o.certificada ? 'certificada' : null].filter(Boolean).join(' · ')
+    // Banda 1 con asesor: de la cartera de un asesor de la red, nunca "Particular".
+    : o.red ? [o.red.deTuAsesor ? 'De tu asesor' : 'De la red', `${o.red.nombre}${o.red.nivel ? ` · ${o.red.nivel}` : ''}`, o.certificada ? 'certificada' : 'sin certificar'].join(' · ')
     : o.origen === 'certificada' ? 'Certificada por SMT Match'
     : o.origen === 'particular' ? 'Particular · sin certificar'
     : `${o.fuente ?? 'Portal'} · sin certificar`

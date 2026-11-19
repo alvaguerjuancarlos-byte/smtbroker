@@ -104,6 +104,8 @@ export interface OpcionPlataforma {
   detalleRenta?: string[]
   certificada: boolean
   deBroker: boolean
+  /** El asesor que la ofrece (cartera), o null si es de un particular. */
+  brokerId: string | null
   /** V9: índice de la zona de la ficha donde cae, su puntaje (0-100) y por qué. Con el motor (§29), el
    *  puntaje es su % de coincidencia; null = recién publicada, el motor todavía no la tiene. */
   zona: number
@@ -139,7 +141,7 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
       activoId: a.id, nombre: a.nombre, tipo: a.tipo, municipio: a.municipio, colonia: a.colonia, superficie: a.superficie,
       precio_total: a.precio_total, operacion: a.operacion ?? 'venta', renta_mensual: a.renta_mensual, precio: precioPara(a, n.operacion),
       detalleRenta: n.operacion === 'renta' ? detalleRentaActivo(a.renta) : undefined,
-      certificada: certificadas.has(a.id), deBroker: !!a.broker_id,
+      certificada: certificadas.has(a.id), deBroker: !!a.broker_id, brokerId: a.broker_id ?? null,
       zona: zonaDeActivo(a, n), puntaje, razones,
     }
   }).sort((x, y) => y.puntaje - x.puntaje || Number(y.certificada) - Number(x.certificada))
