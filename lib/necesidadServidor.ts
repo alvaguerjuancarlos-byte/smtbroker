@@ -20,7 +20,7 @@ import { perfilesBrokers } from '@/lib/nivelServidor'
 import { municipioCanonico } from '@/lib/matching'
 import { buscarComparables } from '@/lib/comparables'
 import { calcularPrecioMercado, clasificarComparables } from '@/lib/precioMercado'
-import { fuenteDeUrl, resumirRegistro, type ItemRegistro } from '@/lib/registroBusqueda'
+import { fuenteDeUrl, resumirRegistro, esLigaDelBuscador, type ItemRegistro } from '@/lib/registroBusqueda'
 import { ordenDelMotor } from '@/lib/motorBusqueda'
 import {
   cumpleNecesidad, resumenNecesidad, presupuestoPerfil, etiquetaTipo, TIPOS_NECESIDAD, zonasDe, nombreZona,
@@ -272,7 +272,7 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
     return fuente ? { url: o.link, titulo: o.title, fuente: NOMBRE_FUENTE[fuente] ?? fuente.split('.')[0], zona } : null
   }
   const registro: ItemRegistro[] = []
-  const anotar = (o: { link: string; title: string }, razon: string) => registro.push({
+  const anotar = (o: { link: string; title: string }, razon: string) => esLigaDelBuscador(o.link) || registro.push({
     revision: 'portal', fuente: fuenteDeUrl(o.link), titulo: o.title, url: o.link, precio: null, m2: null, zona, resultado: 'descartada', razon,
   })
   // De Avisos de Ocasión, solo los de la operación que pide (sus títulos dicen "Venta de…" o "Renta de…").
@@ -341,7 +341,7 @@ export async function mercadoDeZonasConRegistro(n: Necesidad): Promise<{ mercado
       }))
       // Las páginas que el buscador trajo y de las que no salió ningún comparable.
       for (const f of fuentesConsultadas) {
-        if (comparables.some((k) => k.url === f.url)) continue
+        if (comparables.some((k) => k.url === f.url) || esLigaDelBuscador(f.url)) continue
         registro.push({ revision: 'comparable', fuente: fuenteDeUrl(f.url), titulo: f.titulo, url: f.url, precio: null, m2: null, zona, resultado: 'descartada', razon: 'No trae un precio que se pueda usar' })
       }
       cacheMercado.set(clave, { valor, registro, t: Date.now() })

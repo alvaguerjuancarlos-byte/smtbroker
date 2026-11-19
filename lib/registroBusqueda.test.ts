@@ -1,7 +1,7 @@
 // Pruebas del registro de búsqueda (guion v12, momento 3). Uso: node --test lib/registroBusqueda.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fuenteDeUrl, resumirRegistro, lineaRegistro, type ItemRegistro } from './registroBusqueda.ts'
+import { fuenteDeUrl, resumirRegistro, lineaRegistro, esLigaDelBuscador, type ItemRegistro } from './registroBusqueda.ts'
 
 const item = (x: Partial<ItemRegistro>): ItemRegistro => ({ revision: 'portal', fuente: 'inmuebles24', titulo: 't', url: null, precio: null, m2: null, zona: 0, resultado: 'mostrada', razon: null, ...x })
 
@@ -47,4 +47,11 @@ test('registro: la clasificación de comparables coincide con el cálculo del pr
     assert.equal(cl.find((x) => x.comparable === lista[6])?.uso, 'atipico')
   }
   assert.equal(clasificarComparables(lista, 100).find((x) => x.comparable === lista[5])?.uso, 'otro_tamano')
+})
+
+test('registro: las ligas de redirección del buscador no cuentan', () => {
+  assert.ok(esLigaDelBuscador('https://www.google.com/goto?url=CAES'))
+  assert.ok(esLigaDelBuscador('https://google.com/x'))
+  assert.ok(!esLigaDelBuscador('https://www.inmuebles24.com/x'))
+  assert.ok(!esLigaDelBuscador('https://www.facebook.com/marketplace/item/1'))
 })

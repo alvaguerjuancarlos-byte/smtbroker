@@ -46,6 +46,11 @@ export function fuenteDeUrl(url: string): string {
   return conocido ? conocido[1] : host.replace(/^www\./, '')
 }
 
+/** Ligas de redirección del propio buscador (google.com/goto…): no son anuncios ni fuentes; no se registran. */
+export function esLigaDelBuscador(url: string): boolean {
+  try { const h = new URL(url).hostname.toLowerCase(); return h === 'google.com' || h.endsWith('.google.com') || /^google\.com\.\w+$/.test(h) } catch { return true }
+}
+
 export function resumirRegistro(items: ItemRegistro[]): ResumenRegistro {
   // Una misma liga revisada dos veces (p. ej. como anuncio y como comparable) cuenta una vez.
   const vistas = new Set<string>()
