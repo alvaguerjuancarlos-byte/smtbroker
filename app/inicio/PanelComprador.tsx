@@ -40,6 +40,7 @@ interface Opcion {
   opcionId?: string; anuncioId?: string; lectura?: string | null; colonia?: string | null
   zona?: number; puntaje?: number; razones?: string[]; operacion?: 'compra' | 'renta'; detalleRenta?: string[]
   foto?: string | null; pedida?: boolean; invitacion?: string
+  mercado?: { estado: 'arriba' | 'en_linea' | 'abajo'; pct: number } | null
 }
 interface Datos { conBroker: boolean; necesidades: Busqueda[]; bandeja: Opcion[]; analizados: string[] }
 
@@ -200,6 +201,13 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
   // rinde tu dinero", §23.2), solo con 3 comparables o más. Es una referencia rápida; el análisis
   // completo sale al marcar "Me interesa" (§20).
   const contraMercado = (o: Opcion) => {
+    // Con los comparables de la propiedad, lo mismo que dirá su análisis (JC, 19-nov-2026).
+    if (o.mercado) {
+      const m = o.mercado
+      return m.estado === 'en_linea' ? { texto: 'En línea con el mercado', color: 'var(--c-tinta-2)' }
+        : m.estado === 'abajo' ? { texto: `~${Math.abs(m.pct)} % abajo del mercado`, color: verde }
+        : { texto: `~${Math.abs(m.pct)} % arriba del mercado`, color: m.pct > 15 ? 'var(--c-aviso, #b54708)' : 'var(--c-tinta-2)' }
+    }
     if (!o.precio || !o.superficie || o.zona == null || o.zona < 0) return null
     const z = datos.necesidades.find((n) => n.id === o.necesidadId)?.zonas?.[o.zona]
     if (!z?.precioM2 || z.comparables < 3) return null
