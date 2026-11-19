@@ -29,6 +29,7 @@ async function limpiar() {
   for (const u of data.users.filter((x) => x.email?.startsWith('prueba.entrada') && x.email.endsWith('@demo.smtbroker.mx'))) {
     const { data: pf } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', u.id)
     for (const p of pf ?? []) await admin.from('radar_opciones').delete().eq('perfil_id', p.id)
+    await admin.from('busquedas_registro').delete().eq('usuario_id', u.id)
     for (const t of ['necesidades', 'perfiles_intencion', 'contactos_cliente']) await admin.from(t).delete().eq('usuario_id', u.id)
     await admin.from('usuarios').delete().eq('id', u.id)
     await admin.auth.admin.deleteUser(u.id)
@@ -119,6 +120,25 @@ try {
   await page.waitForFunction(() => location.pathname === '/inicio', { timeout: 60000 })
   const { data: nec } = await admin.from('necesidades').select('id, es_demo, tipo').eq('usuario_id', cuenta?.id)
   ok(nec?.length === 1 && nec[0].es_demo === true && nec[0].tipo === 'departamento', 'la búsqueda quedó guardada en el mundo demo')
+
+  // Momento 3 (guion v12): el registro de todo lo revisado y su línea en el tablero.
+  let reg = null, sinTabla = false
+  for (let i = 0; i < 40 && nec?.[0]; i++) {
+    const { data, error } = await admin.from('busquedas_registro').select('resumen, items').eq('necesidad_id', nec[0].id).maybeSingle()
+    if (error) { sinTabla = /busquedas_registro/.test(error.message); break }
+    if (data) { reg = data; break }
+    await sleep(3000)
+  }
+  if (sinTabla) console.log('OMITIDA registro de la búsqueda: falta la tabla busquedas_registro (migración 20261119000000)')
+  else {
+    ok(!!reg && reg.resumen.revisadas > 0 && reg.resumen.fuentes > 0, `registro: revisó ${reg?.resumen.revisadas} en ${reg?.resumen.fuentes} fuentes (${reg?.resumen.nombresFuentes?.join(', ')}); ${reg?.resumen.cumplen} cumplen`)
+    ok(!!reg && reg.items.every((i) => i.resultado !== 'descartada' || i.razon), 'registro: todo lo descartado dice por qué')
+    ok(!!reg && reg.items.some((i) => i.revision === 'comparable'), 'registro: incluye los comparables de precio')
+    await page.reload({ waitUntil: 'networkidle2' })
+    await page.waitForSelector('[data-registro]', { timeout: 60000 }).catch(() => null)
+    const linea = await page.$eval('[data-registro]', (e) => e.innerText).catch(() => '')
+    ok(/^Revisamos \d[\d,]* propiedad/.test(linea), `tablero: "${linea}"`)
+  }
 
   // Sale y vuelve a entrar con su usuario y con su teléfono.
   await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sb-')).forEach((k) => localStorage.removeItem(k)))

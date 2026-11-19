@@ -7,6 +7,8 @@
 //                      de portales (solo título y liga a la fuente: §18, términos de los portales).
 //   avisarBrokersZona  camino B (§19.3): aviso a los brokers con propiedades en ese municipio.
 //   mercadoDeZonas     V9 §23.2: precio por m² típico de cada zona ("lo que rinde tu dinero").
+//   registro           guion v12, momento 3 (19-nov-2026): al guardar la ficha queda en busquedas_registro TODO
+//                      lo que se revisó (plataforma, portales y comparables), de dónde vino y si pasó o por qué no.
 //
 // V9 (§23): una ficha busca en hasta 3 zonas. Todo lo de aquí trabaja por zona.
 // V9 (§22): una ficha es de compra o de renta. En renta cuenta la renta mensual de la propiedad, los
@@ -17,7 +19,8 @@ import { avisarUsuario } from '@/lib/avisos'
 import { perfilesBrokers } from '@/lib/nivelServidor'
 import { municipioCanonico } from '@/lib/matching'
 import { buscarComparables } from '@/lib/comparables'
-import { calcularPrecioMercado } from '@/lib/precioMercado'
+import { calcularPrecioMercado, clasificarComparables } from '@/lib/precioMercado'
+import { fuenteDeUrl, resumirRegistro, type ItemRegistro } from '@/lib/registroBusqueda'
 import { ordenDelMotor } from '@/lib/motorBusqueda'
 import {
   cumpleNecesidad, resumenNecesidad, presupuestoPerfil, etiquetaTipo, TIPOS_NECESIDAD, zonasDe, nombreZona,
@@ -65,12 +68,20 @@ export async function guardarNecesidad(admin: SupabaseClient, uid: string, n: Ne
 
   const id = (data as { id: string }).id
   if (n.publicada_brokers) after(() => avisarBrokersZona(admin, n, opts))
-  // Camino A con el mercado: los anuncios de portales quedan en su Radar (una búsqueda por zona).
-  if (n.busqueda_directa && perfilId) after(async () => guardarEnRadar(admin, perfilId!, await anunciosDePortales(n), n, opts))
-  // "Lo que rinde tu dinero" (§23.2) queda guardado en cada zona para el panel del comprador.
   after(async () => {
-    const mercado = await mercadoDeZonas(n)
-    await admin.from('necesidades').update({ zonas: zonasDe(n).map((z, i) => ({ ...z, mercado: mercado[i] })) }).eq('id', id)
+    const vacio = { anuncios: [] as OpcionPortal[], registro: [] as ItemRegistro[] }
+    const [portales, mercado, plataforma] = await Promise.all([
+      n.busqueda_directa ? anunciosDePortalesConRegistro(n) : Promise.resolve(vacio),
+      mercadoDeZonasConRegistro(n),
+      n.busqueda_directa ? revisarInventario(admin, n, { esDemo: opts.esDemo, incluirBrokers: n.camino === 'con_asesor' }) : Promise.resolve([]),
+    ])
+    // Camino A con el mercado: los anuncios de portales quedan en su Radar (una búsqueda por zona).
+    if (n.busqueda_directa && perfilId) await guardarEnRadar(admin, perfilId, portales.anuncios, n, opts)
+    // "Lo que rinde tu dinero" (§23.2) queda guardado en cada zona para el panel del comprador.
+    await admin.from('necesidades').update({ zonas: zonasDe(n).map((z, i) => ({ ...z, mercado: mercado.mercado[i] })) }).eq('id', id)
+    // Momento 3 (guion v12): todo lo revisado. Si la tabla aún no existe (migración 20261119000000), no pasa nada.
+    const items = [...plataforma, ...portales.registro, ...mercado.registro]
+    await admin.from('busquedas_registro').upsert({ necesidad_id: id, usuario_id: uid, es_demo: opts.esDemo, resumen: resumirRegistro(items), items })
   })
   return { id }
 }
@@ -149,6 +160,26 @@ export async function inventarioQueCumple(admin: SupabaseClient, n: Necesidad, o
 }
 
 /**
+ * Registro (momento 3): cada propiedad de la plataforma del tipo que pide, con si cumple su ficha o
+ * por qué no. Las de otro tipo no se listan (no se "revisaron" para esta búsqueda). Yendo por su
+ * cuenta, las de asesores no salen en la banda 1: llegan solo si el asesor se las propone.
+ */
+export async function revisarInventario(admin: SupabaseClient, n: Necesidad, opts: { esDemo: boolean; incluirBrokers: boolean }): Promise<ItemRegistro[]> {
+  const { data } = await admin.from('activos').select(COLS_ACTIVO_FICHA).neq('status', 'cerrado').eq('es_demo', opts.esDemo)
+  return ((data as ActivoDirecta[]) || []).filter((a) => cumpleNecesidad(a, n).motivos.every((m) => !m.startsWith('No es '))).map((a) => {
+    const { cumple, motivos } = cumpleNecesidad(a, n)
+    const deAsesor = cumple && !!a.broker_id && !opts.incluirBrokers
+    const zona = zonaDeActivo(a, n)
+    return {
+      revision: 'plataforma', fuente: 'SMT Match', titulo: a.nombre || `${a.tipo} en ${a.colonia || a.municipio}`, url: null,
+      precio: precioPara(a, n.operacion), m2: a.superficie, zona: zona >= 0 ? zona : null,
+      resultado: cumple && !deAsesor ? 'mostrada' : 'descartada',
+      razon: deAsesor ? 'Es de un asesor: vas por tu cuenta, así que llega solo si te la propone' : cumple ? null : motivos.join('; '),
+    } satisfies ItemRegistro
+  })
+}
+
+/**
  * Con el motor (§29): el porcentaje es el % de coincidencia del motor (lo pedido que cumple cada
  * propiedad) y la lista se ordena por él; en los empates manda el orden del motor. Las que el motor
  * todavía no tiene (recién cargadas) van al final, sin %, como "recién publicada". Nada de lo que
@@ -204,14 +235,19 @@ const MAX_AVISOS = 2
  * devuelve vacío.
  */
 export async function anunciosDePortales(n: Necesidad): Promise<OpcionPortal[]> {
-  const zonas = zonasDe(n)
-  const porZona = await Promise.all(zonas.map((z, i) => anunciosDeZona(n, z, i, zonas.length > 1 ? 5 : 8)))
-  return porZona.flat()
+  return (await anunciosDePortalesConRegistro(n)).anuncios
 }
 
-async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: number): Promise<OpcionPortal[]> {
+/** Los anuncios y, para el registro (momento 3), todo lo que trajo el buscador con lo descartado. */
+export async function anunciosDePortalesConRegistro(n: Necesidad): Promise<{ anuncios: OpcionPortal[]; registro: ItemRegistro[] }> {
+  const zonas = zonasDe(n)
+  const porZona = await Promise.all(zonas.map((z, i) => anunciosDeZona(n, z, i, zonas.length > 1 ? 5 : 8)))
+  return { anuncios: porZona.flatMap((x) => x.anuncios), registro: porZona.flatMap((x) => x.registro) }
+}
+
+async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: number): Promise<{ anuncios: OpcionPortal[]; registro: ItemRegistro[] }> {
   const key = process.env.SERPER_API_KEY?.trim()
-  if (!key) return []
+  if (!key) return { anuncios: [], registro: [] }
   const plural = TIPOS_NECESIDAD.find((t) => t.id === n.tipo)?.plural ?? n.tipo
   const lugar = [z.nombre || z.colonias[0], z.municipio, z.estado].filter(Boolean).join(' ')
   const operacion = n.operacion === 'renta' ? 'renta' : 'venta'
@@ -229,19 +265,40 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
     }
   }
   const [general, avisos] = await Promise.all([buscar(q), buscar(`site:${AVISOS} ${q}`)])
-  const deFuente = (o: { link: string; title: string }): OpcionPortal[] => {
+  const deFuente = (o: { link: string; title: string }): OpcionPortal | null => {
     let host = ''
-    try { host = new URL(o.link).hostname } catch { return [] }
+    try { host = new URL(o.link).hostname } catch { return null }
     const fuente = FUENTES.find((f) => host === f || host.endsWith('.' + f))
-    return fuente ? [{ url: o.link, titulo: o.title, fuente: NOMBRE_FUENTE[fuente] ?? fuente.split('.')[0], zona }] : []
+    return fuente ? { url: o.link, titulo: o.title, fuente: NOMBRE_FUENTE[fuente] ?? fuente.split('.')[0], zona } : null
   }
+  const registro: ItemRegistro[] = []
+  const anotar = (o: { link: string; title: string }, razon: string) => registro.push({
+    revision: 'portal', fuente: fuenteDeUrl(o.link), titulo: o.title, url: o.link, precio: null, m2: null, zona, resultado: 'descartada', razon,
+  })
   // De Avisos de Ocasión, solo los de la operación que pide (sus títulos dicen "Venta de…" o "Renta de…").
   const contraria = operacion === 'venta' ? /\brenta\b/i : /\bventa\b/i
   // Y solo páginas de bienes raíces (el sitio también tiene empleos y autos).
   const inmueble = /\/(Detalle\/BienesRaices|br\/|Portada\/Indice\/(venta|renta)-)/i
-  const deAvisos = avisos.filter((o) => inmueble.test(o.link) && !contraria.test(o.title)).flatMap(deFuente).slice(0, MAX_AVISOS)
-  const resto = general.flatMap(deFuente).filter((o) => !deAvisos.some((a) => a.url === o.url))
-  return [...resto.slice(0, max - deAvisos.length), ...deAvisos]
+  const deAvisos: OpcionPortal[] = []
+  for (const o of avisos) {
+    const f = deFuente(o)
+    if (!inmueble.test(o.link)) anotar(o, 'No es un anuncio de inmuebles')
+    else if (contraria.test(o.title)) anotar(o, operacion === 'venta' ? 'Es de renta y buscas comprar' : 'Es de venta y buscas rentar')
+    else if (!f) anotar(o, 'No es un portal inmobiliario reconocido')
+    else if (deAvisos.length >= MAX_AVISOS) anotar(o, `Ya había ${MAX_AVISOS} de este portal para la zona`)
+    else deAvisos.push(f)
+  }
+  const resto: OpcionPortal[] = []
+  for (const o of general) {
+    if (deAvisos.some((a) => a.url === o.link)) continue
+    const f = deFuente(o)
+    if (!f) anotar(o, 'No es un portal inmobiliario reconocido')
+    else if (resto.length >= max - deAvisos.length) anotar(o, 'Ya había suficientes resultados de portales para la zona')
+    else resto.push(f)
+  }
+  const anuncios = [...resto, ...deAvisos]
+  for (const a of anuncios) registro.push({ revision: 'portal', fuente: fuenteDeUrl(a.url), titulo: a.titulo, url: a.url, precio: null, m2: null, zona, resultado: 'mostrada', razon: null })
+  return { anuncios, registro }
 }
 
 // ── "Lo que rinde tu dinero" (V9, §23.2) ─────────────────────────────────────────────────────
@@ -249,26 +306,49 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
 // Los comparables cuestan (búsqueda + extracción con Claude). Se guardan 12 h por tipo y zona en la
 // memoria de la instancia: la búsqueda antes de la cuenta y la ficha guardada suelen pedir lo mismo.
 const DOCE_HORAS = 12 * 3600_000
-const cacheMercado = new Map<string, { valor: MercadoZona; t: number }>()
+const cacheMercado = new Map<string, { valor: MercadoZona; registro: ItemRegistro[]; t: number }>()
 
 /** Precio por m² típico (mediana de comparables reales, sin atípicos) de cada zona de la ficha. */
 export async function mercadoDeZonas(n: Necesidad): Promise<(MercadoZona | null)[]> {
+  return (await mercadoDeZonasConRegistro(n)).mercado
+}
+
+const RAZON_COMPARABLE = {
+  sin_precio: 'Sin precio por m² que se pueda usar',
+  otro_tamano: 'De un tamaño muy distinto al que pides',
+  atipico: 'Precio atípico para la zona',
+  pocos: 'Muy pocos comparables para dar un precio de zona',
+} as const
+
+/** "Lo que rinde tu dinero" y, para el registro (momento 3), cada comparable con si se usó o por qué no. */
+export async function mercadoDeZonasConRegistro(n: Necesidad): Promise<{ mercado: (MercadoZona | null)[]; registro: ItemRegistro[] }> {
   const area = n.caracteristicas[CAMPO_AREA[n.tipo]]
-  return Promise.all(zonasDe(n).map(async (z) => {
+  const porZona = await Promise.all(zonasDe(n).map(async (z, zona): Promise<{ valor: MercadoZona | null; registro: ItemRegistro[] }> => {
     const lugar = z.nombre || z.colonias[0] || null
     const clave = [n.operacion, n.tipo, municipioCanonico(z.municipio), lugar ?? '', typeof area === 'number' ? area : ''].join('|').toLowerCase()
     const c = cacheMercado.get(clave)
-    if (c && Date.now() - c.t < DOCE_HORAS) return c.valor
+    if (c && Date.now() - c.t < DOCE_HORAS) return { valor: c.valor, registro: c.registro.map((r) => ({ ...r, zona })) }
     try {
       // En renta: renta mensual por m², sin redondear a cientos (lib/precioMercado.ts).
       const enRenta = n.operacion === 'renta'
-      const { comparables } = await buscarComparables({ tipo: etiquetaTipo(n.tipo), municipio: z.municipio, colonia: lugar, estado: z.estado }, enRenta ? 'renta' : 'venta')
-      const pm = calcularPrecioMercado(comparables, typeof area === 'number' ? area : null, null, enRenta ? { total: 1_000, m2: 1 } : undefined)
+      const { comparables, fuentesConsultadas } = await buscarComparables({ tipo: etiquetaTipo(n.tipo), municipio: z.municipio, colonia: lugar, estado: z.estado }, enRenta ? 'renta' : 'venta')
+      const sup = typeof area === 'number' ? area : null
+      const pm = calcularPrecioMercado(comparables, sup, null, enRenta ? { total: 1_000, m2: 1 } : undefined)
       const valor: MercadoZona = { precioM2: pm.precioPromedioM2Zona, comparables: pm.comparablesUsados, fecha: new Date().toISOString() }
-      cacheMercado.set(clave, { valor, t: Date.now() })
-      return valor
+      const registro: ItemRegistro[] = clasificarComparables(comparables, sup).map(({ comparable: k, uso }) => ({
+        revision: 'comparable', fuente: fuenteDeUrl(k.url), titulo: k.nombre, url: k.url, precio: k.precioTotal, m2: k.superficieM2, zona,
+        resultado: uso === 'usado' ? 'referencia' : 'descartada', razon: uso === 'usado' ? null : RAZON_COMPARABLE[uso],
+      }))
+      // Las páginas que el buscador trajo y de las que no salió ningún comparable.
+      for (const f of fuentesConsultadas) {
+        if (comparables.some((k) => k.url === f.url)) continue
+        registro.push({ revision: 'comparable', fuente: fuenteDeUrl(f.url), titulo: f.titulo, url: f.url, precio: null, m2: null, zona, resultado: 'descartada', razon: 'No trae un precio que se pueda usar' })
+      }
+      cacheMercado.set(clave, { valor, registro, t: Date.now() })
+      return { valor, registro }
     } catch {
-      return null
+      return { valor: null, registro: [] }
     }
   }))
+  return { mercado: porZona.map((x) => x.valor), registro: porZona.flatMap((x) => x.registro) }
 }

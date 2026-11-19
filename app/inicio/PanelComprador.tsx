@@ -22,11 +22,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { dinero, MAX_NECESIDADES_ACTIVAS, MEJORES_POR_ZONA } from '@/lib/necesidad'
+import { lineaRegistro, type ResumenRegistro } from '@/lib/registroBusqueda'
 import ListaConexiones from '../components/ListaConexiones'
 
 interface Busqueda {
   id: string; operacion: 'compra' | 'renta'; resumen: string; detalle: string[]; activa: boolean; vigente: boolean; vence_at: string
   busqueda_directa: boolean; publicada_brokers: boolean; propuestas: number
+  registro?: ResumenRegistro | null
   camino?: 'por_mi_cuenta' | 'con_asesor'
   zonas: { nombre: string; municipio: string; precioM2: number | null; comparables: number; rinde: { m2: number; faltaPct: number | null } | null }[]
 }
@@ -337,6 +339,10 @@ export default function PanelComprador({ nombre, conBroker }: { uid: string; nom
         {conZona.map((n) => (
           <div key={n.id} className="flex flex-col gap-3" data-tablero-busqueda={n.id}>
             <div className="flex flex-col gap-1">
+              {/* Momento 3 (guion v12): cuánto revisó SMT Match para llegar a lo que ve. */}
+              {n.registro && n.registro.revisadas > 0 && (
+                <span className="text-[17px] font-medium text-tinta" data-registro>{lineaRegistro(n.registro)}</span>
+              )}
               <span className="font-display text-[22px] font-medium">Tu tablero{conZona.length > 1 ? ` · ${n.resumen}` : ''}</span>
               {n.zonas.some((z) => z.rinde) && (
                 <span className="text-[15px] text-tinta-2" data-rinde>

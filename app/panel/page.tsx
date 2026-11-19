@@ -7,6 +7,7 @@ import Topbar from '../components/Topbar'
 import ValidacionOperacion from './ValidacionOperacion'
 import RadarOperacion from './RadarOperacion'
 import ConexionesOperacion from './ConexionesOperacion'
+import BusquedasOperacion from './BusquedasOperacion'
 import CertificacionesOperacion from './CertificacionesOperacion'
 import { etiquetaRol, HOME_POR_ROL } from '@/lib/roles'
 import { EjemploBadge } from '../components/EjemploBadge'
@@ -446,6 +447,9 @@ export default function PanelPage() {
 
           {/* V8 §21: conexiones por validar y alertas de seguimiento (ver ConexionesOperacion.tsx) */}
           <ConexionesOperacion />
+
+          {/* Guion v12, momento 3: todo lo que revisó cada búsqueda (ver BusquedasOperacion.tsx) */}
+          <BusquedasOperacion />
 
           {/* Paso 4 V6.3: certificaciones legales (ver CertificacionesOperacion.tsx) */}
           <CertificacionesOperacion />

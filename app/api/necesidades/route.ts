@@ -1,3 +1,4 @@
+import type { ResumenRegistro } from '@/lib/registroBusqueda'
 import { NextRequest, NextResponse } from 'next/server'
 import { BUCKET_FOTOS } from '@/lib/fichaPublica'
 import { sesionServidor } from '@/lib/sesionServidor'
@@ -194,6 +195,9 @@ export async function GET(req: NextRequest) {
     conActivo.forEach((o, i) => { o.foto = portadas[i] })
 
     const { data: an } = await s.admin.from('analisis').select('activo_id, anuncio_id').eq('usuario_id', s.uid).eq('descartado', false)
+    // Momento 3 (guion v12): el resumen de lo que revisó cada búsqueda (sin la tabla todavía, nada).
+    const { data: regs } = await s.admin.from('busquedas_registro').select('necesidad_id, resumen').in('necesidad_id', N.map((n) => n.id))
+    const registroDe = new Map(((regs as { necesidad_id: string; resumen: ResumenRegistro }[]) || []).map((r) => [r.necesidad_id, r.resumen]))
     return NextResponse.json({
       conBroker,
       analizados: [...new Set(((an as { activo_id: string | null; anuncio_id: string | null }[]) || []).map((x) => (x.activo_id ?? x.anuncio_id)!))],
@@ -201,6 +205,7 @@ export async function GET(req: NextRequest) {
         id: n.id, operacion: n.operacion, resumen: resumenNecesidad(n), detalle: [...detalleCaracteristicas(n), ...detalleRenta(n.renta)], activa: n.activa, vigente: vigente(n),
         vence_at: n.vence_at, busqueda_directa: n.busqueda_directa, publicada_brokers: n.publicada_brokers, camino: n.camino ?? 'por_mi_cuenta',
         propuestas: P.filter((x) => x.necesidad_id === n.id).length,
+        registro: registroDe.get(n.id) ?? null,
         // V9 (§23.2): sus zonas con "lo que rinde tu dinero".
         zonas: zonasDe(n).map((z) => ({
           nombre: nombreZona(z), municipio: z.municipio, precioM2: z.mercado?.precioM2 ?? null,

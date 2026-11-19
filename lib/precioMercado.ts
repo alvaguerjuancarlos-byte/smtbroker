@@ -81,3 +81,29 @@ export function calcularPrecioMercado(
     percentilPosicionamiento: m2Lista != null ? Math.round((valores.filter((v) => v < m2Lista).length / valores.length) * 100) : null,
   }
 }
+
+/**
+ * Lo que hizo calcularPrecioMercado con cada comparable, con las mismas reglas (registro de la
+ * búsqueda, lib/registroBusqueda.ts): usado, sin precio por m², de tamaño muy distinto o atípico.
+ * Con menos de 2 útiles no hay precio de zona: los que quedaron se marcan "pocos".
+ */
+export type UsoComparable = 'usado' | 'sin_precio' | 'otro_tamano' | 'atipico' | 'pocos'
+export function clasificarComparables<T extends ComparableConPrecio>(comparables: T[], superficieM2: number | null): { comparable: T; uso: UsoComparable }[] {
+  const sup = superficieM2 != null && superficieM2 > 0 ? superficieM2 : null
+  const uso = new Map<T, UsoComparable>()
+  const parecidos: T[] = []
+  for (const c of comparables) {
+    if (precioM2De(c) == null) uso.set(c, 'sin_precio')
+    else if (sup && !(c.superficieM2 != null && c.superficieM2 > 0 ? c.superficieM2 >= sup / 2 && c.superficieM2 <= sup * 2 : c.precioM2 != null)) uso.set(c, 'otro_tamano')
+    else parecidos.push(c)
+  }
+  const valores = parecidos.map((c) => precioM2De(c)!).sort((a, b) => a - b)
+  let dentro: (v: number) => boolean = () => true
+  if (valores.length >= 4) {
+    const q1 = percentil(valores, 25), q3 = percentil(valores, 75), iqr = q3 - q1
+    dentro = (v) => v >= q1 - 1.5 * iqr && v <= q3 + 1.5 * iqr
+  }
+  const usados = parecidos.filter((c) => dentro(precioM2De(c)!))
+  for (const c of parecidos) uso.set(c, !dentro(precioM2De(c)!) ? 'atipico' : usados.length < 2 ? 'pocos' : 'usado')
+  return comparables.map((c) => ({ comparable: c, uso: uso.get(c)! }))
+}
