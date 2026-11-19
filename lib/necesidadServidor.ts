@@ -246,6 +246,36 @@ export async function anunciosDePortalesConRegistro(n: Necesidad): Promise<{ anu
   return { anuncios: porZona.flatMap((x) => x.anuncios), registro: porZona.flatMap((x) => x.registro) }
 }
 
+type ResultadoBuscador = { link: string; title: string; displayedLink?: string }
+
+/**
+ * Google a veces entrega un resultado como liga de redirección (google.com/goto?url=…, cifrada): el
+ * sitio de origen viene en displayedLink ("https://www.avisosdeocasion.com › Detalle › …"). Hallazgo del
+ * 19-nov-2026 con el aviso de JC en Torre West: 7 de 10 avisos de Avisos de Ocasión llegaban así y se
+ * descartaban. Ahora: se intenta seguir la liga (Google la suelta con un 302 casi siempre la primera
+ * vez); si no, se queda la liga de Google, que en el navegador de una persona sí lleva al aviso.
+ */
+const UA_NAVEGADOR = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
+function hostDeResultado(o: ResultadoBuscador): string {
+  try {
+    if (!esLigaDelBuscador(o.link)) return new URL(o.link).hostname.toLowerCase()
+    return new URL((o.displayedLink ?? '').split(' ')[0]).hostname.toLowerCase()
+  } catch { return '' }
+}
+async function seguirLiga(o: ResultadoBuscador): Promise<ResultadoBuscador> {
+  if (!esLigaDelBuscador(o.link)) return o
+  try {
+    const r = await fetch(o.link, { redirect: 'manual', headers: { 'User-Agent': UA_NAVEGADOR }, signal: AbortSignal.timeout(3000) })
+    const destino = r.headers.get('location')
+    return destino && /^https?:\/\//.test(destino) && !esLigaDelBuscador(destino) ? { ...o, link: destino } : o
+  } catch { return o }
+}
+// Palabras de cada tipo en los títulos de Avisos de Ocasión ("Renta de casas en…", "Se renta departamento…").
+const PALABRAS_TIPO: [string, RegExp][] = [
+  ['departamento', /\bdepartamentos?\b|\bdeptos?\b|\bdepas?\b|\bpent ?house\b/i], ['casa', /\bcasas?\b|\bresidencias?\b/i],
+  ['terreno', /\bterrenos?\b|\blotes?\b/i], ['bodega', /\bbodegas?\b|\bnaves?\b/i], ['local', /\blocal(es)?\b/i], ['oficina', /\boficinas?\b/i],
+]
+
 async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: number): Promise<{ anuncios: OpcionPortal[]; registro: ItemRegistro[] }> {
   const key = process.env.SERPER_API_KEY?.trim()
   if (!key) return { anuncios: [], registro: [] }
@@ -253,39 +283,50 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
   const lugar = [z.nombre || z.colonias[0], z.municipio, z.estado].filter(Boolean).join(' ')
   const operacion = n.operacion === 'renta' ? 'renta' : 'venta'
   const q = `${plural} en ${operacion} ${lugar}`
-  const buscar = async (consulta: string) => {
+  const buscar = async (consulta: string): Promise<ResultadoBuscador[]> => {
     try {
       const r = await fetch('https://google.serper.dev/search', {
         method: 'POST', headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: consulta, gl: 'mx', hl: 'es', num: 10 }),
       })
       if (!r.ok) return []
-      return ((await r.json()) as { organic?: { link: string; title: string }[] }).organic ?? []
+      return ((await r.json()) as { organic?: ResultadoBuscador[] }).organic ?? []
     } catch {
       return []
     }
   }
-  const [general, avisos] = await Promise.all([buscar(q), buscar(`site:${AVISOS} ${q}`)])
-  const deFuente = (o: { link: string; title: string }): OpcionPortal | null => {
-    let host = ''
-    try { host = new URL(o.link).hostname } catch { return null }
+  const [crudosGeneral, crudosAvisos] = await Promise.all([buscar(q), buscar(`site:${AVISOS} ${q}`)])
+  const [general, avisos] = await Promise.all([Promise.all(crudosGeneral.map(seguirLiga)), Promise.all(crudosAvisos.map(seguirLiga))])
+  const fuenteDe = (o: ResultadoBuscador) => fuenteDeUrl(`https://${hostDeResultado(o) || 'otro-sitio'}/`)
+  const deFuente = (o: ResultadoBuscador): OpcionPortal | null => {
+    const host = hostDeResultado(o)
     const fuente = FUENTES.find((f) => host === f || host.endsWith('.' + f))
     return fuente ? { url: o.link, titulo: o.title, fuente: NOMBRE_FUENTE[fuente] ?? fuente.split('.')[0], zona } : null
   }
   const registro: ItemRegistro[] = []
-  const anotar = (o: { link: string; title: string }, razon: string) => esLigaDelBuscador(o.link) || registro.push({
-    revision: 'portal', fuente: fuenteDeUrl(o.link), titulo: o.title, url: o.link, precio: null, m2: null, zona, resultado: 'descartada', razon,
+  const anotar = (o: ResultadoBuscador, razon: string) => hostDeResultado(o) && registro.push({
+    revision: 'portal', fuente: fuenteDe(o), titulo: o.title, url: o.link, precio: null, m2: null, zona, resultado: 'descartada', razon,
   })
   // De Avisos de Ocasión, solo los de la operación que pide (sus títulos dicen "Venta de…" o "Renta de…").
   const contraria = operacion === 'venta' ? /\brenta\b/i : /\bventa\b/i
-  // Y solo páginas de bienes raíces (el sitio también tiene empleos y autos).
+  // Y solo páginas de bienes raíces (el sitio también tiene empleos y autos). Una liga que Google no
+  // soltó no dice su ruta: ahí se decide por el título.
   const inmueble = /\/(Detalle\/BienesRaices|br\/|Portada\/Indice\/(venta|renta)-)/i
+  const noInmueble = /mascotas|empleo|veh[ií]culo|autos?\b|servicios|m[aá]quinas|acciones|viajes/i
+  const esInmueble = (o: ResultadoBuscador) => (esLigaDelBuscador(o.link) ? !noInmueble.test(o.title) : inmueble.test(o.link))
+  // Y del tipo que busca: "Renta de casas" no sirve a quien busca departamento.
+  const propio = PALABRAS_TIPO.find(([t]) => t === n.tipo)?.[1]
+  const deOtroTipo = (titulo: string) => !!propio && !propio.test(titulo) && PALABRAS_TIPO.some(([t, re]) => t !== n.tipo && re.test(titulo))
   const deAvisos: OpcionPortal[] = []
-  for (const o of avisos) {
+  // Primero los avisos concretos ("Se renta departamento en…") y luego las páginas de índice ("Renta de departamentos en…").
+  const indice = (o: ResultadoBuscador) => /\/Portada\/Indice\//i.test(o.link) || /^(renta|venta)[ -]de[ -]/i.test(o.title)
+  for (const o of [...avisos].sort((x, y) => Number(indice(x)) - Number(indice(y)))) {
     const f = deFuente(o)
-    if (!inmueble.test(o.link)) anotar(o, 'No es un anuncio de inmuebles')
+    if (!esInmueble(o)) anotar(o, 'No es un anuncio de inmuebles')
     else if (contraria.test(o.title)) anotar(o, operacion === 'venta' ? 'Es de renta y buscas comprar' : 'Es de venta y buscas rentar')
+    else if (deOtroTipo(o.title)) anotar(o, `No es ${etiquetaTipo(n.tipo).toLowerCase()}`)
     else if (!f) anotar(o, 'No es un portal inmobiliario reconocido')
+    else if (deAvisos.some((a) => a.url === f.url)) continue
     else if (deAvisos.length >= MAX_AVISOS) anotar(o, `Ya había ${MAX_AVISOS} de este portal para la zona`)
     else deAvisos.push(f)
   }
@@ -298,7 +339,11 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
     else resto.push(f)
   }
   const anuncios = [...resto, ...deAvisos]
-  for (const a of anuncios) registro.push({ revision: 'portal', fuente: fuenteDeUrl(a.url), titulo: a.titulo, url: a.url, precio: null, m2: null, zona, resultado: 'mostrada', razon: null })
+  const hostDeAnuncio = new Map([...avisos, ...general].map((o) => [o.link, o]))
+  for (const a of anuncios) {
+    const o = hostDeAnuncio.get(a.url)
+    registro.push({ revision: 'portal', fuente: o ? fuenteDe(o) : fuenteDeUrl(a.url), titulo: a.titulo, url: a.url, precio: null, m2: null, zona, resultado: 'mostrada', razon: null })
+  }
   return { anuncios, registro }
 }
 
