@@ -40,7 +40,12 @@ const CUENTAS = {
   patricia: `recorrido.patricia.v11.${SUFIJO}@demo.smtbroker.mx`,
 }
 const BODEGA_DIEGO = 'Bodega en Parque Industrial Apodaca'
-const creados = { activos: [], solicitud: null, fotos: [], anuncios: [] }
+const creados = { activos: [], solicitud: null, fotos: [], anuncios: [], laura: null }
+// Escena 14b: precio demo de Laura y presupuestos de las búsquedas que la cuentan (se restauran al final).
+const LAURA_ACTIVO = '7c0c1823-f952-47ee-8e7b-bd5cce4d44d2'
+// Precio por m² típico de bodegas en General Escobedo (el de "lo que rinde tu dinero", grabación del 18-nov).
+// Se ajusta al real en cuanto Patricia guarda su búsqueda.
+const ESCOBEDO_M2 = 12_600
 
 const { data: lista } = await admin.auth.admin.listUsers({ perPage: 1000 })
 const ids = { ricardo: lista.users.find((u) => u.email === CUENTAS.ricardo).id, diego: lista.users.find((u) => u.email === CUENTAS.diego).id }
@@ -53,6 +58,12 @@ async function restaurar() {
   }
   if (creados.solicitud) await admin.from('solicitudes').delete().eq('id', creados.solicitud)
   if (creados.anuncios.length) await admin.from('radar_anuncios').delete().in('id', creados.anuncios)
+  if (creados.laura) {
+    await admin.from('activos').update({ precio_total: creados.laura.precio }).eq('id', LAURA_ACTIVO)
+    for (const n of creados.laura.necesidades) await admin.from('necesidades').update({ presupuesto_min: n.presupuesto_min, presupuesto_max: n.presupuesto_max }).eq('id', n.id)
+    // El análisis guardado de Laura se recalcula con su precio original.
+    await api('laura', '/api/agentes/mercado', { activoId: LAURA_ACTIVO, regenerar: true }).catch((e) => console.log('  (Laura, análisis)', e.message))
+  }
   const { data: todas } = await admin.auth.admin.listUsers({ perPage: 1000 })
   for (const u of todas.users.filter((x) => x.email === CUENTAS.patricia)) {
     const { data: pf } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', u.id)
@@ -292,7 +303,8 @@ try {
   const salida = (m, sup) => { const p = m.precioSalidaRecomendadoMXN; return p && p / sup >= 12_000 && p / sup <= 45_000 ? p : 21_000 * sup }
   const precios = {
     diego: redondear(salida(mD, 1200)), cert1: redondear(salida(m1, 1100) * 0.95), cert2: redondear(salida(m2, 1300) * 0.97),
-    escobedo: redondear(salida(mE, 1150) * 0.98),
+    // La de Escobedo, un poco abajo del precio típico de su zona, para que la tarjeta y el comparativo digan lo mismo.
+    escobedo: redondear(ESCOBEDO_M2 * 1150 * 0.95),
   }
   console.log(`  mercado: Diego ${mD.precioSalidaRecomendadoMXN} · Sur ${m1.precioSalidaRecomendadoMXN} · Huinalá ${m2.precioSalidaRecomendadoMXN} · Escobedo ${mE.precioSalidaRecomendadoMXN} → ${JSON.stringify(precios)}`)
   for (const [id, p] of [[bodegaDiego, precios.diego], [cert1, precios.cert1], [cert2, precios.cert2], [escobedo, precios.escobedo]]) await admin.from('activos').update({ precio_total: p }).eq('id', id)
@@ -353,6 +365,18 @@ try {
   const { data: pu } = await admin.from('usuarios').select('id').eq('nombre', 'Patricia Longoria').eq('es_demo', true).order('created_at', { ascending: false }).limit(1).single()
   const { data: nec } = await admin.from('necesidades').select('id').eq('usuario_id', pu.id).single()
   const { data: pf } = await admin.from('perfiles_intencion').select('id').eq('usuario_id', pu.id).single()
+  // Escobedo con el precio por m² real de su zona (se guarda en segundo plano al crear la búsqueda).
+  for (let i = 0; i < 30; i++) {
+    const { data } = await admin.from('necesidades').select('zonas').eq('id', nec.id).single()
+    const pm = data.zonas?.find((z) => /Escobedo/.test(z.municipio))?.mercado?.precioM2
+    if (pm) {
+      const p = Math.max(redondear(pm * 1150 * 0.95), presupuesto.min)
+      await admin.from('activos').update({ precio_total: p }).eq('id', escobedo)
+      console.log(`  Escobedo: ${Math.round(pm)}/m² en su zona → ${p}`)
+      break
+    }
+    await sleep(2000)
+  }
   // Los anuncios de portales que trae el motor se guardan en segundo plano: se espera a que dejen de llegar.
   let previo = -1
   for (let i = 0; i < 20; i++) {
@@ -448,6 +472,24 @@ try {
     await page.waitForFunction(() => document.querySelector('[data-estado="negociando"]')?.disabled, { timeout: 30000 })
     marca('negociando'); await sleep(3500)
   })
+
+  // r7 · Laura (dueña): su precio ~8 % arriba del realista; los presupuestos de las búsquedas de
+  // departamento en San Pedro suben en la misma proporción (siguen 3 que sí y 1 con menos presupuesto).
+  {
+    const { data: act } = await admin.from('activos').select('precio_total').eq('id', LAURA_ACTIVO).single()
+    const { data: ns } = await admin.from('necesidades').select('id,presupuesto_min,presupuesto_max').eq('es_demo', true)
+      .eq('tipo', 'departamento').eq('operacion', 'compra').eq('municipio', 'San Pedro Garza García')
+    creados.laura = { precio: act.precio_total, necesidades: ns }
+    const m = await api('laura', '/api/agentes/mercado', { activoId: LAURA_ACTIVO })
+    const realista = m.precioSalidaRecomendadoMXN
+    if (!realista) throw new Error('sin precio realista para Laura')
+    const nuevo = redondear(realista * 1.08)
+    const f = nuevo / act.precio_total
+    await admin.from('activos').update({ precio_total: nuevo }).eq('id', LAURA_ACTIVO)
+    for (const n of ns) await admin.from('necesidades').update({ presupuesto_min: redondear(n.presupuesto_min * f), presupuesto_max: redondear(n.presupuesto_max * f) }).eq('id', n.id)
+    await api('laura', '/api/agentes/mercado', { activoId: LAURA_ACTIVO, regenerar: true })
+    console.log(`  Laura: realista ${realista} → su precio ${nuevo}; ${ns.length} búsquedas ×${f.toFixed(2)}`)
+  }
 
   // r7 · Laura (dueña): su tablero
   await toma('r7-laura-tablero', 'laura', '/inicio', async (page, marca) => {
