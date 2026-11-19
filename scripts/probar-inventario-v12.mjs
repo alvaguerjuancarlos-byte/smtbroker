@@ -51,7 +51,12 @@ try {
   for (const o of t.bandeja.filter((o) => nuestras.has(o.activoId))) {
     const pm2 = o.precio && o.superficie ? Math.round(o.precio / o.superficie) : null
     const contra = pm2 && n.zonas[0].precioM2 ? Math.round((pm2 / n.zonas[0].precioM2 - 1) * 100) : null
-    console.log(`- [${o.origen}${o.certificada ? ' · certificada' : ''}${o.broker ? ` · ${o.broker.nombre} ${o.broker.nivel}` : ''}] ${o.nombre} · $${o.precio?.toLocaleString('es-MX')} · ${o.superficie} m² · ${pm2}/m² (${contra}% vs zona) · puntaje ${o.puntaje} · foto ${o.foto ? 'sí' : 'no'} · ${o.razones?.slice(0, 4).join('; ')}`)
+    const an = await llamar(tk, '/api/analisis', { activoId: o.activoId, necesidadId: nec.id }).catch((e) => ({ error: e.message }))
+    const { data: fila } = an.id ? await admin.from('analisis').select('resultado').eq('id', an.id).maybeSingle() : { data: null }
+    const sem = fila?.resultado?.mercado?.semaforo
+    const tarjeta = o.mercado ? `${o.mercado.estado} ${o.mercado.pct}%` : `(zona) ${contra}%`
+    const analisis = sem ? `${sem.estado} ${sem.diferenciaPct}%` : JSON.stringify(an).slice(0, 160)
+    console.log(`- [${o.origen}${o.broker ? ' · ' + o.broker.nombre : ''}] ${o.titulo} · $${o.precio} · ${o.superficie} m² · TARJETA ${tarjeta} · ANÁLISIS ${analisis} · puntaje ${o.puntaje}`)
   }
   const fuera = [...nuestras].filter((id) => !t.bandeja.some((o) => o.activoId === id))
   console.log(fuera.length ? `NO APARECEN: ${fuera.join(', ')}` : 'Las 4 aparecen en su tablero.')
