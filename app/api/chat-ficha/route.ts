@@ -39,7 +39,7 @@ Reglas:
 3. Si el mensaje es una respuesta corta ("3", "renta", "en Cumbres"), interprétala como respuesta a la última pregunta.
 4. operacion: "compra" (comprar, compra, venta, adquirir) o "renta" (rentar, renta, alquilar).
 5. tipo: casa (casa, residencia, townhouse), departamento (depa, depto, departamento, loft), terreno (lote, predio), bodega (nave), oficina, local (local comercial), edificio.
-6. zonas: hasta 3. municipio es uno de: ${MUNICIPIOS_NL.join(', ')}; si el cliente dice una colonia o zona conocida (Cumbres, Valle Oriente, Contry, Del Valle, Carretera Nacional, Mitras…), ponla en colonias y pon su municipio solo si estás seguro. Si no sabes el municipio, no agregues la zona: déjala en preferencias con sus palabras.
+6. zonas: hasta 3. municipio es uno de: ${MUNICIPIOS_NL.join(', ')}; si el cliente dice una colonia o zona conocida (Cumbres, Valle Oriente, Contry, Del Valle, Carretera Nacional, Mitras…), ponla en colonias y pon su municipio solo si estás seguro (Valle Poniente es de Santa Catarina; decisión de JC, 19-nov-2026). Si no sabes el municipio, no agregues la zona: déjala en preferencias con sus palabras.
 7. Montos: "melón/melones" y "M/millones" = 1,000,000; "mil/k" = 1,000. "hasta/máximo/menos de/no más de" = presupuesto_max; "desde/mínimo" = presupuesto_min; "como de X" o "alrededor de X" = presupuesto_max X. En renta el monto es mensual.
 8. recamaras, banos, estacionamientos: mínimos ("3 recámaras" = 3; "cochera para 2" = 2 estacionamientos; "2 baños y medio" = 2.5).
 9. amenidades, solo de esta lista: ${AMENIDADES_CHAT.join(', ')}. "Vigilancia" o "privada con caseta" = Seguridad privada; "pet friendly" o "con mi perro" = Acepta mascotas. Otras cosas van a preferencias.

@@ -221,12 +221,13 @@ export async function guardarEnRadar(admin: SupabaseClient, perfilId: string, an
 
 // Portales inmobiliarios reconocidos. Con varios `site:` juntos el buscador no devuelve nada
 // (probado el 10-nov-2026), así que se busca simple y se quedan solo los resultados de estos dominios.
-const FUENTES = ['inmuebles24.com', 'lamudi.com.mx', 'vivanuncios.com.mx', 'propiedades.com', 'mercadolibre.com.mx', 'doorvel.com', 'spot2.mx', 'casasyterrenos.com', 'easybroker.com', 'avisosdeocasion.com']
+const FUENTES = ['inmuebles24.com', 'lamudi.com.mx', 'vivanuncios.com.mx', 'propiedades.com', 'mercadolibre.com.mx', 'doorvel.com', 'spot2.mx', 'casasyterrenos.com', 'easybroker.com', 'avisosdeocasion.com', 'monopolio.com.mx']
+// Monopolio (portal regio, 19-nov-2026): traía cientos de anuncios en Valle Poniente y se descartaba.
 // Avisos de Ocasión (El Norte, Reforma y Mural; 19-nov-2026): muchos anuncios de dueños directos que no
 // salen en los otros portales. En la búsqueda general casi nunca llega a los primeros 10, así que tiene
 // su propia búsqueda (un solo `site:` sí funciona).
 const AVISOS = 'avisosdeocasion.com'
-const NOMBRE_FUENTE: Record<string, string> = { [AVISOS]: 'Avisos de Ocasión' }
+const NOMBRE_FUENTE: Record<string, string> = { [AVISOS]: 'Avisos de Ocasión', 'monopolio.com.mx': 'Monopolio' }
 const MAX_AVISOS = 2
 
 /**

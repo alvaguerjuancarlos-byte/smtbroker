@@ -34,7 +34,7 @@ export interface ResumenRegistro {
 const NOMBRES: [string, string][] = [
   ['inmuebles24.com', 'inmuebles24'], ['vivanuncios.com.mx', 'Vivanuncios'], ['propiedades.com', 'Propiedades.com'],
   ['mercadolibre.com.mx', 'Mercado Libre'], ['lamudi.com.mx', 'Lamudi'], ['doorvel.com', 'Doorvel'], ['spot2.mx', 'Spot2'],
-  ['casasyterrenos.com', 'Casas y Terrenos'], ['easybroker.com', 'EasyBroker'], ['avisosdeocasion.com', 'Avisos de Ocasión'],
+  ['casasyterrenos.com', 'Casas y Terrenos'], ['easybroker.com', 'EasyBroker'], ['avisosdeocasion.com', 'Avisos de Ocasión'], ['monopolio.com.mx', 'Monopolio'],
   ['metroscubicos.com', 'Metros Cúbicos'], ['icasas.mx', 'iCasas'], ['trovit.com.mx', 'Trovit'], ['nocnok.com', 'Nocnok'],
 ]
 
@@ -67,7 +67,8 @@ export function resumirRegistro(items: ItemRegistro[]): ResumenRegistro {
 /** La línea del tablero del cliente. */
 export function lineaRegistro(r: Pick<ResumenRegistro, 'revisadas' | 'fuentes' | 'cumplen'>): string {
   const p = (n: number, uno: string, varios: string) => `${n.toLocaleString('es-MX')} ${n === 1 ? uno : varios}`
-  const revisamos = `Revisamos ${p(r.revisadas, 'propiedad', 'propiedades')} en ${p(r.fuentes, 'fuente', 'fuentes')}.`
-  if (r.cumplen === 0) return `${revisamos} Ninguna cumple todavía todo lo que pides: te avisamos en cuanto aparezca.`
-  return `${revisamos} ${r.cumplen === 1 ? 'Esta cumple' : `Estas ${r.cumplen.toLocaleString('es-MX')} cumplen`} lo que pides.`
+  // "Te mostramos", no "cumplen": parte de lo que se muestra son páginas de portales sin verificar (JC, 19-nov).
+  const revisamos = `Revisamos ${p(r.revisadas, 'propiedad y anuncio', 'propiedades y anuncios')} en ${p(r.fuentes, 'fuente', 'fuentes')}.`
+  if (r.cumplen === 0) return `${revisamos} Ninguna coincide todavía con lo que pides: te avisamos en cuanto aparezca.`
+  return `${revisamos} ${r.cumplen === 1 ? 'Te mostramos la que coincide' : `Te mostramos las ${r.cumplen.toLocaleString('es-MX')} que coinciden`} con lo que pides.`
 }

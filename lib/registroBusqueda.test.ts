@@ -29,9 +29,10 @@ test('registro: resumen sin contar dos veces la misma liga', () => {
 })
 
 test('registro: la línea del tablero', () => {
-  assert.equal(lineaRegistro({ revisadas: 143, fuentes: 10, cumplen: 6 }), 'Revisamos 143 propiedades en 10 fuentes. Estas 6 cumplen lo que pides.')
-  assert.equal(lineaRegistro({ revisadas: 1, fuentes: 1, cumplen: 1 }), 'Revisamos 1 propiedad en 1 fuente. Esta cumple lo que pides.')
-  assert.match(lineaRegistro({ revisadas: 40, fuentes: 5, cumplen: 0 }), /Ninguna cumple todavía/)
+  assert.equal(lineaRegistro({ revisadas: 29, fuentes: 13, cumplen: 8 }), 'Revisamos 29 propiedades y anuncios en 13 fuentes. Te mostramos las 8 que coinciden con lo que pides.')
+  assert.equal(lineaRegistro({ revisadas: 1, fuentes: 1, cumplen: 1 }), 'Revisamos 1 propiedad y anuncio en 1 fuente. Te mostramos la que coincide con lo que pides.')
+  assert.match(lineaRegistro({ revisadas: 40, fuentes: 5, cumplen: 0 }), /Ninguna coincide todavía/)
+  assert.equal(fuenteDeUrl('https://www.monopolio.com.mx/renta/departamentos'), 'Monopolio')
 })
 
 test('registro: la clasificación de comparables coincide con el cálculo del precio', async () => {
