@@ -6,8 +6,9 @@
 //   - 3 departamentos CERTIFICADOS de dueños directos (cuenta demo de Ricardo, propietario): banda 1,
 //     "Particular · certificada";
 //   - el departamento de Diego Salinas (asesor Oro), que le propone a la búsqueda: banda 2.
-// Las rentas salen del Agente de Mercado (comparables reales de renta): la superficie se elige para que
-// la renta realista caiga en el presupuesto, y cada una queda un poco abajo o en línea con el mercado.
+// Rentas FIJAS y distintas ($54,000, $55,500, $56,500 de Diego y $58,500 de Torre West; JC, 19-nov): la renta
+// realista del Agente de Mercado cambia de un día a otro y dos depas llegaron a quedar iguales. La superficie
+// (~140 m²) las deja en línea con el mercado de Valle Poniente (~$390–$400 por m² al mes).
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -19,8 +20,8 @@ const RENTA = { incluye_mantenimiento: true, mantenimiento: null, deposito_meses
 
 // [nombre, superficie, factor sobre la renta realista, foto, amenidades extra, descripción, renta fija?]
 const DEPAS = [
-  ['Departamento con vista en Valle Poniente', 138, 0.96, 'depa1.jpg', ['roof_garden'], 'Excelente ubicación, a unos minutos de Valle Oriente. Vista abierta a la sierra. Amenidades: alberca, gimnasio, roof garden y seguridad 24 horas.'],
-  ['Departamento en Privada Valle Poniente', 144, 0.97, 'depa2.jpg', ['terraza'], 'Muy bien ubicado, en privada con caseta. Terraza propia. Amenidades: alberca, gimnasio, elevador y seguridad 24 horas.'],
+  ['Departamento con vista en Valle Poniente', 138, 0.96, 'depa1.jpg', ['roof_garden'], 'Excelente ubicación, a unos minutos de Valle Oriente. Vista abierta a la sierra. Amenidades: alberca, gimnasio, roof garden y seguridad 24 horas.', 54_000],
+  ['Departamento en Privada Valle Poniente', 144, 0.97, 'depa2.jpg', ['terraza'], 'Muy bien ubicado, en privada con caseta. Terraza propia. Amenidades: alberca, gimnasio, elevador y seguridad 24 horas.', 55_500],
   // El depa de JC en Torre West (su anuncio real en Avisos de Ocasión, 19-nov): renta fija de $58,500, 140 m² con dos balcones.
   ['Departamento en Torre West', 140, null, 'depa3.jpg', ['terraza', 'roof_garden'], 'Torre West, Valle Poniente: excelente ubicación, frente al consulado de Estados Unidos. 3 recámaras. Muy buenas amenidades: alberca, gimnasio, roof garden, terraza y seguridad 24 horas.', 58_500],
 ]
@@ -53,7 +54,7 @@ export async function crearInventario({ admin, api, ids, fotosDir, log = console
       propietario_nombre: 'Familia Garza Treviño', nombre: NOMBRE_DIEGO, superficie: 142,
       descripcion: 'La mejor ubicación de Valle Poniente, en torre nueva con vista. Muy buenas amenidades: alberca techada, gimnasio, roof garden, terraza y seguridad 24 horas.', amenidades: [...AMENIDADES, 'roof_garden', 'terraza'],
     }),
-    nombre: NOMBRE_DIEGO, superficie: 142, factor: 0.98, foto: 'depa-diego.jpg',
+    nombre: NOMBRE_DIEGO, superficie: 142, factor: 0.98, foto: 'depa-diego.jpg', rentaFija: 56_500,
   }
   // Certificadas (banda 1, "Particular · certificada").
   const { error: eCert } = await admin.from('certificaciones').insert(depas.map((d) => ({ activo_id: d.id, solicitado_por: ids.ricardo, estado: 'certificada' })))
