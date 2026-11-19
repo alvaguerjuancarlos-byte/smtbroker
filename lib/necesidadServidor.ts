@@ -190,7 +190,13 @@ export async function guardarEnRadar(admin: SupabaseClient, perfilId: string, an
 
 // Portales inmobiliarios reconocidos. Con varios `site:` juntos el buscador no devuelve nada
 // (probado el 10-nov-2026), así que se busca simple y se quedan solo los resultados de estos dominios.
-const FUENTES = ['inmuebles24.com', 'lamudi.com.mx', 'vivanuncios.com.mx', 'propiedades.com', 'mercadolibre.com.mx', 'doorvel.com', 'spot2.mx', 'casasyterrenos.com', 'easybroker.com']
+const FUENTES = ['inmuebles24.com', 'lamudi.com.mx', 'vivanuncios.com.mx', 'propiedades.com', 'mercadolibre.com.mx', 'doorvel.com', 'spot2.mx', 'casasyterrenos.com', 'easybroker.com', 'avisosdeocasion.com']
+// Avisos de Ocasión (El Norte, Reforma y Mural; 19-nov-2026): muchos anuncios de dueños directos que no
+// salen en los otros portales. En la búsqueda general casi nunca llega a los primeros 10, así que tiene
+// su propia búsqueda (un solo `site:` sí funciona).
+const AVISOS = 'avisosdeocasion.com'
+const NOMBRE_FUENTE: Record<string, string> = { [AVISOS]: 'Avisos de Ocasión' }
+const MAX_AVISOS = 2
 
 /**
  * Camino A con el mercado: anuncios de portales vía búsqueda web. Solo título y liga a la fuente
@@ -208,21 +214,34 @@ async function anunciosDeZona(n: Necesidad, z: ZonaBusqueda, zona: number, max: 
   if (!key) return []
   const plural = TIPOS_NECESIDAD.find((t) => t.id === n.tipo)?.plural ?? n.tipo
   const lugar = [z.nombre || z.colonias[0], z.municipio, z.estado].filter(Boolean).join(' ')
-  const q = `${plural} en ${n.operacion === 'renta' ? 'renta' : 'venta'} ${lugar}`
-  try {
-    const r = await fetch('https://google.serper.dev/search', {
-      method: 'POST', headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q, gl: 'mx', hl: 'es', num: 10 }),
-    })
-    if (!r.ok) return []
-    const j = await r.json() as { organic?: { link: string; title: string }[] }
-    return (j.organic ?? []).flatMap((o) => {
-      const fuente = FUENTES.find((f) => o.link.includes(f))
-      return fuente ? [{ url: o.link, titulo: o.title, fuente: fuente.split('.')[0], zona }] : []
-    }).slice(0, max)
-  } catch {
-    return []
+  const operacion = n.operacion === 'renta' ? 'renta' : 'venta'
+  const q = `${plural} en ${operacion} ${lugar}`
+  const buscar = async (consulta: string) => {
+    try {
+      const r = await fetch('https://google.serper.dev/search', {
+        method: 'POST', headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: consulta, gl: 'mx', hl: 'es', num: 10 }),
+      })
+      if (!r.ok) return []
+      return ((await r.json()) as { organic?: { link: string; title: string }[] }).organic ?? []
+    } catch {
+      return []
+    }
   }
+  const [general, avisos] = await Promise.all([buscar(q), buscar(`site:${AVISOS} ${q}`)])
+  const deFuente = (o: { link: string; title: string }): OpcionPortal[] => {
+    let host = ''
+    try { host = new URL(o.link).hostname } catch { return [] }
+    const fuente = FUENTES.find((f) => host === f || host.endsWith('.' + f))
+    return fuente ? [{ url: o.link, titulo: o.title, fuente: NOMBRE_FUENTE[fuente] ?? fuente.split('.')[0], zona }] : []
+  }
+  // De Avisos de Ocasión, solo los de la operación que pide (sus títulos dicen "Venta de…" o "Renta de…").
+  const contraria = operacion === 'venta' ? /\brenta\b/i : /\bventa\b/i
+  // Y solo páginas de bienes raíces (el sitio también tiene empleos y autos).
+  const inmueble = /\/(Detalle\/BienesRaices|br\/|Portada\/Indice\/(venta|renta)-)/i
+  const deAvisos = avisos.filter((o) => inmueble.test(o.link) && !contraria.test(o.title)).flatMap(deFuente).slice(0, MAX_AVISOS)
+  const resto = general.flatMap(deFuente).filter((o) => !deAvisos.some((a) => a.url === o.url))
+  return [...resto.slice(0, max - deAvisos.length), ...deAvisos]
 }
 
 // ── "Lo que rinde tu dinero" (V9, §23.2) ─────────────────────────────────────────────────────
