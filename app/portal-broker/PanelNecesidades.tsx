@@ -61,7 +61,7 @@ export default function PanelNecesidades() {
     setEnviando(false)
     if (!r.ok) { setMensaje({ id: necesidadId, texto: j.error ?? 'No se pudo proponer', ok: false }); return }
     setMensaje({ id: necesidadId, texto: 'Propuesta enviada: el comprador ya la ve en su bandeja.', ok: true })
-    setElegida(null); setAcepto(false)
+    setAbierta(null); setElegida(null); setAcepto(false)   // se cierra el formulario: ya no hay nada que elegir
     await cargar()
   }
 
@@ -128,7 +128,12 @@ export default function PanelNecesidades() {
 
           {abierta === n.id && (
             <div className="border-t border-linea pt-3 flex flex-col gap-2.5">
-              {n.compatibles.length === 0 ? (
+              {n.compatibles.length === 0 && n.misPropuestas.length > 0 ? (
+                <p className="text-[16px] text-tinta-2">
+                  Ya propusiste las propiedades de tu cartera que cumplen esta ficha.{' '}
+                  <button onClick={() => router.push('/activo/nuevo')} className="text-acento underline underline-offset-2">Cargar otra propiedad</button>
+                </p>
+              ) : n.compatibles.length === 0 ? (
                 <p className="text-[16px] text-tinta-2">
                   Ninguna propiedad de tu cartera cumple esta ficha (tipo, zona, precio con ±10 % y tamaño).{' '}
                   <button onClick={() => router.push('/activo/nuevo')} className="text-acento underline underline-offset-2">Cargar una propiedad</button>
