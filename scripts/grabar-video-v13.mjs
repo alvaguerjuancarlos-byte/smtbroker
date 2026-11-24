@@ -206,8 +206,13 @@ async function grabar(page, nombre) {
 async function irA(page, texto, offset = 120, ms = 1400) {
   await page.evaluate(async (texto, offset, ms) => {
     const xpath = `//*[contains(normalize-space(text()), ${JSON.stringify(texto)})]`
+    // Respaldo: títulos armados con varios nodos de texto ("3 · " + "En portales · sin certificar" + " · 5"); el
+    // XPath de arriba solo ve el primero. Se toma el elemento más interno cuyo texto completo lo contiene.
+    const t = JSON.stringify(texto)
+    const interno = `//*[contains(normalize-space(.), ${t}) and not(*[contains(normalize-space(.), ${t})])]`
     const el = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-    if (!el) return
+      ?? document.evaluate(interno, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+    if (!el) { console.warn('irA: no encontré', texto); return }
     const destino = window.scrollY + el.getBoundingClientRect().top - offset
     const inicio = window.scrollY
     const t0 = performance.now()
